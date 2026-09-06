@@ -1,0 +1,337 @@
+{
+  "round": 1,
+  "date": "2026-09-06",
+  "title": "The Cut, Two Cards",
+  "headline": "Build from The Cut: an eight-ship, seven-heat season on one points ladder with a cut after every heat from the third, plus two named hazard cards per course (leader lays first, tail lays second with the leader's visible), tags with pips and a capped modifier block, tier-gated face-up drafting in reverse ladder order, and hull that carries and costs credits to repair.",
+  "builtFrom": "run-first",
+  "proposals": [
+    {
+      "slug": "economy-first",
+      "title": "The Purse",
+      "oneLiner": "A twelve-heat, eight-ship championship where one currency, credits, is earned by placing and by saving, and spent on parts, slots, hull repairs and flags that put hazards onto the next course, so the build, run health and the other players all hang off the same coin.",
+      "file": "proposals/economy-first.md"
+    },
+    {
+      "slug": "interaction-first",
+      "title": "The Course Is the Other Players",
+      "oneLiner": "Every heat is flown on a course the eight players just built, one slot each, and the parts on your ship decide both what hazard you can lay down and what you can survive, so a build is a weapon and a shield at once and counter-picking is the build itself.",
+      "file": "proposals/interaction-first.md"
+    },
+    {
+      "slug": "run-first",
+      "title": "The Cut",
+      "oneLiner": "A run is a seven-heat season of eight ships on one points ladder where the bottom is cut after every heat from the third, the leader lays the next course and the tail shops first, so builds, credits and counter-picks all exist to move you up the ladder before the cut reaches you.",
+      "file": "proposals/run-first.md"
+    },
+    {
+      "slug": "build-first",
+      "title": "Hardpoints",
+      "oneLiner": "Six hardpoints and four part families: three of a family brings its core online, five overdrives it, and the family you commit to decides what you can drop on the other seven ships' track and what you can survive of theirs, over nine heats where standing is the health you protect.",
+      "file": "proposals/build-first.md"
+    }
+  ],
+  "reviews": [
+    {
+      "lens": "Fun",
+      "file": "reviews/fun.md",
+      "recommendedBase": "build-first",
+      "grafts": [
+        "From run-first: replace the standing drain with a cut line. Keep standing as the number and the sector multipliers, but cut the lowest standing after every round from the fourth to the seventh; four ships fly rounds eight and nine, the last worth double. Tiebreak on the most recent round, shown beside the line.",
+        "From run-first: tier gating as a second reason to bank besides hardpoints. Tier two parts enter the shop from round four, tier three from round seven, at 3, 5 and 7 credits.",
+        "From run-first: once per sector, at the gate, a face-up draft of ten parts picked in reverse standing order replaces the private shop (the carousel), so the tail gets a real pick and denial happens on a screen a phone player can see.",
+        "From interaction-first: attribution. Every beacon carries the name of who dropped it and the results screen reads hazard by hazard (\"18 hull to Bulwark's debris\").",
+        "From interaction-first: sequence. Lay beacons in drop order along the segment within the three-per-segment cap, so the last player to drop can put a flare after a shadow on purpose. If the drop screen cannot show it plainly, go to one per segment before cutting attribution.",
+        "From economy-first: the shop shows copies remaining per part, not only a bar per family.",
+        "Cut from build-first: the Burn overdrive as written (never cooks, runs 15% faster hot). Give Burn five a second reroute per stage instead, the same shape as Field five.",
+        "Do not take: economy-first's flags (a vote), interaction-first's free hull repair (removes the F-Zero trade), run-first's leader-only course card (seven of eight players do nothing to the track)."
+      ],
+      "scores": [
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 3,
+            "tradeoffs": 4,
+            "interaction": 2,
+            "stakes": 3,
+            "legibility": 2,
+            "fit": 4,
+            "buildable": 2,
+            "measurable": 4
+          },
+          "total": 24,
+          "bestIdea": "The shop shows copies remaining per part (\"Ion Thruster, 2 left\"), which turns a private shop into a contested one in one line.",
+          "fatalFlaw": "The flag is a vote: one flag in a tally of nine or ten rarely decides anything, the proposal admits everyone flags the burst, and the worked run is won by three ships happening to agree, which is coincidence rather than counter-play."
+        },
+        {
+          "slug": "interaction-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 2,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 2,
+            "fit": 4,
+            "buildable": 2,
+            "measurable": 4
+          },
+          "total": 27,
+          "bestIdea": "Sequence: a hazard is stronger because of what came before it, and the player who places last can build the combo, so the trailer's weapon and the comeback are one mechanic.",
+          "fatalFlaw": "Everyone lays what they survive, and rock is a punishment while a straight is only a reward, so the lobby converges on Plating and the course eats its own variety."
+        },
+        {
+          "slug": "run-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 3,
+            "interaction": 3,
+            "stakes": 5,
+            "legibility": 4,
+            "fit": 5,
+            "buildable": 4,
+            "measurable": 4
+          },
+          "total": 32,
+          "bestIdea": "The ladder with the cut line drawn under it, one ship gone per heat from the third, tiebreak on the most recent heat.",
+          "fatalFlaw": ""
+        },
+        {
+          "slug": "build-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 4,
+            "interaction": 4,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 31,
+          "bestIdea": "Six slots make the archetypes arithmetic: five of one plus a loose part, or three and three, no room for three cores, so commitment is built into the hull.",
+          "fatalFlaw": ""
+        }
+      ]
+    },
+    {
+      "lens": "Engineering",
+      "file": "reviews/engineering.md",
+      "recommendedBase": "run-first",
+      "grafts": [
+        "From Hardpoints: a Modifiers block returned by resolveBuild, read by hazards and stepRace, capped at eight numbers; PR one.",
+        "From The Course Is the Other Players: seeder ids on placements and per-placement damage in the race log, so the leader's card carries a name and results read hazard by hazard.",
+        "From The Course Is the Other Players: a second open slot per course filled by the last-placed ship after seeing the leader's card, with the card menu decided by tags held; rivals use the stated seeding rule (lay what your set answers, hole after rock).",
+        "From The Course Is the Other Players: the Solar Flare as a fifth hazard, one function and one test, the anti-Reroute mirror of the burst.",
+        "From Hardpoints: coloured pips per tag on the ladder and a per-tag bar of copies left in the season deck; UI only.",
+        "Drop the Mk II from both proposals that have it, drop The Purse's flags, streaks, hot laps and slots, and move The Cut's interest to 1 per 10 capped at 3."
+      ],
+      "scores": [
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 5,
+            "interaction": 4,
+            "stakes": 4,
+            "legibility": 2,
+            "fit": 4,
+            "buildable": 2,
+            "measurable": 3
+          },
+          "total": 28,
+          "bestIdea": "The shop shows how many copies of each part are left: one counter on the pool turns it into a visible contest.",
+          "fatalFlaw": "It is three games; the proposal's own eight-PR first playable ships the economy with no makers and no flags, so it answers gap two and neither of the gaps the brief cares most about."
+        },
+        {
+          "slug": "interaction-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 3,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 5,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 31,
+          "bestIdea": "A placement carries the id of who laid it and the race log charges damage to it: the cheapest possible other-players, and rivals become legible with no UI copy.",
+          "fatalFlaw": ""
+        },
+        {
+          "slug": "run-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 3,
+            "stakes": 4,
+            "legibility": 4,
+            "fit": 5,
+            "buildable": 4,
+            "measurable": 5
+          },
+          "total": 33,
+          "bestIdea": "The tail shops first: a comeback lever with no charity in it, one sort on the ladder, and it makes denial a move the player can see coming.",
+          "fatalFlaw": ""
+        },
+        {
+          "slug": "build-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 4,
+            "interaction": 4,
+            "stakes": 3,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 30,
+          "bestIdea": "resolveBuild returns a modifier block beside the five stats with a hard cap of ten numbers; hazards and the loop read from it, and any part needing an eleventh is a stat delta instead.",
+          "fatalFlaw": "The standing arithmetic that is meant to be the tuning edge is off by a third (fifth every round costs 27, not 20), and three cored beacons at 360 ticks do not fit any segment on the track they are dropped on."
+        }
+      ]
+    },
+    {
+      "lens": "Phone",
+      "file": "reviews/phone.md",
+      "recommendedBase": "run-first",
+      "grafts": [
+        "From interaction-first: attribution. The leader's card carries the leader's name and the results screen reads hazard by hazard with who laid it.",
+        "From build-first: coloured pips with a count on the ladder screen in place of 'Burner 2/3' text.",
+        "From build-first, later: a second set threshold at 5 (overdrive) so the build has a late game, added only once the harness says sets at 3 are balanced.",
+        "From interaction-first, if the leader-lays-course snowball proves real: the leader chooses from the hazards its own sets answer instead of three deck cards, so the course reads from the build.",
+        "From economy-first: nothing but the one-coin discipline for parts and repairs, which The Cut already has. Leave hot laps, streaks, slots, Mk II and secret flags out.",
+        "Owner calls: keep the run at seven heats, and cap between-heat screens at three."
+      ],
+      "scores": [
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 3,
+            "stakes": 4,
+            "legibility": 2,
+            "fit": 4,
+            "buildable": 2,
+            "measurable": 4
+          },
+          "total": 27,
+          "bestIdea": "One coin: repairs, slots, parts and flags all cost credits, so hull damage is a bill and greed has a price you can read.",
+          "fatalFlaw": "System count: twelve heats, twenty minutes, five income streams, three build systems and a secret flag tally. The player cannot say why they earned what they earned."
+        },
+        {
+          "slug": "interaction-first",
+          "criteria": {
+            "buildFantasy": 3,
+            "tradeoffs": 3,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 2,
+            "measurable": 4
+          },
+          "total": 28,
+          "bestIdea": "Attribution: every hazard names who laid it, and the results screen reads hazard by hazard.",
+          "fatalFlaw": "Cannot be held in one head on a phone: a star curve, an eighteen-entry seed table and a two-wave seeding phase on ten-second timers."
+        },
+        {
+          "slug": "run-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 4,
+            "stakes": 4,
+            "legibility": 5,
+            "fit": 5,
+            "buildable": 4,
+            "measurable": 4
+          },
+          "total": 34,
+          "bestIdea": "Three fixed screens between heats, ladder then course then draft, one glance each, no timers, everything public.",
+          "fatalFlaw": ""
+        },
+        {
+          "slug": "build-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 4,
+            "interaction": 4,
+            "stakes": 3,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 30,
+          "bestIdea": "Coloured pips with a count: three red pips is a Burn ship one part from its core, a build read in under a second.",
+          "fatalFlaw": "The beacon pile: eight beacons per round, three per segment, doubled by cores, on a course that already escalates, unreadable in a 15-second drop window. Standing only goes down, so a bad sector 1 is permanent."
+        }
+      ]
+    }
+  ],
+  "synthesisFile": "synthesis.md",
+  "critiqueFile": "critique.md",
+  "questions": [
+    {
+      "question": "Seven heats, or five with a cut after every heat from the second?",
+      "why": "Seven is nine minutes and gives a set three heats of payoff; five is six minutes and a set comes online with one heat left."
+    },
+    {
+      "question": "Two cards per course (leader then tail), or one?",
+      "why": "Two is the whole answer to the fourth gap; one is cheaper by a PR and leaves seven ships with nothing to do on the track."
+    },
+    {
+      "question": "Does the leader choose which of the two slots it fills, or is slot order fixed?",
+      "why": "Choice gives the leader a positional read; fixed keeps the course screen to one tap."
+    },
+    {
+      "question": "Do copies of a part count toward a set, or does a set need three distinct parts?",
+      "why": "Copies keep stacking a feature and let a set come online at heat 3; distinct parts push every set to heat 5 and make tier gating bite harder."
+    },
+    {
+      "question": "Does a lost ship return at 40 hull with its build intact, or lose its last part?",
+      "why": "Intact is soft and legible; losing a part is the nastier feeling and the stronger reason to repair."
+    },
+    {
+      "question": "Are rival wish lists printed on the ladder, or only their pips?",
+      "why": "Printed is more legible; hidden gives a rival a character to discover over several runs."
+    },
+    {
+      "question": "Is denial (taking the part that completes a rival's set) a move this game wants?",
+      "why": "It is the auto-battler feeling and also the pick a phone player may not read."
+    },
+    {
+      "question": "Eight ships or six?",
+      "why": "Eight is the field that four cuts need; six changes nothing in the sim and is easier to draw."
+    },
+    {
+      "question": "Solar Flare in the first playable, or stay at four hazards until sets are balanced?",
+      "why": "It is one function and one test, and also a fifth thing a player has to learn."
+    },
+    {
+      "question": "Does the final pay double points, or is a flat scale cleaner?",
+      "why": "Double is the comeback lever for a ship that scrapes into fourth; flat is the easier sum to hold."
+    },
+    {
+      "question": "Names: tags Burner/Brick/Mirror/Sling, the Sling rival renamed Keel, parts and rivals as placeholders?",
+      "why": "A tag and a ship must not share a name; everything else is taste."
+    }
+  ],
+  "nextRound": "Take the framework as fixed and develop three things: the course phase in full (card menu per tag and count, slot positions on each of the seven courses, the bot card rule as pseudocode, and a degenerate-course test where a bot that reads the ladder must beat one that always lays the same card); the harness (bots by name, run count, targets as assertions: runaway leader after heat 3 caught a third of the time, no tag above 35% of wins, saver/spender/switcher each reaching the final a fair share, heat-1 winner wins under 35%); and the first eleven PRs as interfaces (Modifiers, Season, Ladder, Draft types and the new shape of run.ts). Challenge one thing: whether two cards is enough interaction or just the leader-lays-course snowball wearing a hat, with any counter-proposal (three cards, tail first, every ship below the line lays one) costed in screens and bots.",
+  "gaps": [
+    "The player never lays a card",
+    "The economy has no scarcity, so saving costs nothing",
+    "Bots or players is decided without being asked",
+    "Mirror 3 contradicts the worked run",
+    "Brick's online moment rewards a stat Brick removes",
+    "Hull is not run health at 1 credit per 20",
+    "The tail has no reason to lay a real card",
+    "The cost estimate hides hazards.ts",
+    "The draft's deal is not specified",
+    "Counter-picking mostly means copying the leader",
+    "Several numbers do not hold",
+    "Nobody counted the systems"
+  ]
+}

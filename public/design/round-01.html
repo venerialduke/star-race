@@ -1,0 +1,1309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1730">
+<title>Star Race Framework Round 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+:root {
+  --ground: #f4efe2;
+  --surface: #fbf8f0;
+  --ink: #17203a;
+  --ink-soft: #4d5a7a;
+  --rule: #d6cdb6;
+  --accent: #b46a0c;
+  --accent-ink: #7a4706;
+  --good: #2f7a3e;
+  --bad: #b2372e;
+  --chip: #e9dcc0;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1730;
+    --surface: #152140;
+    --ink: #e9e4d6;
+    --ink-soft: #9aabcb;
+    --rule: #2c3a5e;
+    --accent: #f2a93b;
+    --accent-ink: #f2a93b;
+    --good: #7fd48c;
+    --bad: #e2685f;
+    --chip: #253359;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0d1730;
+  --surface: #152140;
+  --ink: #e9e4d6;
+  --ink-soft: #9aabcb;
+  --rule: #2c3a5e;
+  --accent: #f2a93b;
+  --accent-ink: #f2a93b;
+  --good: #7fd48c;
+  --bad: #e2685f;
+  --chip: #253359;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 17px/1.55 "Source Serif 4", Georgia, "Times New Roman", serif;
+  -webkit-text-size-adjust: 100%;
+}
+.page { max-width: 44rem; margin: 0 auto; padding: 0 20px 96px; }
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.masthead { padding: 40px 0 24px; border-bottom: 2px solid var(--ink); }
+.eyebrow {
+  font: 600 12px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+h1 {
+  font: 700 clamp(30px, 7vw, 44px)/1.05 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.01em; margin: 14px 0 12px; text-wrap: balance;
+}
+.headline { font-size: 20px; line-height: 1.4; margin: 0; color: var(--ink); text-wrap: balance; }
+
+nav.toc {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--ground); border-bottom: 1px solid var(--rule);
+  margin: 0 -20px; padding: 10px 20px;
+  display: flex; gap: 6px 16px; overflow-x: auto; white-space: nowrap;
+  font: 500 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.04em;
+}
+nav.toc a { text-decoration: none; color: var(--ink-soft); padding: 4px 0; }
+nav.toc a:hover { color: var(--accent-ink); }
+
+section { padding-top: 40px; }
+h2 {
+  font: 700 24px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+}
+h3 { font: 700 20px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 32px 0 8px; }
+h4 { font: 600 17px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 24px 0 6px; }
+h5 { font: 600 15px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 18px 0 4px; color: var(--ink-soft); }
+p { margin: 0 0 1em; }
+ul, ol { padding-left: 1.4em; margin: 0 0 1em; }
+li { margin-bottom: 0.35em; }
+blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--accent); color: var(--ink-soft); }
+code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
+pre code { background: none; padding: 0; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+.scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { font: 600 12px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+table.scores td { text-align: right; font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 14px; }
+table.scores td.mean { font-weight: 700; }
+table.scores td.hi { color: var(--good); font-weight: 700; }
+table.scores td.lo { color: var(--bad); font-weight: 700; }
+table.scores th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.caption { font-size: 14px; color: var(--ink-soft); margin: 0 0 20px; }
+.chip {
+  display: inline-block; font: 600 11px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-ink);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 4px 8px; margin-left: 8px; vertical-align: middle;
+}
+
+.questions { counter-reset: q; list-style: none; padding: 0; }
+.questions li { counter-increment: q; display: grid; grid-template-columns: 2.2rem 1fr; gap: 0 8px; padding: 14px 0; border-bottom: 1px solid var(--rule); margin: 0; }
+.questions li::before { content: counter(q, decimal-leading-zero); font: 700 18px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--accent); }
+.questions .q { font-weight: 600; }
+.questions .why { grid-column: 2; color: var(--ink-soft); font-size: 15px; }
+
+details { border-top: 1px solid var(--rule); }
+details:last-of-type { border-bottom: 1px solid var(--rule); }
+summary {
+  cursor: pointer; padding: 16px 0; list-style: none;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline;
+}
+summary::-webkit-details-marker { display: none; }
+summary .t { font: 700 19px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+summary .s { grid-column: 1; color: var(--ink-soft); font-size: 15px; }
+summary .arrow { font: 600 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; color: var(--accent-ink); text-transform: uppercase; }
+details[open] summary .arrow::after { content: "Close"; }
+details:not([open]) summary .arrow::after { content: "Read"; }
+details .body { padding: 0 0 24px; }
+details .body > h2:first-child { margin-top: 0; }
+
+.synthesis { background: var(--surface); border: 1px solid var(--rule); padding: 20px; margin: 0 -20px; }
+@media (min-width: 720px) { .synthesis { margin: 0; padding: 32px; } }
+
+.gaps { padding-left: 1.4em; }
+.gaps li { margin-bottom: 0.6em; }
+.feedback-how { background: var(--surface); border: 1px dashed var(--rule); padding: 16px 20px; }
+.feedback-how code { white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-soft); }
+</style>
+
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <div class="eyebrow"><span>Star Race</span><span>Framework round 1</span><span>2026-09-06</span></div>
+  <h1>The Cut, Two Cards</h1>
+  <p class="headline">Build from The Cut: an eight-ship, seven-heat season on one points ladder with a cut after every heat from the third, plus two named hazard cards per course (leader lays first, tail lays second with the leader's visible), tags with pips and a capped modifier block, tier-gated face-up drafting in reverse ladder order, and hull that carries and costs credits to repair.</p>
+</header>
+<nav class="toc">
+  <a href="#synthesis">Recommendation</a>
+  <a href="#decisions">Your decisions</a>
+  <a href="#scores">Scores</a>
+  <a href="#proposals">Proposals</a>
+  <a href="#reviews">Reviews</a>
+  <a href="#critique">Critique</a>
+  <a href="#feedback">Reply</a>
+  <a href="ledger.html">Ledger</a>
+</nav>
+
+<section id="synthesis">
+  <h2>The recommendation</h2>
+  <div class="synthesis"><h2>The Cut, Two Cards</h2>
+<h3>In one paragraph</h3>
+<p>A run is a season: eight ships, seven heats, one points ladder, about nine minutes on a phone. After every heat from the third the bottom of the ladder is cut, and four ships fly a double-points final. Between heats there are three untimed screens: the ladder, where every build is four colours of pip; the course, where the leader lays one hazard card into the next course and the tail lays a second, seeing the leader&#39;s, every card carrying the name of who laid it; and the draft, where ten parts are dealt face up and ships pick in reverse ladder order. Every part has a tag; two of a tag is a direction and opens the cards you can lay; three changes a rule. Credits come from placing and go on parts, on repairs, or into the bank for the tier-two and tier-three parts that arrive in heats 3 and 5. Points keep you in, hull keeps you alive, and the other seven ships reach you through the deck, the cards and the line.</p>
+<h3>The loop</h3>
+<p>The lobby first: seven rivals, each with a name and two words for what it reaches for, and the season, seven courses drawn end to end with every fixed hazard placed and two dashed boxes per course, the open slots. Thirty seconds of reading, one tap.</p>
+<p>A heat is one course of four or five segments, 700 to 950 ticks at base speed, 12 to 16 seconds of flying after a three-second countdown. The final is six segments, about 1,100 ticks. Eight ships leave the line from a standstill under today&#39;s rules: hazards, heat, shields, hull, two actives, a handful of taps. The renderer fans eight lanes; the sim has one line.</p>
+<p>Between heats, three screens, each one or two taps.</p>
+<p>The ladder: eight rows of points, hull, credits, and each build as coloured pips with the set count lit. From heat 3 the cut line is drawn under the bottom row with the tiebreak rule beside it.</p>
+<p>The course: the leader picks one hazard card from the menu its build allows and drops it into either open slot of the next course. Then the ship at the bottom picks from its own menu and fills the slot left, with the leader&#39;s card on the map.</p>
+<p>The draft: ten parts dealt face up from the season deck, each printed with the copies left. Ships pick one each in reverse ladder order. A part costs credits; you may pass and bank, and repairs are bought here too.</p>
+<p>Heats 1 and 2 are open: nobody is cut, the courses are gentle, and the first course&#39;s slots are dealt by the season because there is no ladder yet. After heats 3, 4, 5 and 6 the last row is cut. Four fly the final at double points, and the ladder after it is the standings. Seven heats of 15 seconds and six garages of three or four taps is eight to nine minutes: one gap on a train.</p>
+<h3>The build</h3>
+<p>The five stats survive. A part is additive deltas resolved once before the race. Two things are new: every part carries one <strong>tag</strong>, and <code>resolveBuild</code> returns a block of <strong>rule modifiers</strong> beside the stats, which the race loop and hazards read instead of <code>tuning.ts</code>.</p>
+<p>Four tags, fourteen parts, three tiers. Tier 1 is the six slice parts at 2 credits. Tier 2 enters the draft from heat 3 at 4. Tier 3 enters from heat 5 at 6.</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Colour</th>
+<th>Tier 1</th>
+<th>Tier 2</th>
+<th>Tier 3</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Burner</td>
+<td>red</td>
+<td>Ion Thruster, Overclocked Reactor</td>
+<td>Afterburner</td>
+<td>Plasma Drive</td>
+</tr>
+<tr>
+<td>Brick</td>
+<td>grey</td>
+<td>Ablative Plating</td>
+<td>Keel Plate</td>
+<td>Ram Prow</td>
+</tr>
+<tr>
+<td>Mirror</td>
+<td>blue</td>
+<td>Mirror Shielding</td>
+<td>Capacitor Bank</td>
+<td>Phase Array</td>
+</tr>
+<tr>
+<td>Sling</td>
+<td>purple</td>
+<td>Inertial Anchor, Radiator Fins</td>
+<td>Grav Keel</td>
+<td>Slingshot Core</td>
+</tr>
+</tbody></table>
+<p>Higher tiers are bigger deltas with bigger costs: Ram Prow is +70 hull for −0.12 speed, Plasma Drive +0.25 speed for −25 hull and −20 heat tolerance. Copies count: three Ion Thrusters is Burner 3, because parts stack today and the balance table says that is fine. Thresholds change rules:</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>2 of a tag (direction)</th>
+<th>3 of a tag (online)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Burner</td>
+<td>Heat sheds twice as fast</td>
+<td>Reroute cooldown 420 ticks to 210</td>
+</tr>
+<tr>
+<td>Brick</td>
+<td>Asteroid damage −30%</td>
+<td>Asteroid damage scales with speed, not speed squared</td>
+</tr>
+<tr>
+<td>Mirror</td>
+<td>Shields hold 150 ticks, not 90</td>
+<td>The pool refills the tick a burst lands</td>
+</tr>
+<tr>
+<td>Sling</td>
+<td>Black hole pull 0.55 to 0.75</td>
+<td>Assist and flare heat halved; black hole pull becomes 1.0</td>
+</tr>
+</tbody></table>
+<p>Each set is punished by one hazard: Burner by asteroid fields and the ringed planet, Brick by clean track because it is slow, Mirror by anything that is not a burst, Sling by bursts.</p>
+<p>The modifier block is eight numbers and no more: asteroid exponent, asteroid damage multiplier, reroute cooldown, shield duration, black hole multiplier, hazard heat multiplier, heat dissipation, and a burst-refill flag. A part that needs a ninth is a stat delta instead.</p>
+<p>Commitment is arithmetic from the pick count, not bought slots. Seven drafts is seven parts at most, and passing costs one. Two sets is six parts, the greedy dream; three sets is impossible. A build has a direction at the second part of a tag, which is also when its card menu opens, and comes online at the third: heat 3 at the earliest, heat 4 or 5 for most.</p>
+<p>A second threshold at 5, the overdrive, is parked: Burner 5 gets a second reroute charge, Brick 5 repairs 20 hull free every heat, Mirror 5 halves the shield cooldown, Sling 5 flies the black hole at 1.3 with no escape threshold. It ships when the harness says sets at 3 are balanced.</p>
+<h3>The economy</h3>
+<p>Credits, whole numbers, never inside the race. Every ship starts with 4.</p>
+<p>The purse: 6 for first, 5 for second, 4 for third, 3 for everyone else who finishes. A lost ship gets 2, salvage. Interest is 1 per 5 banked, capped at 3, paid before the draft. Prices are 2, 4 and 6 by tier. Repairs cost 1 per 20 hull. No rerolls, because the draft is shared; no selling, because a wasted pick is what a pivot costs.</p>
+<p>Why save. Interest is the small reason: 10 banked pays 2 a heat, a tier-1 part for nothing. Tier gating is the big one: the part that makes your set strong arrives at heat 3 or 5 costing 4 or 6, and a ship that spent 2 a heat on tier 1 walks into that draft with 3 credits and watches it go. Repairs are the emergency: hull carries between heats, and a ship that flew heats 1 to 3 fast reaches the heat 4 black hole with 40 hull and can buy plating or the part, not both.</p>
+<p>Why spend. The cut is next heat and the ship one row below you just bought Plating for the rock the leader laid. A ship that banks its way to seventh place is rich and about to be cut.</p>
+<p>Interest is 1 per 5 rather than run-first&#39;s 1 per 4 or the engineering review&#39;s 1 per 10: at 1 per 4 the cap arrives at 12 banked and the bank then pays nothing; at 1 per 10 most ships see no interest before heat 4.</p>
+<h3>Run health and elimination</h3>
+<p>What you protect is your row on the ladder. Points per heat are 9 minus position, 8 for first down to 1 for eighth; a lost ship scores 0 and places behind every finisher. The final pays double. After heats 3 to 6 the bottom row is cut. Ties break on the most recent heat, so the ship falling is the one that goes.</p>
+<p>Hull is heat health, not run health. It carries between heats and costs credits to repair. A ship destroyed in a heat returns at 40 hull with 2 salvage credits, build intact, and a 0 on the ladder. Two crashes in three heats will get you cut, and should.</p>
+<p>Being cut is earned. Nobody goes before heat 3, so the first two garages are for planning. One ship goes per heat, so a bad heat 3 costs a row, not the run.</p>
+<p>Recovery has four levers, none charity. The tail lays the second card with the leader&#39;s visible, so the bottom ship builds the sequence: rock in front of the leader&#39;s black hole. The tail shops first, so seventh takes the tier-2 that completes its set in front of the leader who wanted it. The final is double, so fourth going in is at most 16 points from first. And salvage plus interest is a tier-1 part or two repairs.</p>
+<p>Standing as a drain, which two proposals used, loses to the ladder. A leak has no line under it; a player at 27 standing is dying, not fighting. The ladder is relative, so it can be climbed.</p>
+<h3>Other players</h3>
+<p>Every interaction goes through the course, the deck and the line. Ships never touch.</p>
+<p><strong>Two cards on every course.</strong> The leader lays first and chooses the slot; the tail lays second into the slot left, seeing the leader&#39;s card. The menu is the build: any ship can lay Open Run, a clean stretch that rewards pace; two of a tag opens that tag&#39;s hazards. Burner lays the Solar Flare, Brick the Asteroid Field, Mirror the Gamma Burst, Sling the Ringed Planet or the Black Hole. A Brick leader drops rock and spares itself. The tail answers with sequence: a hole behind rock, a burst inside a shield cooldown, a flare after an assist.</p>
+<p>The Solar Flare is the one new hazard: a single tick, no dice, a lump of heat shields do not stop. The burst says tap shields now; the flare says do not tap Reroute now. Burner 2 sheds heat twice as fast, so a Burner can afford its own card.</p>
+<p>The cards land before the draft, so the field sees the course and shops for it, tail first. A leader who drops a burst has told six ships to want shields, and those six pick before it does.</p>
+<p><strong>Every card has a name on it.</strong> A placement carries the id of the ship that laid it, and the race log charges hull and heat to each placement. Results read hazard by hazard: &quot;lost 30 hull to Redline&#39;s rock, shielded Halo&#39;s burst&quot;. A rival is a character after one heat, and the next draft is a response rather than a guess.</p>
+<p><strong>The draft is shared and visible.</strong> Ten parts for eight ships, from a deck of 4 copies per tier-1 part, 3 per tier-2, 2 per tier-3: 44 copies for about 40 purchases. Each card shows its copies left; a part bought is gone for the season. Two Burners want the same Afterburner and the one lower on the ladder gets it. Denial is legal and legible: taking the part that completes a rival&#39;s set, when you pick before it and it is one heat from cutting you, is a move the ladder shows everyone.</p>
+<p><strong>Rivals are bots the harness can replay.</strong> They draft by wish list in tags, as today. They lay cards by one rule: the hazard your set answers; with nothing at 2, Open Run; as the tail, a hole behind the leader&#39;s rock or a burst 200 ticks after the leader&#39;s burst, otherwise the hazard the ladder is worst equipped for by resolved stats. Two rivals read the ladder instead of a list: Ledger banks until it can afford the priciest card on the table, and Tinker buys whatever its ship is worst at for the course just laid. A rival is a build, a card rule and a pilot, all inputs, so one could later be a ghost of another player&#39;s run.</p>
+<p>Everything is visible to everyone, always. Only tap timing is hidden; whether wish lists are printed is the owner&#39;s call.</p>
+<h3>A worked run</h3>
+<p>Eight ships: You, Redline (Burner), Bulwark (Brick), Halo (Mirror), Keel (Sling), Ledger (banks for the priciest card), Tinker (buys what the laid course punishes), Scrap (cheapest card, never repairs).</p>
+<p><strong>Lobby.</strong> The map shows a black hole fixed in heat 4, a burst in heat 5, a ringed planet and a burst in heat 6, the full system in the final. You decide on Sling: two tier-1 parts, then Grav Keel before the black hole.</p>
+<p><strong>Heat 1.</strong> Seeded order. You take Inertial Anchor for 2; Ledger passes; everyone else takes its tag&#39;s tier-1 part. A gentle belt: Redline wins, you are fifth. Ladder: Redline 8, Halo 7, Tinker 6, Keel 5, You 4, Ledger 3, Bulwark 2, Scrap 1. You bank 3 and 1 interest: 6.</p>
+<p><strong>Heat 2.</strong> Redline leads with one red pip, so its menu is Open Run; it lays one before the fixed asteroid field. Scrap, the tail, lays Open Run too. Draft, tail first: you take Fins (Sling 2, 4 left); Bulwark, Halo and Redline each reach 2 of their tag. Redline wins, you are third; Scrap crosses the field flat out on no plating and is lost. Ladder: Redline 16, Halo 14, You 10, Keel 10, Tinker 10, Bulwark 5, Ledger 5, Scrap 1; the tie breaks on this heat, so you sit third. The line appears under Scrap. You bank 4 and 1: 9.</p>
+<p><strong>Heat 3.</strong> Tier 2 enters. Redline lays a Solar Flare after the fixed ringed planet; Scrap lays Open Run. Draft: Ledger, on 12, takes Grav Keel because it is the most expensive card on the table. Bulwark, Keel, Halo and Redline each reach 3 and come online. You pick fifth, Grav Keel is gone, and the planet and the flare are coming; you take the Reactor for 2 and hold 7. You overcook the planet and the flare, drop 25 hull, and finish fourth. Scrap is cut. Ladder: Redline 24, Halo 21, You 15, Keel 14, Tinker 13, Bulwark 11, Ledger 7. You bank 3 and 2: 12. First moment: Ledger took your part because it was expensive, and tail-shops-first is why you will get it back.</p>
+<p><strong>Heat 4.</strong> The black hole. Redline lays Open Run before it; Ledger, the tail with one purple pip, can only lay Open Run too. Draft: Ledger passes, nothing costs 6 yet. You pick fifth and Grav Keel is dealt again, one copy left. You have 12: Grav Keel for 4, 20 hull for 1, Sling 3 online. The pull is a slingshot; you win, Keel second, Bulwark third, Halo fourth. Redline, on 22 hull after three fast heats and no repairs, reroutes into the hole, cooks 8 hull, and is under the escape line. Lost. Ladder: Halo 26, Redline 24, You 23, Keel 21, Bulwark 17, Tinker 17, Ledger 10. Ledger is cut with 12 banked: rich in seventh and cut. You bank 6 and 2: 14.</p>
+<p><strong>Heat 5.</strong> Tier 3 enters. Halo leads with Mirror 3 and lays a Gamma Burst 200 ticks after the fixed one, inside the shield cooldown. Tinker, the tail with Brick 2, lays an Asteroid Field. Draft: Bulwark takes Ram Prow, Halo Phase Array, you the last Mirror Shielding for 2 (12 left). Halo&#39;s pool refills as each burst lands and it wins; you shield the first, eat the second, and finish second on 50 hull. Keel, on cooldown for the second burst with 30 hull, is lost. Ladder: Halo 34, You 30, Redline 30, Bulwark 22, Tinker 21, Keel 21. Tinker stays on the tiebreak; Keel is cut. You bank 5 and 3: 20.</p>
+<p><strong>Heat 6.</strong> Halo lays a Gamma Burst before the fixed ringed planet; Tinker lays an Asteroid Field after it. You take Capacitor Bank for 4 and repair 40 hull for 2: Mirror 2, 14 left. Redline wins, you are second, Bulwark third, Halo fourth after Tinker&#39;s rock. Tinker, on cooldown for Halo&#39;s burst, is lost and cut. Ladder: Halo 39, Redline 38, You 37, Bulwark 28. You bank 5 and 3: 22.</p>
+<p><strong>The final.</strong> Six segments, double points: ringed planet, burst, black hole. Halo lays a Gamma Burst in the first open slot. Bulwark, the tail with Brick 3, lays an Asteroid Field in the second, directly in front of the fixed black hole. You take Phase Array for 6: Mirror 3 online beside Sling 3, seven parts, two sets. Your pool refills through both bursts and the pull is a slingshot. Halo, on 55 hull with four blue pips and no plating, crosses Bulwark&#39;s rock at speed and reaches the hole at 11 hull. Lost. You win, Bulwark second on hull, Redline third. Final ladder: You 53, Redline 50, Bulwark 42, Halo 39, then Tinker, Keel, Ledger, Scrap.</p>
+<p>Halo&#39;s results screen reads &quot;lost at the black hole: 44 hull to Bulwark&#39;s rock&quot;. Second moment: the tail laid it with the leader&#39;s card on the map, and the leader&#39;s run ended on a hazard with a rival&#39;s name on it.</p>
+<h3>What it costs to build</h3>
+<p>Survives unchanged: <code>hazards.ts</code> apart from one new function, <code>actives.ts</code>, <code>pilot.ts</code>, <code>rng.ts</code>, <code>spline.ts</code>, and the loop shape of <code>race.ts</code>.</p>
+<p>Changes. <code>ship.ts</code> gets a tag and tier per part, eight new parts, and <code>resolveBuild</code> returns a <code>Modifiers</code> record of eight numbers. <code>race.ts</code> reads those eight from the build instead of <code>tuning.ts</code>; the burst refill is a new branch in the one-shot path. <code>HazardPlacement</code> gains an optional <code>laidBy</code> ship id and a course gains two open slots. <code>RaceState</code> gains a damage-per-placement map so attribution is data. <code>field.ts</code> widens <code>ShipId</code> to a string. <code>rivals.ts</code> grows to seven with wish lists in tags and a card rule. <code>tuning.ts</code> gains sets, prices, purses, points, interest and the flare&#39;s heat.</p>
+<p>New: <code>season.ts</code>, <code>cards.ts</code>, <code>ladder.ts</code>, <code>draft.ts</code>, <code>economy.ts</code>. <code>run.ts</code> is rewritten around the ladder, the biggest single change. In the UI, a lobby, a ladder with pips, a course screen and a draft replace the garage; results gains attribution.</p>
+<p>The harness gains bots for save, spend, set-chase, counter-pick, deny and card-reader. One run is about 48,000 ship-ticks, the cheapest of the four; a 500-run batch is 24 million, so the vitest bound drops to 50 runs and the batch lives in <code>npm run balance</code>.</p>
+<p>Sixteen one-session PRs, in the order they unblock: (1) modifier block and <code>race.ts</code> reading it. (2, 3) eight new parts with tests. (4) <code>laidBy</code> and per-placement damage. (5) season courses with two slots. (6) ladder, cut, tiebreak. (7) purse, interest, repairs. (8) draft with copies left. (9) seven rivals with card rules. (10, 11) <code>run.ts</code> rewrite. (12) Solar Flare. (13) harness bots. (14) lobby and ladder UI with pips. (15) course and draft UI. (16) results with attribution and the eight-lane render. The first playable is the first eleven.</p>
+<h3>Where it came from</h3>
+<p>From <strong>run-first</strong>, the spine: seven heats, the ladder with the cut line, one ship cut per heat from the third, the tiebreak on the most recent heat, tail shops first, the face-up draft in reverse order, tags with a direction at 2 and a rule at 3, tier gating, purse and repairs on one coin, a lost ship back at 40 hull with salvage, three untimed screens, the season map in the lobby.</p>
+<p>From <strong>build-first</strong>: the modifier block with a hard cap, coloured pips with a count, copies counting toward a set, the family deciding what you can lay, the overdrive at 5 as the parked late game, commitment as arithmetic (from seven picks rather than six hardpoints), rivals as future ghosts.</p>
+<p>From <strong>interaction-first</strong>: attribution, a placement carrying the id of who laid it and results reading hazard by hazard; sequence, the tail placing second with the leader&#39;s card visible; the Solar Flare; the bot card rule beside the tap rules.</p>
+<p>From <strong>economy-first</strong>: copies remaining printed on every card, one coin for parts and repairs, and the names Plasma Drive and Slingshot Core.</p>
+<h3>What was rejected, and why</h3>
+<p>Hardpoints as the base, which the fun review recommended. Its best ideas graft cleanly, and the two reviews that weighed cost and legibility chose The Cut. What the fun review valued most, a family total you count toward and a hull that forces commitment, is here as pips and seven picks. What is not here is the standing drain, the eight-beacon course and bought slots, its three weakest parts.</p>
+<p>Everyone drops a beacon every round. Eight labelled boxes on three segments is a course a phone cannot read, and three cored beacons do not fit in any current segment.</p>
+<p>Flags as a vote. One flag in a tally of nine rarely decides anything, and the proposal&#39;s own equilibrium is everyone flagging the burst.</p>
+<p>Mk II merges and part levels. Stacking already does the job, and a merge needs a part&#39;s upside split from its cost.</p>
+<p>Buyable slots. Tier gating and repairs already give the bank two reasons to exist.</p>
+<p>Free hull repair between heats. It removes the F-Zero trade the brief asked for.</p>
+<p>Standing as a decreasing drain. No line under it, and a bad sector is permanent.</p>
+<p>The star&#39;s dissipation curve. One invisible number per heat that changes what every part is worth. Escalation here is the season map.</p>
+<p>Hot laps, appearance money, streaks and secret flags. Five income sources is a purse you cannot explain after a heat.</p>
+<p>Timers between heats. Every rival is a bot, so a timer is against nobody, and a tunnel should not cost a draft.</p>
+<p>Burn overdrive as &quot;never cooks, runs faster hot&quot;. A balance grenade by its own author&#39;s account.</p>
+<p>Twelve heats and twenty minutes. Four gaps on a train.</p>
+<p>Selling, rerolls and the Special Order. Each is a decision kind the harness would have to bot.</p>
+<p>Bridges that count for two tags: parked, to enter as tier-2 parts once the four pure builds are balanced.</p>
+<h3>Decisions for the owner</h3>
+<ol>
+<li>Seven heats, or five with a cut after every heat from the second? Seven gives a set three heats of payoff; five is six minutes and a set comes online with one heat left.</li>
+<li>Two cards per course, leader then tail, or one? Two is the answer to the fourth gap; one is cheaper by a PR and leaves seven ships nothing to do on the track.</li>
+<li>Does the leader choose its slot, or is slot order fixed? Choice gives a positional read; fixed keeps the screen to one tap.</li>
+<li>Copies count toward a set, or three distinct parts? Copies let a set come online at heat 3; distinct parts push every set to heat 5.</li>
+<li>A lost ship returns at 40 hull with its build intact, or loses its last part? Intact is legible; losing a part is the stronger reason to repair.</li>
+<li>Are rival wish lists printed on the ladder, or only pips? Printed is more legible; hidden gives a rival a character to discover.</li>
+<li>Is denial a move this game wants? It is the auto-battler feeling and the pick a phone player may not read.</li>
+<li>Eight ships or six? Eight is the field four cuts need; six is easier to draw.</li>
+<li>Solar Flare in the first playable, or four hazards until sets are balanced? One function and one test, and a fifth thing to learn.</li>
+<li>Does the final pay double, or flat? Double is the comeback lever; flat is the easier sum.</li>
+<li>Names. Tags are Burner, Brick, Mirror, Sling; the Sling rival becomes Keel so a tag and a ship never share a name.</li>
+</ol>
+<h3>Next round</h3>
+<p>Take this framework as fixed. Develop three things and challenge one.</p>
+<p>Develop the course phase in full: the card menu per tag and count, where the two slots sit on each course, the bot card rule as pseudocode, and the degenerate-course test, a bot that always lays the same card against one that reads the ladder, with the claim that the reader must win more.</p>
+<p>Develop the harness: bots by name, run count, targets as assertions. A runaway leader after heat 3 is caught a third of the time; no tag wins more than 35% of runs; saver, spender and switcher each reach the final a fair share; a heat-1 winner wins the run under 35% of the time.</p>
+<p>Develop the first eleven PRs as interfaces: what <code>Modifiers</code> holds, what <code>Season</code>, <code>Ladder</code> and <code>Draft</code> are as types, and what <code>run.ts</code> becomes, so the first sim-engineer session starts from a signature.</p>
+<p>Challenge whether two cards is enough interaction, or the leader-lays-course snowball wearing a hat. A proposal for three cards, for the tail laying first, or for every ship below the line laying one, should say what it costs in screens and bots.</p>
+</div>
+</section>
+
+<section id="decisions">
+  <h2>Decisions only you can make</h2>
+  <ol class="questions"><li><span class="q">Seven heats, or five with a cut after every heat from the second?</span><span class="why">Seven is nine minutes and gives a set three heats of payoff; five is six minutes and a set comes online with one heat left.</span></li>
+<li><span class="q">Two cards per course (leader then tail), or one?</span><span class="why">Two is the whole answer to the fourth gap; one is cheaper by a PR and leaves seven ships with nothing to do on the track.</span></li>
+<li><span class="q">Does the leader choose which of the two slots it fills, or is slot order fixed?</span><span class="why">Choice gives the leader a positional read; fixed keeps the course screen to one tap.</span></li>
+<li><span class="q">Do copies of a part count toward a set, or does a set need three distinct parts?</span><span class="why">Copies keep stacking a feature and let a set come online at heat 3; distinct parts push every set to heat 5 and make tier gating bite harder.</span></li>
+<li><span class="q">Does a lost ship return at 40 hull with its build intact, or lose its last part?</span><span class="why">Intact is soft and legible; losing a part is the nastier feeling and the stronger reason to repair.</span></li>
+<li><span class="q">Are rival wish lists printed on the ladder, or only their pips?</span><span class="why">Printed is more legible; hidden gives a rival a character to discover over several runs.</span></li>
+<li><span class="q">Is denial (taking the part that completes a rival's set) a move this game wants?</span><span class="why">It is the auto-battler feeling and also the pick a phone player may not read.</span></li>
+<li><span class="q">Eight ships or six?</span><span class="why">Eight is the field that four cuts need; six changes nothing in the sim and is easier to draw.</span></li>
+<li><span class="q">Solar Flare in the first playable, or stay at four hazards until sets are balanced?</span><span class="why">It is one function and one test, and also a fifth thing a player has to learn.</span></li>
+<li><span class="q">Does the final pay double points, or is a flat scale cleaner?</span><span class="why">Double is the comeback lever for a ship that scrapes into fourth; flat is the easier sum to hold.</span></li>
+<li><span class="q">Names: tags Burner/Brick/Mirror/Sling, the Sling rival renamed Keel, parts and rivals as placeholders?</span><span class="why">A tag and a ship must not share a name; everything else is taste.</span></li></ol>
+  <h4>What the next round should work on</h4>
+  <p>Take the framework as fixed and develop three things: the course phase in full (card menu per tag and count, slot positions on each of the seven courses, the bot card rule as pseudocode, and a degenerate-course test where a bot that reads the ladder must beat one that always lays the same card); the harness (bots by name, run count, targets as assertions: runaway leader after heat 3 caught a third of the time, no tag above 35% of wins, saver/spender/switcher each reaching the final a fair share, heat-1 winner wins under 35%); and the first eleven PRs as interfaces (Modifiers, Season, Ladder, Draft types and the new shape of run.ts). Challenge one thing: whether two cards is enough interaction or just the leader-lays-course snowball wearing a hat, with any counter-proposal (three cards, tail first, every ship below the line lays one) costed in screens and bots.</p>
+</section>
+
+<section id="scores">
+  <h2>How the proposals scored</h2>
+  
+<div class="scroll"><table class="scores">
+<thead><tr><th>Proposal</th><th>Fun</th><th>Engineering</th><th>Phone</th><th>Mean</th><th>Backed by</th></tr></thead>
+<tbody><tr><th scope="row"><a href="#proposal-run-first">The Cut</a> <span class="chip">base</span></th><td>32</td><td>33</td><td>34</td><td class="mean">33.0</td><td>●●</td></tr>
+<tr><th scope="row"><a href="#proposal-build-first">Hardpoints</a></th><td>31</td><td>30</td><td>30</td><td class="mean">30.3</td><td>●</td></tr>
+<tr><th scope="row"><a href="#proposal-interaction-first">The Course Is the Other Players</a></th><td>27</td><td>31</td><td>28</td><td class="mean">28.7</td><td></td></tr>
+<tr><th scope="row"><a href="#proposal-economy-first">The Purse</a></th><td>24</td><td>28</td><td>27</td><td class="mean">26.3</td><td></td></tr></tbody>
+</table></div>
+<p class="caption">Totals out of 40. A dot is a reviewer who would build from that proposal.</p>
+<div class="scroll"><table class="scores criteria">
+<thead><tr><th>Per criterion, mean of 3</th><th>Build</th><th>Tradeoffs</th><th>Interaction</th><th>Stakes</th><th>Legibility</th><th>Fit</th><th>Buildable</th><th>Measurable</th></tr></thead>
+<tbody><tr><th scope="row">The Cut</th><td class="hi">4.0</td><td>3.7</td><td>3.3</td><td class="hi">4.3</td><td class="hi">4.3</td><td class="hi">5.0</td><td class="hi">4.0</td><td class="hi">4.3</td></tr>
+<tr><th scope="row">Hardpoints</th><td class="hi">5.0</td><td class="hi">4.0</td><td class="hi">4.0</td><td>3.3</td><td>3.0</td><td class="hi">4.0</td><td>3.0</td><td class="hi">4.0</td></tr>
+<tr><th scope="row">The Course Is the Other Players</th><td>3.7</td><td>2.7</td><td class="hi">5.0</td><td class="hi">4.0</td><td>2.7</td><td class="hi">4.3</td><td>2.3</td><td class="hi">4.0</td></tr>
+<tr><th scope="row">The Purse</th><td>3.7</td><td class="hi">4.3</td><td>3.0</td><td>3.7</td><td class="lo">2.0</td><td class="hi">4.0</td><td class="lo">2.0</td><td>3.7</td></tr></tbody>
+</table></div>
+</section>
+
+<section id="proposals">
+  <h2>The 4 proposals</h2>
+  <details id="proposal-economy-first">
+<summary><span class="t">The Purse</span><span class="arrow"></span><span class="s">A twelve-heat, eight-ship championship where one currency, credits, is earned by placing and by saving, and spent on parts, slots, hull repairs and flags that put hazards onto the next course, so the build, run health and the other players all hang off the same coin.</span></summary>
+<div class="body">
+<h2>The Purse</h2>
+<h3>Premise</h3>
+<p>Star Race becomes a twelve-heat championship for eight ships, and every decision between heats is a decision about credits. Credits are earned by placing, by driving the fastest segment, and by having credits already. They are spent on parts, slots, hull repairs, and flags that put hazards onto the next course. The three gaps close from the same coin: the build is what credits buy, run health is what credits repair, and the other players are the people bidding for the same parts and the same track. The line to say back after one run: points keep you in, hull keeps you alive, credits buy both.</p>
+<h3>The loop</h3>
+<p>A run is twelve heats in three sectors of four: the Outer Belt, the Inner System, the Core. A heat is one course of three segments, about 1,200 ticks at base speed, twenty seconds of racing after a three-second countdown. Eight ships fly it and never touch.</p>
+<p>Between heats is the garage, and the garage is the game: the shop, the frame, the repair bay and the flag. The player sees the next course before buying anything. Two of its three segments are drawn from the sector&#39;s table by the run seed; the third is empty, and the field fills it by flagging. The garage is untimed but should take about forty-five seconds.</p>
+<p>After heats four and eight the bottom two ships by championship points leave. Eight become six, six become four, and the four race a five-segment final at heat twelve worth double points. Most points after the final wins. Twelve heats at about seventy-five seconds each is fifteen minutes; with the lobby, the cuts and the long final, a little under twenty.</p>
+<p>Sectors escalate. The Outer Belt has asteroid fields and one gamma burst. The Inner System adds ringed planets and lets players flag a black hole. The Core seeds black holes into its own segments and has two flagged segments per course. The late game needs real hull, real shields or a build that turns gravity into speed.</p>
+<h3>The build</h3>
+<p>A ship has slots and a part fills a slot. Every ship starts with four and can buy up to seven. Parts stay what they are today, additive deltas on the five stats, with a price that is also their tier, and one new thing: a maker. Four makers, fourteen parts.</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Price</th>
+<th>Maker</th>
+<th>Gives</th>
+<th>Costs</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ion Thruster</td>
+<td>1</td>
+<td>Vulcan</td>
+<td>+0.15 speed</td>
+<td>−10 hull</td>
+</tr>
+<tr>
+<td>Radiator Fins</td>
+<td>1</td>
+<td>Vulcan</td>
+<td>+45 heat tolerance</td>
+<td>−15 hull</td>
+</tr>
+<tr>
+<td>Ablative Plating</td>
+<td>1</td>
+<td>Bastion</td>
+<td>+40 hull</td>
+<td>−0.08 speed</td>
+</tr>
+<tr>
+<td>Mirror Shielding</td>
+<td>1</td>
+<td>Prism</td>
+<td>+35 shields, +12 hull</td>
+<td>−0.05 speed</td>
+</tr>
+<tr>
+<td>Inertial Anchor</td>
+<td>1</td>
+<td>Slingshot</td>
+<td>+0.03 acceleration</td>
+<td>−0.02 speed</td>
+</tr>
+<tr>
+<td>Overclocked Reactor</td>
+<td>2</td>
+<td>Vulcan</td>
+<td>+0.10 speed, +0.015 accel</td>
+<td>−30 heat tolerance</td>
+</tr>
+<tr>
+<td>Afterburner</td>
+<td>2</td>
+<td>Vulcan</td>
+<td>+0.12 speed</td>
+<td>−20 hull, −10 heat tolerance</td>
+</tr>
+<tr>
+<td>Reinforced Ribs</td>
+<td>2</td>
+<td>Bastion</td>
+<td>+30 hull, +15 heat tolerance</td>
+<td>−0.06 speed</td>
+</tr>
+<tr>
+<td>Deflector Array</td>
+<td>2</td>
+<td>Prism</td>
+<td>+25 shields, shields hold +30 ticks</td>
+<td>−0.04 speed</td>
+</tr>
+<tr>
+<td>Gravity Keel</td>
+<td>2</td>
+<td>Slingshot</td>
+<td>+0.025 accel, +10 hull</td>
+<td>−0.03 speed</td>
+</tr>
+<tr>
+<td>Plasma Drive</td>
+<td>3</td>
+<td>Vulcan</td>
+<td>+0.25 speed</td>
+<td>−25 hull, −20 heat tolerance</td>
+</tr>
+<tr>
+<td>Fortress Plating</td>
+<td>3</td>
+<td>Bastion</td>
+<td>+70 hull</td>
+<td>−0.12 speed</td>
+</tr>
+<tr>
+<td>Phase Shield</td>
+<td>3</td>
+<td>Prism</td>
+<td>+60 shields, +0.02 accel</td>
+<td>−0.06 speed</td>
+</tr>
+<tr>
+<td>Slingshot Core</td>
+<td>3</td>
+<td>Slingshot</td>
+<td>+0.05 accel, +0.08 speed</td>
+<td>−20 hull</td>
+</tr>
+</tbody></table>
+<p>Two things make parts combine. The first is the maker bonus: two parts from one maker give a stat, four give a rule. Vulcan at two is +25 heat tolerance; at four, Reroute Power&#39;s cooldown drops from 420 ticks to 240 and its heat halves, so a Vulcan ship boosts twice a heat and through the ringed planet without cooking. Bastion at two is +25 hull; at four, asteroid damage and the black hole&#39;s escape threshold both halve. Prism at two makes shields hold 150 ticks instead of 90; at four, Raise Shields fills to double capacity and holds 300 ticks. Slingshot at two is +0.02 acceleration; at four, the black hole&#39;s 0.55 speed multiplier becomes 1.15. The Core&#39;s worst hazard becomes that ship&#39;s best assist.</p>
+<p>The second is the Mk II. Three copies of one part merge into a Mk II that takes one slot, gives three times the upside and pays the single cost. Three Ion Thrusters are +0.45 speed for −30 hull; a Mk II is +0.45 for −10 and two free slots. There is no bench: copies race until the third arrives.</p>
+<p>A build has a direction from the second purchase, because two of a maker is already a plan. It comes online at the four-count, around heat six or seven, or at the first Mk II, around heat five. Selling a part back pays its price minus one, so a pivot costs a credit per part and the heats spent.</p>
+<h3>The economy</h3>
+<p>One currency, credits, in whole numbers, never inside the race.</p>
+<p>Income arrives after every heat from five sources. Appearance money is 3 for every ship that started, lost or not. The purse is 4 for first, 3 for second, 2 for third, 1 for fourth, nothing below and nothing for a lost ship. Hot laps pay 1 to the fastest ship through each segment, so a speed build that crashes in segment three is still paid for the first two. Interest is 1 per 10 banked when income is paid, capped at 5. Streaks are the recovery valve: three heats in a row outside the top four pays +2 a heat until the streak breaks; three in a row inside it pays +1, five in a row +2. A mid-field ship makes about 6 a heat, a leader 9 or 10, a saver on 50 makes 8 without placing. Over twelve heats a ship sees roughly 80 credits, and what it could buy adds up to more, which is the point.</p>
+<p>Four sinks, three of them new. The shop shows five parts each garage from a shared, finite pool: twelve copies of each 1-credit part, eight of each 2, five of each 3. What a rival buys is gone until they sell it. Odds shift by sector: 70/25/5 across tiers in the Outer Belt, 40/40/20 in the Inner System, 20/40/40 in the Core. A reroll is 2. Slots: the fifth costs 4, the sixth 6, the seventh 8. Repairs are 1 per 10 hull. Flags: the first is free, the second and third cost 2 each.</p>
+<p>Saving is right because interest is the only income that does not depend on the field. A ship at 50 by heat six has been paid 3 to 5 a heat for nothing, which over a run is a tier-three part and two slots. Saving is wrong when the pool is emptying: if three ships are Vulcan the Ion Thrusters are gone by heat five. Greed is right when the course ahead is kind: skip the repair, buy the Afterburner, take the hot laps. Greed is wrong the heat before a burst you cannot shield or a black hole you cannot escape, and both are drawn on the course before you decide. Neither is obviously right because the shop, the course and seven other banks are on the screen at once.</p>
+<h3>Run health and elimination</h3>
+<p>Hull carries between heats and is not repaired for free: the slice&#39;s rule, now a credit sink. A ship that flies the Outer Belt fast arrives at heat five with 40 hull and a choice: 6 credits to repair, or a Reinforced Ribs and hope. A ship lost in a heat scores no points and no purse and starts the next heat at 25 hull whatever its maximum. It is not out, only poor and fragile, and a full repair is 5 to 10 credits it does not have.</p>
+<p>Elimination is by standing. Every heat pays championship points: 8, 6, 5, 4, 3, 2, 1, 0 by position, lost ships last. After heat four the bottom two leave; after heat eight, two more. The final pays double. A tie at a cut is broken by fewer lost heats, then by bank. Nobody leaves before heat four, and a ship that finishes fifth every heat is safe at the first cut because two ships have crashed by then.</p>
+<p>Recovery is a ladder. A bad heat one costs 5 or 6 points, which is one good heat later. A crash costs a heat&#39;s income and a repair, and the loss streak pays from the third bad heat, so a ship that bottoms out for three heats has 6 extra credits and usually a shop nobody else is buying from. The last rung is the sector shift at heats five and nine: a ship that saved through a bad sector arrives with the bank to buy what the new odds offer.</p>
+<h3>Other players</h3>
+<p>Nothing touches, so the field interacts through the pool, the flag and the table.</p>
+<p>The pool is contested. Fourteen parts with finite copies and eight buyers means a maker can be sold out. The shop shows how many copies of each offered part remain, so &quot;Ion Thruster, 2 left&quot; says that Vulcan is crowded and rerolling for a third copy is a bad bet.</p>
+<p>The flag is the pacing lap, priced. Each garage the player flags one hazard for the empty segment of the next course, free, and may add two more at 2 each. The tally is secret until the countdown, when the grid shows it and the winner, ties broken by the run seed. Three flags decide the segment most heats in a field that averages nine or ten flags across four hazards. A Vulcan ship with Radiator Fins flags the ringed planet: free speed for it, a heat problem for everyone else. A Slingshot ship at four flags black holes. Anyone else flags the burst because everyone spends a tap on it.</p>
+<p>The table is the information. Between heats the standings screen shows every ship&#39;s points, bank, hull, parts, maker counts and last purchase. Banks are public on purpose. The read is one glance: &quot;Kite is Prism three with 22 banked, one part from four, and she will flag bursts until she gets there.&quot; Counter-play is the flag against the build: a lone Vulcan in a Bastion field flags the burst three times and watches four slow ships spend their one shield on it. Flags alone are secret, until the grid.</p>
+<h3>A worked run</h3>
+<p>Eight ships: the player, Redline, Bulwark, Kite, Miser, Ember, Anchor and Sable. Redline is Vulcan speed and repairs only below 40 hull. Bulwark is Bastion and repairs to full every heat. Kite is Prism and flags bursts. Miser saves to 50 before buying anything but plating. Ember is Vulcan and never repairs. Anchor is Slingshot and saves for the Core. Sable buys whatever counters the field&#39;s flags.</p>
+<p>Heat one. Everyone starts with 5 credits and four empty slots. The course shows an asteroid field in segment two and an empty segment three. The player buys an Ion Thruster and a Mirror Shielding and flags the burst, free. Miser buys one Ablative Plating and banks 4. Kite flags the burst twice. The tally is burst 5, asteroids 3. Ember, who spent his tap on Reroute Power in segment one, takes 45 of his 90 hull. Redline wins, the player is third, Ember sixth.</p>
+<p>Heats two to four. The player takes a second Ion Thruster, a fifth slot for 4, and repairs 20 hull before the cut. Miser reaches 31 banked and earns 3 in interest. At the cut Ember, who crashed twice and never repaired, and Sable, who never found a build, go out.</p>
+<p>Heat five, the Inner System. The odds shift and the player sees a Plasma Drive for 3 against 11 banked: the drive now, or wait for a third Ion Thruster and a Mk II, or bank to 20 for the next interest step. She takes the drive and is Vulcan three. Kite, Prism three at 24 banked, flags the burst three times for 4 credits. Redline, at 35 hull after four fast heats, flags the ringed planet twice.</p>
+<p>The moment. The tally is burst 6, ringed planet 4. Redline misreads it, raises shields in segment two against a burst that is not there, and reaches the real one on cooldown with 35 hull. Redline is lost, and starts heat six at 25 hull with 4 credits and a Plasma Drive he cannot protect. Kite&#39;s 4 credits did that. The player, shields up because she had read Kite&#39;s bank and maker count, takes second and a hot lap. In the next garage she buys Radiator Fins instead of a third Ion Thruster, because Redline needs the assist to catch up and will keep flagging it, and fins make that segment a gift.</p>
+<p>Heats six to eight. The player hits Vulcan four at heat seven with fins and an Afterburner, and Reroute Power comes back every four seconds. Miser reaches 50 at heat six and starts spending: Fortress Plating, a sixth slot, Reinforced Ribs, finishing fifth, fourth, third. At the second cut Redline, never recovered, and Bulwark, on 19 points to Miser&#39;s 21, go out.</p>
+<p>Heats nine to twelve, the Core. Anchor buys the Slingshot Core in heat nine and goes to four: the black hole is now a 1.15 assist. Anchor flags black holes three times every garage and wins heats nine and ten. The player, at 55 hull, spends 5 on repairs in heat ten instead of a seventh slot, because the escape threshold does not care how fast she is. Miser, on 240 hull, cannot be killed and cannot win. Into the final: Anchor 61, the player 58, Kite 54, Miser 47.</p>
+<p>The final, five segments, double points. Anchor flags black holes; the player, Kite and Miser all flag the ringed planet, and it wins 6 to 3. The player&#39;s Vulcan four boosts through the assist with 70 heat headroom, takes two hot laps and wins by 40 ticks over Anchor. Final standings: the player 74, Anchor 73, Kite 64, Miser 55. She wins because three ships agreed on one flag in one garage.</p>
+<h3>What it costs to build</h3>
+<p>Survives unchanged: the race loop, hazards.ts, actives.ts, pilot.ts, rng.ts, spline.ts and the stat resolution in ship.ts.</p>
+<p>Changes: field.ts drops the three-ship ShipId union and steps N racers. track.ts gains a course builder that assembles three segments from a sector table plus the flag result. ship.ts gains price and maker on Part, the Mk II merge, and maker counts. race.ts gains a per-ship block in RaceOptions of six rule modifiers: shield duration, reroute cooldown, reroute heat, asteroid damage multiplier, black hole multiplier, escape threshold. That is the honest bend: maker bonuses touch rules, and options read at race start are cleaner than logic inside hazards. run.ts is rewritten around twelve heats, credits, points and cuts. garage.ts becomes the shop: pool with counts, odds per sector, reroll. rivals.ts grows to seven personalities, each with a repair threshold, a save target and a flag habit. tuning.ts gains about forty constants.</p>
+<p>New: economy.ts, pure functions from standings to income. flags.ts, tally and tiebreak. makers.ts, bonus tables and what they write into RaceOptions. sectors.ts, three hazard tables and the odds. A strategy harness that plays saver, spender, never-repair, always-repair, one-maker and flag-counter over 500 runs and prints win rate, mean elimination heat and bank per heat.</p>
+<p>UI: the garage is a rework, the standings table and the grid screen are new, results is a small change.</p>
+<p>Sixteen to twenty one-session PRs: field to N ships, makers, the pool shop, economy.ts, flags and the course builder, sectors, the run.ts rewrite, rule modifiers in race, Mk II, seven rivals, cuts and the final, the harness, then five or six UI PRs. The first playable version, with credits, shop, pool and cuts but no flags or makers, is about eight PRs, and already a game with an economy.</p>
+<h3>What it needs from the owner</h3>
+<p>Should banks be public? Public banks make interest legible and the field readable, and let a leader see who cannot afford to counter them.</p>
+<p>Is twelve heats right, or is ten with cuts at four and seven closer to twenty minutes on a real phone?</p>
+<p>Should a lost ship come back at 25 hull, or should a second loss in one sector end the run so hull is a death as well as a cost?</p>
+<p>Is the Mk II merge too much TFT? It could be dropped, at the cost of the pool mattering less.</p>
+<p>Should flags be secret until the grid, or live in the garage? Secret rewards reading builds; live rewards spending last.</p>
+<p>Is Slingshot four turning the black hole into an assist too big a swing, or exactly the moment a build should come online?</p>
+<p>Should the final pay double, or be winner-takes-all among four so points are only a qualifier?</p>
+<p>What are the makers called? The names here are placeholders.</p>
+<h3>Risks</h3>
+<p>The purse and hot laps both pay the fast ship, so an early lead can compound through interest into a run decided by heat six. The streak bonus and the repair sink are the brakes; the harness has to show a heat-one winner wins the run under 35% of the time, or the purse flattens.</p>
+<p>Flag pile-ons. If bot flag habits are too consistent the same hazard lands every heat and flags stop being a decision. Bots need a seeded spread, and the tiebreak needs to be visible so a lost tally does not feel like cheating.</p>
+<p>Makers, Mk II and slots are one build system more than a phone holds on first play. The fallback is to ship without Mk II and see whether makers alone are enough direction.</p>
+<p>Eight ships on a twenty-second course are hard to watch. The race should follow the player and show the field as a position strip, not eight dots.</p>
+<p>The pool is invisible without counts on the shop, and a cluttered shop turns the contest into background randomness.</p>
+<p>The numbers are guesses. They live in tuning.ts, and the harness says whether a saver, a spender and a greedy pilot each win a fair share.</p>
+
+<h4>What the reviewers said</h4>
+<h5>Fun · 24/40</h5><p><strong>Best idea:</strong> The shop shows copies remaining per part (&quot;Ion Thruster, 2 left&quot;), which turns a private shop into a contested one in one line.</p><p><strong>Fatal flaw:</strong> The flag is a vote: one flag in a tally of nine or ten rarely decides anything, the proposal admits everyone flags the burst, and the worked run is won by three ships happening to agree, which is coincidence rather than counter-play.</p><h5>Engineering · 28/40</h5><p><strong>Best idea:</strong> The shop shows how many copies of each part are left: one counter on the pool turns it into a visible contest.</p><p><strong>Fatal flaw:</strong> It is three games; the proposal's own eight-PR first playable ships the economy with no makers and no flags, so it answers gap two and neither of the gaps the brief cares most about.</p><h5>Phone · 27/40</h5><p><strong>Best idea:</strong> One coin: repairs, slots, parts and flags all cost credits, so hull damage is a bill and greed has a price you can read.</p><p><strong>Fatal flaw:</strong> System count: twelve heats, twenty minutes, five income streams, three build systems and a secret flag tally. The player cannot say why they earned what they earned.</p>
+</div>
+</details>
+<details id="proposal-interaction-first">
+<summary><span class="t">The Course Is the Other Players</span><span class="arrow"></span><span class="s">Every heat is flown on a course the eight players just built, one slot each, and the parts on your ship decide both what hazard you can lay down and what you can survive, so a build is a weapon and a shield at once and counter-picking is the build itself.</span></summary>
+<div class="body">
+<h2>The Course Is the Other Players</h2>
+<h3>Premise</h3>
+<p>Ships never touch, so the only thing one player can do to another is change the track. That is the whole game here. Every heat is flown on a course the players in it have just built, one slot each, and what a player can lay down is decided by the parts on their ship. Ablative Plating lets you seed an asteroid field and survive one. Mirror Shielding lets you seed a gamma burst and eat one. A build is a shield and a weapon at once, and both are visible to everyone.</p>
+<p>So &quot;what should I buy&quot; and &quot;what will they do to me&quot; become one question. If three players are stacking Plating, the track will be full of rock and speed is a trap. Counter-picking is not a side system. It is the build. Economy, run health and elimination follow from making the course the arena.</p>
+<h3>The loop</h3>
+<p>Eight players. Ten heats. About fifteen minutes.</p>
+<p>A heat is one course of eight slots between a fixed launch and a fixed finish straight. A slot is 180 ticks at base speed; launch and finish are 120 each. A full course is 1,680 ticks, 28 seconds at 60 ticks per second. Each player eliminated takes a slot with them, so a late heat with four ships left runs about 16 seconds.</p>
+<p>Four phases, each on a timer.</p>
+<p>Garage, 25 seconds. Everyone shops at once from their own four-part offer, drawn from a pool the lobby shares. Every ship&#39;s build sits in a ribbon across the top of the screen throughout.</p>
+<p>Seeding, 20 seconds in two waves. The top four in the standings place first, blind to each other, ten seconds. Then the bottom four place, seeing the top four&#39;s seeds, ten seconds. Each player puts one hazard into one empty slot; the hazard comes from their parts. Two players who want the same slot: the lower in the standings gets it.</p>
+<p>The heat, 16 to 28 seconds. Eight ships fly the course in lockstep. The player has two taps, Raise Shields and Reroute Power, exactly as now.</p>
+<p>Results, 10 seconds. Finishing order, credits, run hull lost, and one line per hazard that hurt you, with the name of who seeded it.</p>
+<p>The run ends after heat 10, or when one player is left. Final standings are survivors by run hull, then the eliminated in reverse order of exit.</p>
+<p>The star is the only PvE arc. The run is a fall toward a star, which escalates the whole field without touching anyone: heat dissipation drops each heat, from 2.0 per tick in heat 1 to 0.2 in heat 10. Early, heat comes back. Late, it is a scar. Fins matter more each heat, the Reactor less, and an assist you rode for free in heat 2 cooks you in heat 8. One number per heat in <code>tuning.ts</code>.</p>
+<h3>The build</h3>
+<p>The six slice parts survive with their deltas unchanged. Two things are added: levels and seeds.</p>
+<p>Levels. Two copies of a part merge into a Mk II, three into a Mk III. A Mk II applies the delta twice, a Mk III three times: the stacking the sim already does. A ship has four hardpoints and a merged part fills one, so a finished ship is at most four Mk IIIs, twelve purchases, and nobody gets there before heat 9. The first Mk III usually lands in heat 4, and that is when a build comes online.</p>
+<p>Seeds. Every part carries the hazard it answers, and owning the part lets you lay it.</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Seeds</th>
+<th>Hurts</th>
+<th>Suits</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ion Thruster</td>
+<td>Long straight, 270 ticks, empty</td>
+<td>Slow ships</td>
+<td>Fast ships</td>
+</tr>
+<tr>
+<td>Ablative Plating</td>
+<td>Asteroid field</td>
+<td>Fast, light ships</td>
+<td>Armour</td>
+</tr>
+<tr>
+<td>Mirror Shielding</td>
+<td>Gamma burst</td>
+<td>Shields down or on cooldown</td>
+<td>Deep shield pools</td>
+</tr>
+<tr>
+<td>Radiator Fins</td>
+<td>Gravity assist</td>
+<td>Low heat tolerance</td>
+<td>Fins</td>
+</tr>
+<tr>
+<td>Inertial Anchor</td>
+<td>Black hole</td>
+<td>Low hull, low acceleration</td>
+<td>Acceleration and hull</td>
+</tr>
+<tr>
+<td>Overclocked Reactor</td>
+<td>Solar flare, new: one tick, +40 heat, shields do not stop it</td>
+<td>Anyone running hot</td>
+<td>Fins</td>
+</tr>
+</tbody></table>
+<p>Level upgrades the seed as well as the ship. A Mk II lays the bigger version: a field that fills the slot, a twin burst 60 ticks apart that a base pool of 50 cannot cover and a Mirror pool of 85 can, a deep hole with an escape hull of 30 instead of 15, a full-slot assist, a twin flare, a 360-tick straight. A Mk III lays its seed across two adjacent free slots, a wall.</p>
+<p>Three archetypes fall out. The Wall: Plating and Anchor, seeds rock with a black hole behind it, so the fast ships reach the hole with nothing left. The Hot Rod: Thruster, Reactor and Fins, seeds straights, assists and flares, and eats its own flares for free. The Mirror: Mirror Shielding plus Thrusters, seeds twin bursts the lobby has to time perfectly. A build with a direction seeds a course that suits it; a build without one seeds noise.</p>
+<p>The Solar Flare is the only new hazard, the burst&#39;s mirror: the burst says tap shields now; the flare says do not tap Reroute now. A lone Reactor seeding a flare hurts itself. With Fins it is free.</p>
+<h3>The economy</h3>
+<p>Credits. You start with 6 and earn at the results screen: 5 base per heat, plus 3, 2 or 1 for first, second or third, plus 2 for finishing in the bottom three, plus interest of 1 per 10 banked up to 3. Income is flat on purpose; the gap between players is run hull, not money.</p>
+<p>Parts cost 3, four on offer, drawn from a shared pool of 12 copies of each part. What another player buys is gone until someone sells it back. Reroll for 1. Sell a part for 2, a Mk II for 4, a Mk III for 6; the copies return to the pool. A Special Order, once per garage, costs 6 and takes any part the pool still holds.</p>
+<p>Why spend now: a part is a seed as well as a stat. Plating in heat 1 means every heat from now on has your rock on it, and rock compounds: it spends the fast ships&#39; hull before whatever comes after.</p>
+<p>Why save: three reasons. Interest, which at 30 banked is a free part every heat. The Special Order, which is how you get your third Mirror the round the ribbon shows the lobby has no shields. And the pool: if three players are on Plating there are three copies left, you will not complete a Mk III, and the right move is to bank and pivot into what the lobby is leaving alone.</p>
+<p>Greed is right early: a Mk II by heat 2 wins heats 2 and 3 and pays for itself. Saving is right when the pool is contested, or when the star is about to turn heat against your build. Neither is obviously right.</p>
+<h3>Run health and elimination</h3>
+<p>Standing is the run&#39;s health, chosen over hull-as-health on purpose. Two hulls are two systems to hold in one head, and a game about seeding black holes needs a ship to die in a heat without the player leaving the table. So ship hull is repaired to full between heats. What carries is run hull, starting at 100.</p>
+<p>After each heat you lose run hull by position. The top three lose nothing; fourth loses 3, fifth 6, sixth 9, seventh 12, eighth 15. A ship destroyed in the heat is placed behind every finisher and loses 10 more. The star multiplies the toll: heats 1 to 3 at x1, 4 to 6 at x1.5, 7 to 10 at x2. At 0 you are out and spectate.</p>
+<p>The arithmetic is the design. The worst possible heat 1 costs 25, so nobody is out before heat 3. Fifth every heat loses 93 over ten heats and scrapes home. Sixth every heat is out in heat 8. Fourth every heat loses 45 and is comfortably in the final. Elimination is earned by living in the bottom half; a single crash costs one heat.</p>
+<p>Recovery has three levers. The bottom four seed second, with information, and the bottom three get the 2-credit catch-up. The top three lose nothing, so one good heat stops the bleed, and a build that comes online in heat 5 with 60 run hull is in the fight. And the star punishes the leader&#39;s early build as much as anyone&#39;s: the Hot Rod that won heats 1 to 4 has to find Fins or start paying at x2. A late win is worth more than an early one.</p>
+<h3>Other players</h3>
+<p>My build changes your race because my build is on your track. Five ways.</p>
+<p>Seeding. I lay one hazard per heat, the one my ship is built to survive, and your ship flies through it. With Mk II Plating my rock fills a slot; a Thruster ship crossing at speed 1.45 takes about twice the damage of a base ship and reaches whatever comes next with a hull that cannot clear a black hole.</p>
+<p>Sequence. Slots have an order and hazards have memory. An assist then a flare cooks anyone without Fins. A burst 200 ticks after a burst catches everyone whose shield is on its 420-tick cooldown. The bottom wave, placing with the top wave&#39;s seeds visible, builds these on purpose. That is the trailer&#39;s weapon, and it is the comeback.</p>
+<p>Visible builds. The ribbon shows every ship&#39;s parts and levels at all times. A player reads the ribbon: three Mirrors in the lobby, so at least three bursts next heat; a 7-second shield cooldown against a 28-second heat covers four of eight slots; so buy Mirror while the pool has it, or stop reaching for speed. That is the counter-pick, in one glance.</p>
+<p>The pool. Twelve copies of each part, eight players. Four players can complete a Mk III of the same part and the fifth cannot. Buying the third Anchor is also denying it. Selling hands copies back, a real decision when the player just below you is one short.</p>
+<p>Attribution. Every hazard carries the name of who seeded it, and the results screen reads hazard by hazard: 18 hull to Bulwark&#39;s rock, cooked two seconds at Ember&#39;s flare, lost at Gravitas&#39;s hole. The next garage is a response, not a guess, and rivals get a character legible in play.</p>
+<p>Bots seed with one rule in <code>pilot.ts</code> beside the tap rules: lay your highest-level seed; put a hole after rock, a flare after an assist, a burst after a burst; otherwise take the free slot furthest from the launch. A human&#39;s seed is the same input as a bot&#39;s.</p>
+<h3>A worked run</h3>
+<p>Eight ships: you, plus seven pilots with wish lists. Redline (speed), Bulwark (armour), Ember (Reactor, then Fins), Gravitas (Anchor, then Plating), Mirage (Mirror, then Thruster), Ledger (banks to 30 first), Drift (takes the first card offered).</p>
+<p>Heat 1. Everyone has 6 credits and buys two parts from four. You take Plating and a Thruster, a hedge with one of each seed. The ribbon shows Bulwark and Gravitas both on Plating, so there will be rock. Standings are empty, so you place blind in the top wave: rock in slot 6, late, to eat hull from ships that have been going fast. Redline wins. You are fifth. Drift crosses both fields flat out and is seventh. Run hull: you 94, Drift 88.</p>
+<p>Heat 2. A second Plating shows and you merge to Mk II; your rock now fills a slot. You are fifth, so you seed in the bottom wave and see the top four seeds. Gravitas laid a black hole in slot 5. You put the long field in slot 4, right in front of it. Redline enters slot 4 at 1.45, leaves it with 31 hull, and crawls into the hole with too little to clear the escape line. Redline&#39;s ship is lost; Redline loses 25 run hull and drops from first to fourth. That is the moment. Your rock never touched Redline&#39;s ship, and it decided Redline&#39;s heat, because of where Gravitas had already put the hole.</p>
+<p>Heat 3. Redline reads the ribbon, sees four Platings in the lobby, and buys Mirror instead of a third Thruster: bursts do not care about rock, and it needs the hull. Mirage sees Redline reach for Mirror and takes the Special Order for its third Mirror before the pool thins. A Mk III in heat 3; its twin burst now spans two slots.</p>
+<p>Heat 4. Dissipation drops to 1.4 and the toll goes to x1.5. Mirage&#39;s twin burst catches five ships with shields down and Mirage wins by four seconds. Ember, on Reactor with no Fins yet, cooks through its own flare and is eighth: 22 run hull gone. You are third, free.</p>
+<p>Heat 6. You are on 88 run hull, Drift on 27. Ledger, sitting on 30 credits at 3 interest a heat, spends 15 in one garage into a Mk III Fins. Its assist fills two slots; with dissipation at 1.0 everyone but Ledger and Ember leaves it near 140 heat and cooks. Drift finishes eighth, destroyed, and is the first player out.</p>
+<p>Heat 8. Seven ships, seven slots, x2 toll; Ember went out after heat 7. Gravitas&#39;s Mk III deep hole spans slots 5 and 6, escape hull 30. You have Mk II Plating and arrive with 30 to spare. Bulwark, seeding last as the bottom player, lays rock in slot 4 and takes Ledger&#39;s ship with it.</p>
+<p>Heat 10. Four left: Mirage 74, you 70, Gravitas 58, Redline 40. Four slots, 16 seconds. Redline lays a 360-tick straight, Gravitas a hole, Mirage a twin burst, you a long field in front of the hole. Final standings: Mirage 74, you 70, Gravitas 52, Redline 22, then Bulwark, Ledger, Ember, Drift.</p>
+<p>Every decision above was a reaction to the ribbon or to a hazard with somebody&#39;s name on it.</p>
+<h3>What it costs to build</h3>
+<p>Survives unchanged: <code>rng.ts</code>, <code>spline.ts</code>, <code>actives.ts</code>, the loop in <code>race.ts</code>, the four functions in <code>hazards.ts</code>, <code>tuning.ts</code> as the home for every new number, the pilot&#39;s tap rules, the balance harness.</p>
+<p>Changes. <code>ship.ts</code> gains a level per part and four hardpoints; <code>resolveBuild</code> is the same sum. <code>makeTrack</code> survives and the slice track becomes a test fixture; placements gain a seeder id. <code>hazards.ts</code> gains the Solar Flare. <code>race.ts</code> takes the star&#39;s dissipation as an option. <code>field.ts</code> already steps any list of entries; <code>ShipId</code> becomes a string. <code>run.ts</code> is rewritten: heats, run hull, credits, the pool, seeding waves, standings. <code>rivals.ts</code> grows to seven wish lists and a seeding rule. <code>garage.ts</code> becomes a shop. <code>pilot.ts</code> gains seeding.</p>
+<p>New: <code>course.ts</code> (seeds to a Track), <code>seeds.ts</code> (part and level to placement), <code>economy.ts</code>, the seeding and shop UI, the ribbon, an eight-lane render, results with attribution.</p>
+<p>PRs, one session each, in the order they unblock: (1) Solar Flare. (2) Star dissipation per heat. (3) Part levels and hardpoints. (4) <code>seeds.ts</code>. (5) <code>course.ts</code> with seeder ids. (6) <code>field.ts</code> to n ships. (7) <code>economy.ts</code>. (8) Shop. (9) Run hull, toll, elimination. (10) Seeding waves as run inputs. (11) Bot seeding. (12) Seven rivals. (13) Harness of bot strategies. (14) Shop UI and ribbon. (15) Seeding UI. (16) Eight-lane render. (17) Results with attribution. (18) Tuning pass. The first thirteen run headless; the first playable version needs about twelve. Honest size: S2 and S3 again, on the same bones.</p>
+<h3>What it needs from the owner</h3>
+<p>Is a run ten heats and fifteen minutes, or seven and ten? Is the bottom wave seeding second the right amount of comeback, or should last place seed alone, last, with everything visible? Should a Mk III seed span two slots? Is the Solar Flare the right sixth seed, or should the Reactor share the assist with Fins and the game stay at four hazards? Should ship hull carry between heats at all? Is twelve copies per part the right contest, or eight and tighter? Is the star the escalation, or would harder fixed slots in late heats be more legible? And underneath all of them: is laying a hazard with your name on it, knowing it will hurt someone, the feeling this game wants?</p>
+<h3>Risks</h3>
+<p>Seeding could be the slow part. If it drags, the fix is one wave with the bottom half placing last inside it, or the pilot seeding for anyone who has not tapped in five seconds.</p>
+<p>Seeding can degenerate. If a hole after rock is always right, every heat is the same course by heat 5. The harness measures this: a bot that always seeds the same thing against bots that read the ribbon. If the reader does not win more, the seed table is wrong, and the seed table is tuning.</p>
+<p>A Mk III at heat 3 may snowball. The star and the pool are the brakes; if they are not enough, the Special Order goes to 8 credits or once every three heats.</p>
+<p>Self-harm seeds could feel bad. A player who lays a black hole and dies in it will blame the game. Attribution has to say it was their own hole, and the seeding UI should show the player&#39;s own margin before they commit.</p>
+<p>The star is one number. If slower dissipation does not force build transitions, late heats are early heats with fewer ships. The fallback is fixed hazards in late slots: more content, less elegant.</p>
+<p>The state machine grows. Seeds, buys, sells and rerolls are all inputs, so <code>simulate</code> stays pure and a test replays a whole run from a seed and an input list, but <code>run.ts</code> gets much bigger.</p>
+
+<h4>What the reviewers said</h4>
+<h5>Fun · 27/40</h5><p><strong>Best idea:</strong> Sequence: a hazard is stronger because of what came before it, and the player who places last can build the combo, so the trailer's weapon and the comeback are one mechanic.</p><p><strong>Fatal flaw:</strong> Everyone lays what they survive, and rock is a punishment while a straight is only a reward, so the lobby converges on Plating and the course eats its own variety.</p><h5>Engineering · 31/40</h5><p><strong>Best idea:</strong> A placement carries the id of who laid it and the race log charges damage to it: the cheapest possible other-players, and rivals become legible with no UI copy.</p><h5>Phone · 28/40</h5><p><strong>Best idea:</strong> Attribution: every hazard names who laid it, and the results screen reads hazard by hazard.</p><p><strong>Fatal flaw:</strong> Cannot be held in one head on a phone: a star curve, an eighteen-entry seed table and a two-wave seeding phase on ten-second timers.</p>
+</div>
+</details>
+<details id="proposal-run-first">
+<summary><span class="t">The Cut<span class="chip">base</span></span><span class="arrow"></span><span class="s">A run is a seven-heat season of eight ships on one points ladder where the bottom is cut after every heat from the third, the leader lays the next course and the tail shops first, so builds, credits and counter-picks all exist to move you up the ladder before the cut reaches you.</span></summary>
+<div class="body">
+<h2>The Cut</h2>
+<h3>Premise</h3>
+<p>A run is a season. Eight ships, seven heats, one ladder. After every heat from the third on, the ship at the bottom of the ladder is cut. Four reach the final. The run ends with a standings table nobody can argue with, because everyone watched it built one heat at a time.</p>
+<p>Everything else hangs off that shape. The build has seven garages to come together in, not three. Credits are the only way up the ladder, and the ladder is the only thing that keeps you in the run. Interaction comes from two rules: the leader lays the next course, and the tail shops first. You never fight another ship. You fight over the course and the parts.</p>
+<p>A run takes about fourteen minutes on a phone: seven heats of twelve to sixteen seconds of flying, six garages of about a minute, a lobby, a final table.</p>
+<h3>The loop</h3>
+<p>The lobby comes first. Seven rivals, each with a name and two words for what it reaches for. The season: seven short courses drawn end to end across the system, every fixed hazard placed, and on each course one empty slot drawn as a dashed box for the leader to fill. Thirty seconds of reading, one tap to start.</p>
+<p>A heat is one course, four or five segments, 700 to 950 ticks at base speed. Eight ships leave the line from a standstill and fly it under the current rules: hazards, heat, shields, two actives, a handful of taps. The renderer fans eight lanes across the track; the sim has one line. A heat produces a finishing order, which pays out points and credits.</p>
+<p>Between heats, three screens in a fixed order, each one tap or two.</p>
+<p>First, the ladder. Eight rows: points, hull, credits, and every ship&#39;s build as part icons with its set count, &quot;Redline — Burner 2/3&quot;. The cut line is drawn under the bottom row from heat 3 on. This screen is the whole game&#39;s information, in one glance.</p>
+<p>Second, the course. The ladder leader picks one of three hazard cards and drops it into the next course&#39;s open slot. Everyone sees the card land.</p>
+<p>Third, the draft. Ten parts are dealt face up. Ships pick one each in reverse ladder order, bottom first. A part costs credits; you may pass and bank, and pay for repairs. Then the next heat starts.</p>
+<p>Heats 1 and 2 are open: nobody is cut, courses are gentle, everyone banks. After heats 3 to 6 the last ship on the ladder is retired. The final is four ships on the hardest course, double points, and the ladder after it is the standings.</p>
+<h3>The build</h3>
+<p>The five stats survive unchanged. A part is still additive deltas, resolved once before the race. What is new is that every part carries one <strong>tag</strong>, and three tags on a ship make a <strong>set</strong>.</p>
+<p>Four tags, one per hazard family, each answering one hazard and weak to another.</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Parts</th>
+<th>2 of a kind</th>
+<th>3 of a kind (online)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Burner</td>
+<td>Ion Thruster, Overclocked Reactor, Afterburner</td>
+<td>Reroute heat halved</td>
+<td>Reroute cooldown 420 to 210 ticks</td>
+</tr>
+<tr>
+<td>Brick</td>
+<td>Ablative Plating, Keel Plate, Ram Prow</td>
+<td>Asteroid damage minus 30%</td>
+<td>Asteroid damage scales with speed, not speed squared</td>
+</tr>
+<tr>
+<td>Mirror</td>
+<td>Mirror Shielding, Capacitor Bank, Phase Array</td>
+<td>Shields hold 150 ticks, not 90</td>
+<td>Shield pool refills the tick a burst lands</td>
+</tr>
+<tr>
+<td>Sling</td>
+<td>Inertial Anchor, Radiator Fins, Grav Keel</td>
+<td>Black hole pull 0.55 to 0.75</td>
+<td>Gravity assist heat halved; the black hole pull becomes 1.0</td>
+</tr>
+</tbody></table>
+<p>Twelve parts, three per tag, three tiers. Tier 1 is the six slice parts; tier 2 enters the draft from heat 3, tier 3 from heat 5. Higher tiers are bigger deltas with bigger costs.</p>
+<p>A build has a direction at two parts of one tag and comes online at three. That takes three drafts, so the earliest a set is online is the garage before heat 4, and most ships get there by heat 5 or 6. A ship that never wastes a pick can hold two sets by the final, the greedy dream.</p>
+<p>Sets change a rule, not a number. That is the moment the player feels: Brick 3 flies through an asteroid field at full speed and keeps its hull; Sling 3 is slung through the black hole that just ate two rivals. Stat deltas still stack as now, so Ion Thruster, Ion Thruster and Ablative Plating is still a real ship, just one with no direction.</p>
+<p>Each set answers one hazard and is punished by one. Burner by asteroid fields and the ringed planet&#39;s heat. Brick by clean track, because it is slow. Mirror by anything that is not a burst, because it spent picks on a pool it needs twice a season. Sling by bursts, because it has neither shields nor hull to spare.</p>
+<h3>The economy</h3>
+<p>Credits. Earned after every heat, spent in the draft and on repairs, banked with interest.</p>
+<p>The purse: 6 credits for first, 5 for second, 4 for third, 3 for everyone else who finishes. A lost ship gets 2, called salvage. Interest is 1 credit per 4 banked, capped at 3, paid before the draft.</p>
+<p>Prices: tier 1 parts cost 2, tier 2 cost 4, tier 3 cost 6. Repairs cost 1 credit per 20 hull. No rerolls; the draft is shared and a reroll would break that.</p>
+<p>Why save. Interest is the small reason: 8 banked earns 2 a heat, a tier 1 part for nothing. Tier gating is the big one. The part that completes your set may be tier 2 or 3, costing 4 or 6 the heat it appears. A ship that bought tier 1 parts at 2 each is strong now and cannot afford its own plan when the plan arrives; a ship that banked through heats 1 and 2 walks into the heat 3 draft with 12 credits. Repairs are the emergency: hull carries between heats, as now, and a ship that flew heats 1 to 3 greedy arrives at heat 4 with 40 hull and a black hole ahead. It can spend 3 credits on hull or on the part, not both.</p>
+<p>Why spend. Because the ladder does not wait. The cut is next heat, and the ship one row below you just bought Ablative Plating for the asteroid field the leader dropped. A ship that banks its way to the heat 5 draft in seventh place is rich and about to be cut.</p>
+<h3>Run health and elimination</h3>
+<p>The thing you protect across the run is your <strong>place on the ladder</strong>. Points per heat: 8 for first down to 1 for eighth. A lost ship scores 0 and is placed behind every ship that finished. The final pays double.</p>
+<p>After heats 3 to 6, the bottom of the ladder is cut. Ties break on the most recent heat, so the ship currently falling is the one that goes. Eight become four for the final.</p>
+<p>Hull is heat health, not run health. A ship destroyed in a heat comes back for the next one at 40 hull with 2 salvage credits, its build intact, and a 0 for that heat. This keeps heats dangerous without making one crash the end of the session. Two crashes in three heats will get you cut, and it should.</p>
+<p>Being knocked out is earned, never sudden. Nobody is cut before heat 3, so the first two garages are for planning. The cut line is drawn on the ladder, so the ship in eighth knows it. One ship goes per heat, so a bad heat 3 costs a row, not the run. The ladder is cumulative, so a ship that won heats 1 and 2 can crash in 3 and still sit fourth.</p>
+<p>Recovery has three levers, all structural rather than charitable. The tail shops first: the bottom of the ladder picks before anyone else and the leader picks last, so a ship in eighth after heat 3 gets first choice of ten parts and can take the tier 2 that completes its set, in front of the leader who wanted it. Points are weighted forward: the final is double, and a ship that scrapes into it in fourth is at most 16 points from first, which one heat can close. And salvage is not nothing: 2 credits plus interest is a tier 1 part or two repairs. The run pushes a crashed ship back toward the draft, not out of it.</p>
+<h3>Other players</h3>
+<p>Every interaction goes through the course, the draft and the ladder.</p>
+<p><strong>The leader lays the course.</strong> After every heat, the ladder leader picks one of three hazard cards from the season deck and drops it into the next course&#39;s open slot. The deck: asteroid field, gamma burst, ringed planet, black hole, and open run, a clean stretch that rewards raw pace. The leader drops the card that punishes the field and spares itself. A Brick leader drops an asteroid field. A Burner leader drops an open run. A Mirror leader drops a burst and dares everyone to time it.</p>
+<p>This is the counter-play loop. The card lands before the draft, so the field sees the course, then shops for it, in reverse ladder order, with the leader last. A leader who drops a burst has told seven ships to want shields, and those seven pick before it does.</p>
+<p>Rivals choose their card by a fixed rule: the hazard their set answers, or with no set, the hazard most of the ladder is worst equipped for, measured from resolved stats. The rule is in the sim and seeded, so a harness can replay it.</p>
+<p><strong>The draft is shared and visible.</strong> Ten parts for eight ships. Every rival&#39;s wish list is two words on the ladder and its build is icons, so you can read &quot;Halo has Mirror 2/3, Phase Array is on the table, Halo picks before me, that part is gone.&quot; Contest is real: three parts per tag per tier, and two Burners want the same Afterburner. Denial is real: taking the part that completes a rival&#39;s set, when you pick before it and it is one heat from cutting you, is a legal and legible move.</p>
+<p>Rivals draft by wish list, as now, but in tags: Redline wants Burner, then Sling. Two new rivals read the ladder instead: Ledger banks until it can afford a tier 3, and Tinker buys whatever its ship is worst at for the course just laid. Those two keep the harness honest.</p>
+<p><strong>The cut is shared.</strong> Every point you take is a point a ship near the line did not. Sixth instead of seventh in heat 5 may be the row that keeps you and cuts Scrap.</p>
+<p>What is visible to whom: everything, to everyone, always. Builds, credits, hull, points, wish lists, the next course and its slot. Only your tap timing is hidden.</p>
+<h3>A worked run</h3>
+<p>Eight ships: You, Redline (Burner), Bulwark (Brick), Halo (Mirror), Sling (Sling), Ledger (banks, buys tier 3), Tinker (buys what the course punishes), Scrap (cheapest part, never repairs).</p>
+<p><strong>Lobby.</strong> The season map shows a fixed black hole in heat 4 and two bursts in heat 6. You decide on Sling: two cheap tier 1 parts, and Grav Keel at tier 2 would put you online before heat 4.</p>
+<p><strong>Heat 1.</strong> First draft order is random. You take Inertial Anchor for 2. Redline takes Ion Thruster, Bulwark Ablative Plating, Scrap Radiator Fins because it is cheap. A gentle asteroid course: Redline wins, you come fifth. Redline drops an open run into heat 2, because Bulwark is slow.</p>
+<p><strong>Heat 2.</strong> You pick fourth and take Radiator Fins: Sling 2/3, 4 credits left. Ledger passes and banks to 9. Redline wins again. Scrap crashes in the field on no plating. Ladder: Redline 16, Halo 11, You 9, Tinker 9, Sling 8, Ledger 7, Bulwark 5, Scrap 3. Redline drops a ringed planet into heat 3 to cook everyone else.</p>
+<p><strong>Heat 3.</strong> First tier 2 draft. Scrap takes Keel Plate. Bulwark takes Ram Prow: Brick 2/3. Ledger picks third with 12 credits and takes Grav Keel, the part you needed, because it is the most expensive thing on the table. This is the moment. You are fifth with 5 credits, Grav Keel is gone, the ringed planet is coming. You take Overclocked Reactor, overcook the planet, drop 25 hull, finish fourth. Scrap finishes eighth and is cut. Ladder: Redline 24, Halo 16, You 14, Tinker 14, Sling 13, Ledger 12, Bulwark 10. Redline drops an open run next to the fixed black hole.</p>
+<p><strong>Heat 4.</strong> Bulwark picks first, Ablative Plating: Brick 3/3, online. Ledger takes Phase Array because it costs 6. You pick fifth and Grav Keel is dealt again. You have 7 credits, 55 hull, and a black hole ahead. Grav Keel is 4, a repair to 75 is 1. You buy both: Sling 3/3, online. The pull becomes a slingshot and you win. Redline, on 35 hull after three fast heats, is lost in the debris behind the black hole. Bulwark is third, untouched. Ledger is seventh and cut. Ladder: Redline 24, You 22, Halo 21, Bulwark 16, Tinker 16, Sling 14. Redline still leads and drops a burst into heat 5.</p>
+<p><strong>Heat 5.</strong> Sling picks first, Capacitor Bank. Tinker takes Mirror Shielding. Nothing Sling-tagged is left; you take Mirror Shielding for burst cover and bank 6. Halo, Mirror 3/3, takes both bursts on one shield and wins. You are second, Redline fourth, Sling sixth and cut. Ladder: You 29, Halo 29, Redline 29, Bulwark 21, Tinker 20. You lead on the tiebreak and drop a black hole. Bulwark has the hull for it; Halo does not.</p>
+<p><strong>Heat 6.</strong> Halo crashes in the black hole it could not build for. Bulwark wins on hull, Redline second, you third. Tinker fifth and cut.</p>
+<p><strong>Final.</strong> You, Redline, Bulwark, Halo, double points, the full system. You lead, so you lay the course: black hole again, and Halo cannot repair enough to matter. Bulwark wins, you second, Redline third, Halo lost.</p>
+<p><strong>Final standings.</strong> You 41, Bulwark 40, Redline 39, Halo 29.</p>
+<p>The moment to point at: Ledger buying Grav Keel in heat 3 because it was expensive, not because it wanted it. That pick put you a heat behind and cost you 25 hull, and only came good because the tail shops first. The mirror of it: your black hole in heat 6 ended Halo&#39;s run.</p>
+<h3>What it costs to build</h3>
+<p>Survives unchanged: hazards.ts, actives.ts, pilot.ts, rng.ts, spline.ts. The hazards and the taps are exactly what this design wants.</p>
+<p>Changes: ship.ts gets a tag and tier per part, six new parts, and a resolved rules block beside the stats (asteroid exponent, reroute cooldown, shield duration, black hole multiplier, burst refill). race.ts reads those five numbers from the resolved build instead of tuning, its only change. field.ts widens ShipId to eight. track.ts gains an open slot per course. rivals.ts grows to seven, with wish lists in tags and two ladder-reading rules. tuning.ts gains sets, prices, purses, points and the interest cap.</p>
+<p>New: season.ts, seven courses and the hazard deck; ladder.ts, points, cut and tiebreak; draft.ts, deal ten and pick in reverse order; economy.ts, purse, interest, repair. run.ts is rewritten around the ladder, the biggest single change. In the UI, a lobby, a ladder, a course drop and a draft replace the garage. The harness gains bots for save, spend, set-chase, counter-pick and deny, and reports whether choosing well pays and whether any tag wins too often.</p>
+<p>Honest count: 13 one-session PRs. Tags, sets and the rules block. Six new parts with tests. Courses and the season deck. Ladder and cut. Purse, interest, repairs. Draft. Seven rivals and two reading rules. Leader lays the course, sim side. run.ts rewrite, two sessions. Lobby and ladder UI. Draft and course-drop UI. Harness bots and the table. The first playable version is nine of those.</p>
+<h3>What it needs from the owner</h3>
+<p>Is seven heats and fourteen minutes the right length, or should a run be five heats and nine minutes with a cut after every one from the second?</p>
+<p>Should the leader lay the course, or the tail? Leader is the stronger read; tail is the stronger catch-up. It cannot be both on one card.</p>
+<p>Is a lost ship coming back at 40 hull too soft? The alternative is losing a part, a nastier feeling.</p>
+<p>Do sets change a rule, or only a number? Rule changes are the moment that feels like something and the thing that is harder to measure.</p>
+<p>Should wish lists be visible, or only the parts? Visible is more legible; hidden gives a rival a personality to discover.</p>
+<p>Is denial a move this game wants? It is the auto-battler feeling, and the pick a phone player will not read.</p>
+<p>Does the final pay double, or is a flat points scale cleaner?</p>
+<h3>Risks</h3>
+<p>Eight ships is a lot on a phone track. Lanes will be thin, and if the ladder screen does not carry the story, the run does not either. Six ships is the fallback and changes nothing.</p>
+<p>Leader lays the course can kingmake. A leader far enough ahead lays courses for itself forever. Tail shops first and the double final are the counterweights, and the harness has to show a runaway leader after heat 3 is caught a third of the time.</p>
+<p>Sets that change rules are hard to tune. Brick 3 removing the square on asteroid damage might make Brick the only set worth having. One number per rule and a bot per tag make it measurable, but the first table will be wrong.</p>
+<p>A cut on a tiebreak will feel unfair the first time. The rule is most recent heat, and it has to sit on screen next to the cut line before the heat starts.</p>
+
+<h4>What the reviewers said</h4>
+<h5>Fun · 32/40</h5><p><strong>Best idea:</strong> The ladder with the cut line drawn under it, one ship gone per heat from the third, tiebreak on the most recent heat.</p><h5>Engineering · 33/40</h5><p><strong>Best idea:</strong> The tail shops first: a comeback lever with no charity in it, one sort on the ladder, and it makes denial a move the player can see coming.</p><h5>Phone · 34/40</h5><p><strong>Best idea:</strong> Three fixed screens between heats, ladder then course then draft, one glance each, no timers, everything public.</p>
+</div>
+</details>
+<details id="proposal-build-first">
+<summary><span class="t">Hardpoints</span><span class="arrow"></span><span class="s">Six hardpoints and four part families: three of a family brings its core online, five overdrives it, and the family you commit to decides what you can drop on the other seven ships' track and what you can survive of theirs, over nine heats where standing is the health you protect.</span></summary>
+<div class="body">
+<h2>Hardpoints</h2>
+<h3>Premise</h3>
+<p>The ship has six hardpoints and every part belongs to one of four families. Bolt on three of a family and its core comes online; five and it overdrives. Everything else hangs off that count. What you buy is a part, but what you are building is a family total, and what you protect across nine heats is your standing in a field of eight ships on the same track. You never shoot anyone. You beat them by seeing what they are counting toward, taking the part they need, and dropping the hazard their family cannot answer onto the segment they are about to fly.</p>
+<h3>The loop</h3>
+<p>A run is one star system, nine stages in three sectors of three, the whole track visible from the lobby. Nine rounds is long enough for a build to have a middle. A round is four screens and about ninety seconds:</p>
+<ol>
+<li><strong>Garage.</strong> Income lands. The shop shows four parts from a pool shared with the other seven ships. Buy, sell, reroll, or buy a hardpoint. A 45-second timer.</li>
+<li><strong>Drop.</strong> Every player places one beacon on one of the next stage&#39;s three segments, in standing order, leader first. Fifteen seconds.</li>
+<li><strong>Heat.</strong> Eight ships fly the stage, about 25 seconds. The player has the two taps the slice has now, shields and reroute, and nothing else.</li>
+<li><strong>Results.</strong> Finishing order, standing lost, credits earned, five seconds.</li>
+</ol>
+<p>Sector 1 (rounds 1 to 3) is the slice&#39;s hazards at slice strength. Sector 2 doubles asteroid fields and adds a second burst to every corridor. Sector 3 has a black hole in every stage. Hull carries across a sector, as today, and is repaired at each sector gate. The run ends after round 9, or when one player is left standing. Fifteen minutes on a phone.</p>
+<h3>The build</h3>
+<p>Six hardpoints, three open at the start. Fifteen parts, six of them the slice&#39;s, in four families. A part is still additive stat deltas, resolved once before the heat; the family count is resolved in the same pass into a handful of modifiers the hazards and actives read. Parts still stack, and every copy counts toward its family.</p>
+<p><strong>Burn</strong> (red): speed bought with heat and hull. Ion Thruster (+0.15 speed, −10 hull), Overclocked Reactor (+0.10 speed, +0.015 accel, −30 heat), Radiator Fins (+45 heat, −15 hull), Afterburner (Reroute Power boosts ×1.45 instead of ×1.3, −10 hull). Core at 3: Reroute Power and hazard heat are halved. Overdrive at 5: the ship never cooks; above tolerance it runs 15% faster instead of losing hull.</p>
+<p><strong>Armour</strong> (grey): hull bought with speed. Ablative Plating (+40 hull, −0.08 speed), Reinforced Keel (+25 hull, +0.01 accel, −0.05 speed), Salvage Rig (+15 hull, and 1 extra credit every heat you finish in one piece). Core at 3: asteroid damage −40%. Overdrive at 5: repair 20 hull at every gate, the only free repair in the game.</p>
+<p><strong>Field</strong> (blue): shields bought with a little speed. Mirror Shielding (+35 shield, +12 hull, −0.05 speed), Capacitor Bank (+25 shield, shields hold half a second longer), Deflector Web (+20 shield, +10 heat, −0.03 speed). Core at 3: shields hold 3 seconds instead of 1.5, enough to cover two bursts in a corridor. Overdrive at 5: shield cooldown drops to 3.5 seconds, so two shields a stage.</p>
+<p><strong>Gravity</strong> (purple): acceleration and the planets. Inertial Anchor (+0.03 accel, −0.02 speed), Tidal Vanes (+0.02 accel, +15 heat, −10 hull), Mass Sensor (+0.015 accel, +10 hull). Core at 3: ringed planets sling at 1.6× instead of 1.35×, and black holes pull only to 0.75 instead of 0.55. Overdrive at 5: black holes and mass shadows become slingshots, 1.3× inside and no escape threshold. The Gravity ship dives what kills everyone else.</p>
+<p><strong>Bridges</strong>, which count for two families at once: Heat Sink Array (Burn and Field: +15 shield, +20 heat, −0.03 speed) and Mass Driver (Armour and Gravity: +15 hull, +0.02 accel, −0.04 speed).</p>
+<p>Six slots make the archetypes arithmetic. A pure build is five of one family plus one loose part. A pair is three and three: six slots, or five with a bridge. There is no room for three cores, and that is the commitment: by round 5 the grid tells everyone what you are. Four pures and two bridged pairs are the six archetypes the harness measures.</p>
+<p>A core comes online when the third part is bolted on. Three parts cost 9 credits and need the shop to show them, so a focused player who rerolls once or twice hits a core in round 3 or 4. Overdrive needs two bought slots (14) and five parts (15), so it lands in round 6 or 7 for a player who did not waste much. Sector 2 is where a core saves you; sector 3 is where an overdrive wins.</p>
+<p>Pivoting is allowed and priced. A part sells for 1, having cost 3. Selling three parts to change family costs 6 credits and a round of being weak.</p>
+<h3>The economy</h3>
+<p>Credits. Start with 6. Each round pays 4 base, plus 3, 2 or 1 for finishing first, second or third, plus interest of 1 per 10 banked, capped at 3, plus 1 if you are bottom three on standing. A middling player earns about 5 a round, a leader 7, a banker with 30 saved 8.</p>
+<p>Spending: a part is 3, a reroll of the four-card shop is 1, the fourth, fifth and sixth hardpoints cost 6, 8 and 10. A part sells for 1 and returns to the pool next round.</p>
+<p>Why save: interest turns 30 banked into 3 a round, most of a base income, so a player who banks through sector 1 on two parts arrives in round 4 earning nearly double. Hardpoints are the long bet: 24 credits of slots buy nothing this heat and everything in round 7. Why spend: placement credits and standing both come from heats, and three parts in round 2 beat two by enough to take the 3-credit bonus most rounds. The harness has to confirm neither is obviously right: the greedy bot should win sector 1 and struggle in sector 3, the banker the reverse, and the bot that switches at the right round should beat both by a few points, not a mile.</p>
+<h3>Run health and elimination</h3>
+<p>Standing is run health. Every player starts at 20. After a heat, first, second or third costs nothing. Fourth costs 1, fifth 2, sixth 3, seventh 4, eighth or destroyed 5. Sector 2 adds 1 to every loss, sector 3 adds 2. At 0 you are out.</p>
+<p>The arithmetic keeps rounds 1 to 3 safe: the worst possible sector 1 costs 15. Fifth every round loses 2, 2, 2, 3, 3, 3, 4, 4, 4 and ends the run on exactly 0, which is where the tuning starts. Last every round is out in round 5. Top three every round never loses a point.</p>
+<p>Hull is heat health, not run health. It carries across a sector&#39;s three stages and is repaired at sector gates. A ship destroyed in a heat is placed last, takes the full standing hit, and is rebuilt for the next round at half hull. So a Burn ship can boost through a debris field, die, and still be in the game, poorer and behind: fast and fragile is an archetype rather than a way to lose in round 2.</p>
+<p>Recovery has three levers and none is a gift of standing. Bottom-three players earn 1 extra credit a round, drop their beacon last with full information, and are served first when a part is down to its last copy. A player at 6 standing in round 6 with a core online is not dead; one with no core is.</p>
+<p>Final standings: survivors by standing, then total flying time; eliminated players by the round they went out, latest first.</p>
+<h3>Other players</h3>
+<p>Seven other ships fly every heat. Today they are pilots with family wishlists: Redline for Burn, Bulwark for Armour, two new ones for Field and Gravity, three flex pilots that buy toward whatever they hold most of. They could later be ghosts of other players&#39; garages, Super Auto Pets style, without changing the sim: a rival is a build, a beacon choice and a pilot, all inputs. Three mechanisms make them opponents rather than scenery.</p>
+<p><strong>The shared pool.</strong> The shop draws from one finite pool: 6 copies of each part, 90 in all, for 8 players who will buy about 60. A part bought leaves the pool; a part sold returns next round. A strip under the shop, one bar per family, says how many copies are left. When three ships are going Burn there are no Radiator Fins in round 4, and everyone can see that. Denial is priced: a part you do not want costs 3, sells for 1, and is gone for one round.</p>
+<p><strong>Visible builds.</strong> The grid before every heat, and a strip along the top of the garage, shows all eight ships with their hardpoints as coloured pips, family counts, and cores lit. Three red pips is a Burn ship one part from its core; a blue pip on a red ship is a Heat Sink and a pair coming.</p>
+<p><strong>Beacons.</strong> This is the pacing lap. The family a player holds most of decides what they can drop: Burn a Solar Flare (60 ticks of heat, no speed change, one new hazard function), Armour a Debris Field (a 60-tick asteroid field), Field an Ion Storm (one 30-point gamma burst), Gravity a Mass Shadow (60 ticks of pull to 0.7, no escape threshold). A core doubles its own beacon to 120 ticks. No parts, no beacon. It goes on the segment the player picks; a segment holds at most three, laid end to end from its middle, each labelled with the ship that dropped it.</p>
+<p>The families make a rock-paper-scissors nobody has to be taught. A Burn core shrugs off flares but a second burst kills a ship with one 1.5-second shield. A Field core laughs at Ion Storms and hates debris. Armour eats debris and dies to flares. Gravity wants Mass Shadows on the track: at overdrive they are free speed for it and a wall for everyone else. What you drop, where, and at whom, is the round&#39;s second decision, and your build decided the options.</p>
+<p>Information: the shop is private; the bank, builds, standings and dropped beacons are public. Nobody sees what a rival was offered, only what they bought.</p>
+<h3>A worked run</h3>
+<p>Eight ships: You, Redline (Burn), Bulwark (Armour), Halo (Field), Slinger (Gravity), Kestrel and Moth (flex), Tariff (a banker).</p>
+<p><strong>Round 1.</strong> 6 credits each. Your shop: Ion Thruster, Capacitor Bank, Ablative Plating, Mass Driver. You take Capacitor Bank and Ion Thruster, one blue pip and one red. Tariff buys nothing and banks 6. Halo takes Mirror Shielding and Deflector Web. A clean asteroid belt; you finish third, +1 credit, no standing lost. Tariff finishes last on a bare hull, standing 15.</p>
+<p><strong>Round 2.</strong> Halo&#39;s third Field part is in your shop: Mirror Shielding. You take it, because you want Field 3 yourself and it delays Halo a round. Halo rerolls twice, finds nothing blue, buys a Heat Sink. Redline drops a Solar Flare on the open run. You finish fourth, standing 19.</p>
+<p><strong>Round 3.</strong> Your Field core comes online: shields hold 3 seconds. One burst in the corridor; you cover it easily and finish second. Halo hits Field 3 the same round. Sector gate, everyone repaired. Tariff has 22 banked, still 15 standing.</p>
+<p><strong>Round 4.</strong> Sector 2 opens with a doubled asteroid field. Your shop shows Radiator Fins, the last copy in the pool. You do not need heat yet, but Redline has Ion, Reactor and Afterburner and needs Fins to survive its own reroutes. You buy them and hold them. Bulwark hits Armour 3 and crosses the field losing 30 hull to your 55. Kestrel buys a fourth hardpoint. You finish fifth, standing 16.</p>
+<p><strong>Round 5.</strong> The gamma corridor, now with two bursts. Halo, dropping third in standing order, puts an Ion Storm on it: three bursts in 160 ticks. Halo has a 3-second shield. Redline has one 1.5-second shield, half hull from the field, and no Fins. It covers the first burst, eats the second and the storm, and is destroyed: last place, standing 20 to 13. That is Halo&#39;s choice ending Redline&#39;s heat, made because the grid showed a red ship with no blue pips; your Fins made it stick. You sell the Fins for 1 and buy Heat Sink Array: Field 3, Burn 2, one slot left. Second place.</p>
+<p><strong>Round 6.</strong> You buy the fourth hardpoint (6) and Overclocked Reactor: Burn 3. Two cores in five slots, and the Burn core halves your reroute heat, so you can boost through the ringed planet. Sector gate. Tariff, who banked to 40 and finished seventh or eighth every round, is out at 0. Moth pivots from Armour to Gravity, sells three parts for 3, and is bare for a round.</p>
+<p><strong>Round 7.</strong> Sector 3, a black hole every stage. Kestrel, quiet until now with four Gravity parts, five slots and 22 banked, buys the fifth: Gravity overdrive. It drops a Mass Shadow on the inner system, flies the black hole at 1.3× while everyone else crawls at 0.55, and wins by 200 ticks. You finish third. Moth is out.</p>
+<p><strong>Round 8.</strong> Bulwark&#39;s Armour overdrive repairs 20 a gate, so it reaches every black hole with hull to spare, finishes fourth or fifth, never wins a heat. You have 11 credits: the sixth hardpoint (10) with nothing to fill it, or two parts and no slot. You take the slot. Fifth, standing 12.</p>
+<p><strong>Round 9.</strong> Standings going in: Kestrel 20, Halo 17, You 12, Bulwark 11, Slinger 10, Redline 4. Kestrel drops a Mass Shadow on the finish straight, first in order, blind. You drop last and put a Solar Flare on the same segment, because five purple pips and one grey have no heat tolerance. Kestrel cooks for four seconds coming out of the shadow and finishes third. You reroute through the flare on the Burn core, second. Halo first.</p>
+<p>Final: Kestrel 20, Halo 17, You 12, Bulwark 10, Slinger 8, Redline 0 (out round 9), Moth (out 7), Tariff (out 6). Kestrel wins on standing; the flare cost it a heat, not the run, which is the right size for a beacon.</p>
+<h3>What it costs to build</h3>
+<p>Survives unchanged: <code>rng.ts</code>, <code>spline.ts</code>, <code>actives.ts</code>, the stage and gate logic in <code>race.ts</code>, <code>field.ts</code> (already generic over N entries; only the <code>ShipId</code> union widens), the pilot&#39;s timing rules.</p>
+<p>Changes: <code>ship.ts</code> gains a <code>family</code> per part and <code>resolveBuild</code> returns modifiers alongside the five stats (about ten numbers: asteroid damage, hazard heat, reroute heat and speed, shield duration and cooldown, assist and pull multipliers, pull lethality, gate repair). <code>hazards.ts</code> reads three of them and gains one function, the Solar Flare. <code>race.ts</code> reads the rest where it applies heat, shields and reroute. <code>track.ts</code> gains a function that lays beacons onto a stage and returns a new track, so the sim still takes a track and knows nothing about who dropped what. <code>garage.ts</code> becomes a shop: pool, draw of four, prices, reroll, sell. <code>rivals.ts</code> grows family wishlists and a beacon rule. <code>run.ts</code> is the big one: nine rounds, credits, standing, hardpoints, a beacon phase, eight entries, elimination.</p>
+<p>New: <code>families.ts</code> (thresholds and the modifier table), <code>economy.ts</code>, <code>standing.ts</code>, <code>beacons.ts</code>, with every number in <code>tuning.ts</code>; a lobby screen, a drop screen, a grid strip in the garage; and harness bots: six archetypes, a greedy bot, a banker, a switcher.</p>
+<p>Guess: 14 one-session PRs. First playable, with families, hardpoints, credits and standing but no beacons and only the four family pilots, in 7. Beacons and the drop screen are 3 more; the last 4 are the new parts, the 8-ship grid and the harness bots. The renderer needs eight lanes and coloured pips, nothing else.</p>
+<h3>What it needs from the owner</h3>
+<ul>
+<li>Nine rounds in three sectors, or seven in two? Nine is fifteen minutes; is that the session you want?</li>
+<li>Four families or three? Gravity is the most fun and the most work; dropping it makes the pool tighter and the archetypes fewer.</li>
+<li>Is standing the right run health, or should hull carry across the whole run with paid repairs?</li>
+<li>Should a destroyed ship come back at half hull for free, or pay 3 credits?</li>
+<li>Is the Burn overdrive (never cooks, runs faster hot) the fantasy you want, or is it a balance grenade?</li>
+<li>Should beacons stack to three on one segment, or one per segment so the track stays readable?</li>
+<li>Drop order leader-first: is that comeback lever enough, or too much?</li>
+<li>Are the seven rivals bots forever, or should the sim be shaped now for asynchronous ghosts?</li>
+</ul>
+<h3>Risks</h3>
+<p>The modifier set could sprawl. Ten numbers is the ceiling; a part that needs an eleventh should be a stat delta instead. Every new part after the first playable should be pure stats unless it is a bridge.</p>
+<p>The Burn overdrive may be dominant or worthless and nothing in between. The harness can say which in an afternoon; the fix may be a redesign, not a number.</p>
+<p>Eight beacons on three segments can make a stage unreadable. The three-per-segment cap keeps it bounded; if the drop screen cannot show the result plainly, the cap goes to one.</p>
+<p>Pool contest between bots can collapse: three flex pilots all going Field would starve each other and the player. Wishlists need a rule that avoids a family two ships already hold, and the harness has to check no family is unreachable more than a few percent of runs.</p>
+<p>Standing arithmetic is a guess. Fifth every round finishing at exactly 0 is the intended edge; if the harness shows half the field out by round 6, the sector penalties drop first.</p>
+
+<h4>What the reviewers said</h4>
+<h5>Fun · 31/40</h5><p><strong>Best idea:</strong> Six slots make the archetypes arithmetic: five of one plus a loose part, or three and three, no room for three cores, so commitment is built into the hull.</p><h5>Engineering · 30/40</h5><p><strong>Best idea:</strong> resolveBuild returns a modifier block beside the five stats with a hard cap of ten numbers; hazards and the loop read from it, and any part needing an eleventh is a stat delta instead.</p><p><strong>Fatal flaw:</strong> The standing arithmetic that is meant to be the tuning edge is off by a third (fifth every round costs 27, not 20), and three cored beacons at 360 ticks do not fit any segment on the track they are dropped on.</p><h5>Phone · 30/40</h5><p><strong>Best idea:</strong> Coloured pips with a count: three red pips is a Burn ship one part from its core, a build read in under a second.</p><p><strong>Fatal flaw:</strong> The beacon pile: eight beacons per round, three per segment, doubled by cores, on a course that already escalates, unreadable in a 15-second drop window. Standing only goes down, so a bad sector 1 is permanent.</p>
+</div>
+</details>
+</section>
+
+<section id="reviews">
+  <h2>The reviews</h2>
+  <details id="review-fun">
+<summary><span class="t">Fun</span><span class="arrow"></span><span class="s">Would build from Hardpoints</span></summary>
+<div class="body"><h2>Review: Fun</h2>
+<p>The question I asked of each proposal is the one I ask of any auto-battler after a hundred hours: is there a plan, does the plan take rounds to come together, does it hurt to be wrong about it, and do the other seven people at the table matter to it. Everything below is weighted toward those four. Legibility, fit, cost and measurability are scored honestly but they did not decide my recommendation.</p>
+<table>
+<thead>
+<tr>
+<th>Proposal</th>
+<th>Build fantasy</th>
+<th>Tradeoffs</th>
+<th>Interaction</th>
+<th>Stakes and recovery</th>
+<th>Legibility</th>
+<th>Fit</th>
+<th>Buildable</th>
+<th>Measurable</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>The Purse (economy-first)</td>
+<td>3</td>
+<td>4</td>
+<td>2</td>
+<td>3</td>
+<td>2</td>
+<td>4</td>
+<td>2</td>
+<td>4</td>
+<td>24</td>
+</tr>
+<tr>
+<td>The Course Is the Other Players (interaction-first)</td>
+<td>4</td>
+<td>2</td>
+<td>5</td>
+<td>4</td>
+<td>2</td>
+<td>4</td>
+<td>2</td>
+<td>4</td>
+<td>27</td>
+</tr>
+<tr>
+<td>The Cut (run-first)</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>5</td>
+<td>4</td>
+<td>5</td>
+<td>4</td>
+<td>4</td>
+<td>32</td>
+</tr>
+<tr>
+<td>Hardpoints (build-first)</td>
+<td>5</td>
+<td>4</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td>31</td>
+</tr>
+</tbody></table>
+<p>On the four criteria I weight most, the order is Hardpoints 17, The Cut 15, The Course 15, The Purse 12. On the total, The Cut edges Hardpoints because it is cheaper and cleaner. My recommendation follows the weighted order, not the total, and the merge section says why.</p>
+<h3>The Purse</h3>
+<p><strong>Build fantasy 3.</strong> Maker four is a real rule change and Slingshot four turning the black hole into an assist is a genuine moment, but it lands at heat six or seven of twelve, and maker two is a stat, not a plan. Mk II on top of makers on top of slots is three build systems fighting for the same attention.</p>
+<p><strong>Tradeoffs 4.</strong> The best economy on paper: repairs against parts, slots against parts, reroll against bank, and a finite pool that punishes the saver. Five income sources is two too many, and interest capped at 50 banked is a number nobody on 6 a heat will reach without sitting out the run.</p>
+<p><strong>Interaction 2.</strong> The flag is a vote. One flag in a tally of nine or ten rarely decides anything, and the proposal admits the equilibrium in its own words: everyone flags the burst. The pool with visible counts and public banks are good; the pacing lap answer is not.</p>
+<p><strong>Stakes and recovery 3.</strong> Two cuts in twelve heats, each of two ships, the first at heat four. Between cuts nothing is at risk but points. The loss streak paying from the third bad heat is charity from the game, not a lever the player pulls.</p>
+<p><strong>Legibility 2.</strong> Appearance, purse, hot laps, interest, streaks; shop, slots, repairs, flags; makers, Mk II, sector odds, a secret tally shown at the grid. This is TFT with every knob left on, and it will not fit on a phone first time.</p>
+<p><strong>Fit 4.</strong> Per-ship rule modifiers read at race start is the right way to bend hazards without touching them. Twenty minutes strains &quot;short&quot;.</p>
+<p><strong>Buildable 2.</strong> Sixteen to twenty PRs, and the first playable version has neither flags nor makers, so it has no interaction and no build direction.</p>
+<p><strong>Measurable 4.</strong> The harness is named with concrete bots, and &quot;a heat-one winner wins the run under 35%&quot; is exactly the kind of target the brief asks for.</p>
+<p><strong>Best idea.</strong> The shop shows copies remaining (&quot;Ion Thruster, 2 left&quot;). That one line makes a private shop a contested one, and every other proposal should steal it.</p>
+<p><strong>Fatal flaw.</strong> The worked run ends with &quot;she wins because three ships agreed on one flag in one garage&quot;. That is not a plan coming together. That is a vote going her way. The interaction system this proposal was built around produces coincidence, not counter-play.</p>
+<h3>The Course Is the Other Players</h3>
+<p><strong>Build fantasy 4.</strong> Three archetypes fall out of the seed table without being taught, and a Mk III at heat four is a clear coming-online moment. It loses a point because the build is six parts on four hardpoints and the only question is which one to triple; identity is thinner than a family system.</p>
+<p><strong>Tradeoffs 2.</strong> Everything costs 3, income is 5 to 8, ship hull is repaired free, and there is no slot or level sink. The proposal says &quot;the gap is run hull, not money&quot;, which is another way of saying money is not a decision. The Special Order is the one real reason to hold 6.</p>
+<p><strong>Interaction 5.</strong> This is the best answer any proposal gives to the brief&#39;s question. The course is entirely the players&#39;, hazards have memory so a field in front of a hole is a combo, the bottom wave places with information, and every hit has a name on it. The heat two moment, your rock in front of Gravitas&#39;s hole taking Redline, is the moment I would show someone to sell the game.</p>
+<p><strong>Stakes and recovery 4.</strong> Run hull by position with the star&#39;s multiplier is earned, nobody is out before heat three, and a crash costs one heat. It loses a point because a slow leak has no line drawn under it; a player at 27 run hull is dying, not fighting.</p>
+<p><strong>Legibility 2.</strong> Eight player-laid hazards on a 28-second course, some twinned, some spanning two slots, from a seed table with eighteen variants, placed in two ten-second waves. Attribution and the ribbon are the right tools, but they are patching a course that is too busy to read.</p>
+<p><strong>Fit 4.</strong> Seeds are inputs, dissipation is an option, and the pilot seeds by the same rule a human does. Nothing is bent. The seeding timer is UI and belongs there.</p>
+<p><strong>Buildable 2.</strong> Eighteen PRs, twelve before anything is playable. The proposal calls it S2 and S3 again and it is right.</p>
+<p><strong>Measurable 4.</strong> The bot seeding rule lives beside the tap rules, and the degenerate-course test (always-seed-the-same versus reads-the-ribbon) is the right test to write first.</p>
+<p><strong>Best idea.</strong> Sequence. A hazard is stronger because of what came before it, and the player who places last can build the combo. That is the trailer&#39;s weapon and the comeback in one mechanic, and it costs nothing in the sim.</p>
+<p><strong>Fatal flaw.</strong> Everyone lays what they survive, and rock is a punishment while a straight is only a reward. The proposal&#39;s own logic points at a lobby that converges on Plating by heat five: rock everywhere, speed a trap, and the game becomes who has the most armour. The harness may prove me wrong. Until it does, this is a course that eats its own variety.</p>
+<h3>The Cut</h3>
+<p><strong>Build fantasy 4.</strong> Sets change a rule at three, tiers gate what can complete a set, and the season map in the lobby lets you pick Sling because you can see the black hole in heat four. It loses a point because seven heats means online at four and three heats of payoff, and a second set is a dream almost nobody reaches.</p>
+<p><strong>Tradeoffs 3.</strong> Tier gating is a good reason to bank and repair-or-part is a real fork. But the purse is a flat 3 for fourth through eighth, interest at 1 per 4 rewards banking almost immediately, and there are no rerolls, slots or levels, so the economy has one axis.</p>
+<p><strong>Interaction 3.</strong> The face-up draft in reverse ladder order is the most legible denial in any of the four; &quot;Halo picks before me, that part is gone&quot; is exactly the read a phone player can make. But the course lever belongs to one player per heat. Seven of eight ships do nothing to the track. Most rounds, the only way another player touches my race is by taking a card.</p>
+<p><strong>Stakes and recovery 5.</strong> A cut line drawn on the ladder, one ship gone after every heat from the third, tiebreak on the most recent heat so the ship falling is the ship that goes. This is the tension the brief asked for and nobody else delivers it. Tail shops first is structural recovery, not a handout.</p>
+<p><strong>Legibility 4.</strong> Ladder, course card, draft, in a fixed order, each a tap or two. Twelve parts, four tags. A phone can hold this.</p>
+<p><strong>Fit 5.</strong> A rules block on the resolved build and five reads in race.ts. The hazards and taps are untouched. Nothing is bent and nothing needs to be.</p>
+<p><strong>Buildable 4.</strong> Thirteen PRs, nine to playable, and most of the sim survives. The honest count in the proposal matches what the code looks like.</p>
+<p><strong>Measurable 4.</strong> Save, spend, set-chase, counter-pick and deny bots, and &quot;a runaway leader after heat 3 is caught a third of the time&quot; is a target the harness can check.</p>
+<p><strong>Best idea.</strong> The ladder with the cut line under it. Every point I take is a point the ship near the line did not, and sixth instead of seventh in heat five is a real, visible, one-row decision.</p>
+<p><strong>Fatal flaw.</strong> No single one. The nearest is that leader-lays-course means the field is scenery for seven players out of eight on the track, and the proposal knows it: the owner question &quot;leader or tail&quot; is really &quot;why not everyone&quot;.</p>
+<h3>Hardpoints</h3>
+<p><strong>Build fantasy 5.</strong> Cores at three, overdrives at five, six hardpoints that make the archetypes arithmetic, bridges that count twice, coloured pips that show everyone what you are. This is TFT traits done for a racer, and the moment Kestrel goes to Gravity overdrive and dives the black hole everyone else is crawling through is the best coming-online moment in the round.</p>
+<p><strong>Tradeoffs 4.</strong> Hardpoints at 6, 8 and 10 are the level-up sink, and an overdrive costs about 29 credits by round six on 5 to 8 a round, so greed in sector one against banking for sector three is a real choice. It loses a point because sector gates repair free, so hull never costs money, and selling for 1 having paid 3 makes a pivot a punishment rather than a choice.</p>
+<p><strong>Interaction 4.</strong> Everyone drops a beacon every round, the family decides the beacon, the pool has six copies and the bars show it, and the tail drops last with full information. Halo&#39;s Ion Storm on a corridor with two bursts, made stick by the Fins you bought to deny Redline, is a proper two-player play. A point off because a 60-tick beacon is a nudge, not a wall, and three per segment is either unreadable or has to go to one.</p>
+<p><strong>Stakes and recovery 4.</strong> Standing 20 with sector multipliers, and &quot;fifth every round ends on exactly 0&quot; is a good tuning anchor. It loses a point for the same reason The Course does: a drain has no line under it, so the mid-table leaks rather than fights, and elimination only bites in sector three.</p>
+<p><strong>Legibility 3.</strong> Pips make builds readable at a glance, which is most of the battle. Against that: four families with two thresholds each, two bridges, hardpoints, four beacon hazards, and a standing loss table with sector modifiers. Holdable, not simple.</p>
+<p><strong>Fit 4.</strong> Ten modifiers out of resolveBuild is honest, and the track function that lays beacons keeps the sim ignorant of who dropped what. The Burn overdrive &quot;never cooks, runs faster hot&quot; is a rule bend the proposal flags and I would cut.</p>
+<p><strong>Buildable 3.</strong> Fourteen PRs, seven to playable. The first playable has families, credits and standing but no beacons, which is a fine game already.</p>
+<p><strong>Measurable 4.</strong> Six archetype bots plus greedy, banker and switcher, and the expected shape (greedy wins sector one, banker sector three, switcher both by a little) is stated so the harness can disagree.</p>
+<p><strong>Best idea.</strong> &quot;Six slots make the archetypes arithmetic.&quot; Five of one plus a loose part, or three and three, and no room for three cores. The commitment is built into the hull, not into a rule, and by round five the grid tells everyone what you are.</p>
+<p><strong>Fatal flaw.</strong> None fatal. The real risk is the one the proposal names: the pool is 90 copies for 60 purchases and three flex pilots on the same family starve the human. That is a wishlist rule and a harness check, not a redesign.</p>
+<h3>Recommended merge</h3>
+<p>Build from Hardpoints. It is the only proposal where the build is the reason to play: a family total you are counting toward, a hull that forces commitment, and an overdrive that changes what a hazard is. The Cut scores one point higher in total by being cheaper and cleaner, but the thing it is cheap and clean about is a thinner version of the same set system. Take Hardpoints&#39; families, six hardpoints, pool, pips and beacons as the spine.</p>
+<p>Graft The Cut&#39;s ladder onto it, replacing the standing drain. Keep standing as the number, keep the sector multipliers, but draw a line: after every round from the fourth to the seventh, the lowest standing is cut, and four ships fly rounds eight and nine with the last worth double. A leak is not a stake. A line is. The tiebreak on the most recent round goes on screen beside the line, as The Cut says.</p>
+<p>Graft The Cut&#39;s tier gating, so hardpoints are not the only reason to bank: tier two parts enter the shop from round four, tier three from round seven, at 3, 5 and 7 credits. And once per sector, at the gate, replace the private shop with The Cut&#39;s face-up draft of ten in reverse standing order. That is the carousel, it gives the tail a real pick, and it puts denial on a screen where a phone player can see it happen.</p>
+<p>Graft two things from The Course. First, attribution: every beacon carries the name of who dropped it and the results screen reads &quot;18 hull to Bulwark&#39;s debris&quot;. It costs a field on a placement and it is the difference between rivals and scenery. Second, sequence: keep the three-per-segment cap but lay beacons in drop order along the segment, so the last player to drop can put a flare after a shadow on purpose. If the drop screen cannot show the result plainly, cut to one per segment before cutting attribution.</p>
+<p>From The Purse take one line: the shop shows copies remaining per part, not only a bar per family.</p>
+<p>Cut from Hardpoints: the Burn overdrive as written. &quot;Never cooks, runs 15% faster hot&quot; is the balance grenade the proposal admits it is; give Burn five a second reroute per stage instead, the same shape as Field five. Do not take The Purse&#39;s flags, The Course&#39;s free hull repair, or The Cut&#39;s leader-only course card. The first is a vote, the second removes the F-Zero trade the brief asks for, and the third leaves seven players with nothing to do on the track.</p>
+<p>The first playable version is Hardpoints&#39; seven PRs plus the ladder cut, about eight. Beacons with attribution are the next three. The draft and tiers are the three after that. Fourteen or fifteen total, and a game with a plan, a line and a name on every hit by the end of it.</p>
+</div>
+</details>
+<details id="review-engineering">
+<summary><span class="t">Engineering</span><span class="arrow"></span><span class="s">Would build from The Cut</span></summary>
+<div class="body"><h2>Review: Engineering</h2>
+<p>The lens is cost. I read every proposal against what is in <code>src/sim</code> today: a 475-line race loop that reads its rules from <code>tuning.ts</code> through <code>hazards.ts</code> and <code>actives.ts</code>, a 185-line field that already steps any number of entries, a 306-line immutable <code>run.ts</code> state machine with three phases, a garage that shuffles six parts, two rivals with wish lists, and a harness that plays a <code>Run</code> through <code>choosePart</code> and <code>runStage</code> with a pilot on the stick. Every proposal rewrites <code>run.ts</code> and widens <code>ShipId</code>. Those are the same price everywhere, so they do not separate the four. What separates them is how many new decision kinds the harness has to bot, how much of the race loop has to learn about the build, and whether the shop can be resolved in an order.</p>
+<p>Two costs no proposal states. First, three of the four have eight ships buying &quot;at once&quot; from one finite pool. The sim has no &quot;at once&quot;; it needs an order, and whoever goes first gets the last copy. Only The Cut says what the order is. Second, every proposal multiplies harness load by 15 to 35. Today the balance test runs about 10 million ship-ticks. A 500-run batch of eight ships over 7 to 12 heats is 150 to 350 million. The vitest bound test drops to 50 runs and the real batch moves to the script, or CI stops being green in under a minute.</p>
+<table>
+<thead>
+<tr>
+<th>Proposal</th>
+<th>Build fantasy</th>
+<th>Tradeoffs</th>
+<th>Interaction</th>
+<th>Stakes</th>
+<th>Legibility</th>
+<th>Fit</th>
+<th>Buildable</th>
+<th>Measurable</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>The Purse (economy-first)</td>
+<td>4</td>
+<td>5</td>
+<td>4</td>
+<td>4</td>
+<td>2</td>
+<td>4</td>
+<td>2</td>
+<td>3</td>
+<td>28</td>
+</tr>
+<tr>
+<td>The Course Is the Other Players (interaction-first)</td>
+<td>4</td>
+<td>3</td>
+<td>5</td>
+<td>4</td>
+<td>3</td>
+<td>5</td>
+<td>3</td>
+<td>4</td>
+<td>31</td>
+</tr>
+<tr>
+<td>The Cut (run-first)</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td>4</td>
+<td>5</td>
+<td>4</td>
+<td>5</td>
+<td>33</td>
+</tr>
+<tr>
+<td>Hardpoints (build-first)</td>
+<td>5</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td>30</td>
+</tr>
+</tbody></table>
+<h3>The Purse</h3>
+<p>Build fantasy: 4. Makers at two give a stat and at four give a rule, and Slingshot four turning the black hole into a 1.15 assist is a real &quot;online&quot; moment; the Mk II is a second system doing the same job.</p>
+<p>Tradeoffs: 5. Five income sources and four sinks, with interest, streaks, repairs and priced flags all pulling on one bank, is the richest economy of the four and the save-versus-spend case is argued with numbers.</p>
+<p>Interaction: 4. The pool with visible counts and public banks make the field readable, but a flag is a vote that averages nine or ten across four hazards, so most players&#39; flags do nothing most heats.</p>
+<p>Stakes: 4. Cuts at heats four and eight, a lost ship back at 25 hull, and the streak valve are sound; the proposal&#39;s own risk section admits purse plus hot laps plus interest can decide a run by heat six.</p>
+<p>Legibility: 2. Makers, Mk II, slots, streaks, interest, hot laps, sector odds, secret flags with a public tally. The proposal says it is one system more than a phone holds. I count three.</p>
+<p>Fit: 4. Pure and tick-bound throughout; the six rule modifiers in <code>RaceOptions</code> are the right shape. It claims the race loop survives unchanged, but hot laps need per-segment split times per ship, which <code>RaceState</code> does not record. That is a <code>segmentEnd</code> event in <code>stepRace</code>, small but unlisted.</p>
+<p>Buildable: 2. Sixteen to twenty PRs is stated and I believe twenty-two. Six decision kinds in the garage (buy, sell, reroll, slot, repair, flag) each need a sim input, a UI and a bot. The Mk II needs a part&#39;s upside split from its cost, which <code>StatDelta</code> does not model. The &quot;first playable at eight PRs&quot; has credits and cuts but no makers and no flags, so it answers gap two and neither of the gaps the brief cares most about.</p>
+<p>Measurable: 3. Bots are named, but with six decision kinds per garage the strategy space is wide enough that &quot;chooses well&quot; is whatever bot the author wrote, and the run is the heaviest to batch: 12 heats of 8 ships at 1,200 ticks is 115,000 ship-ticks per run.</p>
+<p>Best idea: the shop shows how many copies of each part are left. &quot;Ion Thruster, 2 left&quot; is one number that makes the pool a contest instead of background randomness, and it costs a counter on the pool.</p>
+<p>Fatal flaw: it is three games. The economy is the game the proposal wants to be, and the makers and flags are bolted to it late enough that the proposal&#39;s own first playable leaves them out.</p>
+<h3>The Course Is the Other Players</h3>
+<p>Build fantasy: 4. Levels are literally the stacking <code>resolveBuild</code> already does, so the synergy is not between parts, it is between the build and the seed it lays. That is a real identity, and a Mk III in heat four is a real moment, but the part list is the slice&#39;s six.</p>
+<p>Tradeoffs: 3. Income is flat on purpose, ship hull is repaired to full, so the between-heat spend has no repair sink and only the Special Order and the pool argue for saving. Thinner than the other three.</p>
+<p>Interaction: 5. My hazard is on your track with my name on it, the bottom wave places with the top wave&#39;s seeds visible, and the results screen reads hazard by hazard. This is the only proposal where the answer to the brief&#39;s fourth gap is the whole game.</p>
+<p>Stakes: 4. The run-hull arithmetic checks out: fifth every heat scrapes home at 93 lost, sixth every heat is out in heat eight, nobody is out before heat three. Elimination by living in the bottom half is earned.</p>
+<p>Legibility: 3. Four timed phases, two seeding waves, a level per part, an eighteen-entry seed table and a star multiplier on top of a run-hull toll. Attribution on the results screen carries a lot of the load, and it is the right thing to carry it.</p>
+<p>Fit: 5. The course is the arena, so all interaction is <code>Track</code> data going into <code>simulate</code>, which is exactly what the brief asks for. The star is one <code>RaceOptions</code> number. The Solar Flare is a one-shot heat hazard, which is an <code>isOneShot</code> case and one function.</p>
+<p>Buildable: 3. Eighteen PRs and &quot;S2 and S3 again&quot; is honest. Two things are missing from the cost. Attribution needs per-placement damage accounting in <code>stepRace</code>, because today only one-shot hazards log anything; that is a map on <code>RaceState</code> and a change to the loop the proposal says is unchanged. A Mk III seed spanning two slots breaks the <code>makeTrack</code> rule that a placement lies inside its segment, so a slot has to become two segments or the rule has to bend. Neither is large. The simultaneous shop from a shared pool has no resolution order.</p>
+<p>Measurable: 4. The seeding bot is one stated rule in <code>pilot.ts</code>, and &quot;a bot that always seeds the same thing against bots that read the ribbon&quot; is the right test. The noise is that the course is emergent from eight seeders, so a strategy&#39;s win rate has more variance per run than in a fixed-course design; more runs, same harness.</p>
+<p>Best idea: a placement carries the id of who laid it, and the race log charges damage to it. That is the cheapest possible &quot;other players&quot; and it makes rivals legible without a word of UI copy.</p>
+<p>Fatal flaw: none that sinks it. The one to watch is the shop: eight players buying at once from twelve copies is undefined until someone writes the order, and the order decides who gets the third Mirror.</p>
+<h3>The Cut</h3>
+<p>Build fantasy: 4. Four tags, direction at two and online at three, and sets that change a rule not a number. Brick three flying an asteroid field at full speed and Sling three being slung through the black hole are exactly the two moments the slice&#39;s hazards were built to give.</p>
+<p>Tradeoffs: 4. Tier gating is the best save reason of the four: the part that completes your set costs 4 or 6 the heat it appears. Interest at 1 per 4 capped at 3 saturates at 12 banked, so past 12 the bank pays nothing and the cap should move to 1 per 10.</p>
+<p>Interaction: 3. Only the leader shapes the course, and it is one card in one slot, so seven of eight players have no lever on the track. The draft in reverse ladder order with denial is strong and cheap, but it is the weakest answer to the fourth gap of the four, and the proposal knows it.</p>
+<p>Stakes: 4. One cut per heat from heat three, a ladder everyone watched build, a lost ship back at 40 hull with 2 salvage, and the tail shopping first. Nothing is sudden, the line is drawn on screen, and the worked run&#39;s numbers add up.</p>
+<p>Legibility: 4. Three screens in a fixed order and one ladder that holds every number the game has. Eight set rules are the most a phone player has to carry, and they are named after what they do.</p>
+<p>Fit: 5. Pure, tick-bound, nothing touches, and the draft is sequential by construction, so it is the only proposal whose shop the sim can resolve without inventing an order. The seven courses are level data with one open slot each, not a generator.</p>
+<p>Buildable: 4. Thirteen PRs with the first playable at nine is the smallest honest count and I would put it at fourteen. The &quot;only change to race.ts is five numbers&quot; is nearly true: Mirror three refilling the pool the tick a burst lands is a new branch in the one-shot path of <code>stepRace</code>, and the reroute cooldown has to come from resolved stats instead of <code>activeById</code>. Both are afternoon work. Six new parts with tests is two sessions, not one.</p>
+<p>Measurable: 5. Two decision kinds between heats (pick or pass, and the leader&#39;s card), a stated bot per strategy including deny and counter-pick, and the cheapest run to batch at about 48,000 ship-ticks. The &quot;runaway leader after heat three is caught a third of the time&quot; claim is a one-line assertion in the harness.</p>
+<p>Best idea: the tail shops first. It is a comeback lever with no charity in it, it is one sort on the ladder, and it makes denial a move the player can see coming.</p>
+<p>Fatal flaw: none. The weakness is interaction, and it is the cheapest of the four gaps to graft into this frame.</p>
+<h3>Hardpoints</h3>
+<p>Build fantasy: 5. Six hardpoints make the archetypes arithmetic, core at three and overdrive at five give two online moments, bridges make pairs cost one slot less, and the Gravity overdrive diving what kills everyone else is the best single fantasy in the round.</p>
+<p>Tradeoffs: 4. Hardpoints at 6, 8 and 10 are a real long bet against parts at 3 now, and the greedy, banker and switcher bots are the right three to check it with. Interest at 1 per 10 capped at 3 is sane.</p>
+<p>Interaction: 4. Every player drops a beacon, the family decides which, and the pool has a bar per family. It is a rock-paper-scissors nobody has to be taught. The beacon menu is one shape per family, so the choice is where and at whom, not what.</p>
+<p>Stakes: 3. The standing arithmetic is wrong. Fifth every round costs 2, 2, 2, 3, 3, 3, 4, 4, 4, which is 27, not 20; that ship is out in round eight, not &quot;exactly 0 at the end&quot;. Last every round is out in round four, not five. Tariff, seventh or eighth every round, is out in round five, not six as the worked run says. The shape is fine; the numbers that are supposed to be the tuning edge do not add up.</p>
+<p>Legibility: 3. Coloured pips with cores lit are the most legible build display proposed. Against that, fifteen parts, ten modifiers, two bridges and eight rule changes is a lot to hold, and the proposal&#39;s own risk section says the modifier set could sprawl.</p>
+<p>Fit: 4. Pure and tick-bound. Three of the four beacons are existing hazards with a parameter (a 30-point burst, a 60-tick field, a pull with no threshold), which means <code>HazardPlacement</code> grows parameters and the hazard functions stop reading <code>tuning.ts</code> directly. The Burn overdrive is a branch in the cooking block of <code>stepRace</code>, the Armour overdrive is a repair in <code>run.ts</code>. Ten modifiers is more of the race loop learning about the build than the other three.</p>
+<p>Buildable: 3. Fourteen PRs claimed, seven for the first playable. I count seventeen. Beacons &quot;laid end to end from the middle&quot; do not fit: three cored beacons are 360 ticks and no slice segment is longer than 200, so either they overlap, which the loop allows and the drop screen would not show plainly, or segments get longer and the course gets rewritten. The shop has the same unresolved simultaneous-pool problem as The Purse, plus a rule that the bottom three are served first when a copy is the last one, which is a second ordering on top of the first.</p>
+<p>Measurable: 4. Six archetypes plus three economic bots is a good harness, and the standing claims are precise enough that the harness would have caught them. Shop order has to be defined before any of it runs.</p>
+<p>Best idea: <code>resolveBuild</code> returns a modifier block beside the five stats, hazards and the loop read from it, and the ceiling is ten numbers with the rule that any part needing an eleventh is a stat delta instead. That is the right engineering shape for sets in any of the four proposals.</p>
+<p>Fatal flaw: the arithmetic in the section that is supposed to be the tuning edge is off by a third, and the beacon geometry does not fit the track it is dropped on. Neither is a design flaw, both are the kind of thing that turns fourteen PRs into twenty.</p>
+<h3>Recommended merge</h3>
+<p>Build from The Cut. It has the smallest honest count, the only shop the sim can resolve without a new rule, fixed courses that are level data, and a harness that needs two bot decisions per heat instead of six. Its ladder is also the one screen the brief&#39;s fourth gap needs, and it is already drawn.</p>
+<p>Graft five things, in this order.</p>
+<p>First, from Hardpoints: the modifier block. <code>resolveBuild</code> returns the five stats and a <code>Modifiers</code> record, hazards and <code>stepRace</code> read from it, and the cap is eight numbers. The Cut&#39;s five plus a burst refill flag fit. This is PR one and it is what every set in every proposal needs.</p>
+<p>Second, from The Course Is the Other Players: seeder ids on placements and per-placement damage in the race log. Two PRs. Then The Cut&#39;s leader card is the first thing on a course with somebody&#39;s name on it, and the results screen reads &quot;lost 25 hull to Bulwark&#39;s rock&quot; for free.</p>
+<p>Third, from the same proposal: the tail lays a card too. The Cut&#39;s course gets two open slots, the leader fills the first from three cards and the last-placed ship fills the second after seeing the leader&#39;s, with the card menu decided by tags held, so a Brick ship can lay a field and a bare ship lays an open run. That is the cheapest way to give seven ships a lever on the track, and it does not need a course generator. The seeding rule for rivals is the one The Course stated: lay what your set answers, put a hole after rock.</p>
+<p>Fourth, from The Course: the Solar Flare, one function and one test. Burner needs a hazard that punishes it, and &quot;do not tap Reroute now&quot; is the burst&#39;s mirror.</p>
+<p>Fifth, from Hardpoints: coloured pips per tag on the ladder, and a bar per tag under the draft showing copies left in the season deck. UI only, no sim change, and it turns The Cut&#39;s &quot;Halo has Mirror 2/3&quot; text into something a thumb reads.</p>
+<p>Leave out the Mk II from both proposals that have it. Stacking already does the job and the sim already measures it. Leave out The Purse&#39;s flags, streaks, hot laps and slots. Fix The Cut&#39;s interest to 1 per 10 capped at 3.</p>
+<p>Count after grafting: sixteen one-session PRs, first playable at ten. Modifier block, six new parts in two sessions, seeder ids and attribution, season courses with two slots, ladder and cut, purse and repairs, draft, seven rivals with two card rules, <code>run.ts</code> rewrite in two sessions, Solar Flare, harness bots, then ladder and draft UI with pips.</p>
+</div>
+</details>
+<details id="review-phone">
+<summary><span class="t">Phone</span><span class="arrow"></span><span class="s">Would build from The Cut</span></summary>
+<div class="body"><h2>Review: Phone</h2>
+<p>I play with one thumb, in five-minute gaps, on a train. I weight legibility and
+tradeoffs most, and I count systems. Every system a proposal adds is one more
+thing I have to remember after a four-hour break between heat 4 and heat 5.
+Every timer is a screen I lose because the train went into a tunnel.</p>
+<p>One note on pace that applies to all four. Every rival in every proposal is a
+bot. A timer on a garage full of bots is a timer against nobody. The Cut is the
+only proposal with no timers, and it is the only one that fits a gap.</p>
+<h3>Scoreboard</h3>
+<table>
+<thead>
+<tr>
+<th>Proposal</th>
+<th>1 Build</th>
+<th>2 Tradeoffs</th>
+<th>3 Interaction</th>
+<th>4 Stakes</th>
+<th>5 Legibility</th>
+<th>6 Fit</th>
+<th>7 Buildable</th>
+<th>8 Measurable</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>The Purse (economy-first)</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td>2</td>
+<td>4</td>
+<td>2</td>
+<td>4</td>
+<td>27</td>
+</tr>
+<tr>
+<td>The Course Is the Other Players (interaction-first)</td>
+<td>3</td>
+<td>3</td>
+<td>5</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td>2</td>
+<td>4</td>
+<td>28</td>
+</tr>
+<tr>
+<td>The Cut (run-first)</td>
+<td>4</td>
+<td>4</td>
+<td>4</td>
+<td>4</td>
+<td>5</td>
+<td>5</td>
+<td>4</td>
+<td>4</td>
+<td>34</td>
+</tr>
+<tr>
+<td>Hardpoints (build-first)</td>
+<td>5</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>3</td>
+<td>4</td>
+<td>3</td>
+<td>4</td>
+<td>30</td>
+</tr>
+</tbody></table>
+<h3>The Purse</h3>
+<ol>
+<li>Build fantasy: 4. Makers at four change a rule and Slingshot four turning the black hole into a 1.15 assist is a real moment; but makers, Mk II and slots are three build systems doing one job.</li>
+<li>Tradeoffs: 4. Repair, slot, part and flag all draw from one purse, so every garage is one budget question, and interest at 1 per 10 gives saving a reason.</li>
+<li>Interaction: 3. The pool and the flag are real, but flags are secret until the countdown, so the course changes for reasons I only learn on the grid, and reading eight banks and maker counts on a standings table is a spreadsheet, not a glance.</li>
+<li>Stakes: 4. Cuts at heats 4 and 8 are earned, a lost ship comes back at 25 hull poor rather than dead, and the loss streak is a recovery valve.</li>
+<li>Legibility: 2. Five income sources: appearance, purse, hot laps, interest, streaks. After a heat I earned 7 and I cannot say why. Add secret flags, sector odds, Mk II and three buyable slots, and this is the proposal I would put down at heat 6 and not pick up.</li>
+<li>Fit: 4. Rule modifiers read at race start are the honest way to do maker bonuses; the sim stays pure.</li>
+<li>Buildable: 2. Sixteen to twenty PRs and five new files, and the proposal&#39;s own fallback is to ship without Mk II.</li>
+<li>Measurable: 4. Saver, spender, never-repair, always-repair and flag-counter over 500 runs is the right harness, and the 35 percent test on a heat-one winner is a good number to hold.</li>
+</ol>
+<p>Best idea: one coin. Repairs, slots, parts and flags all cost credits, so hull damage is a bill and greed has a price you can read.</p>
+<p>Fatal flaw: system count. Twelve heats, twenty minutes, five income streams, three build systems and a secret flag tally. The proposal admits the build stack is one more than a phone holds and admits the pool is invisible without counts. It is right both times. The pace is wrong too: twenty minutes is four of my gaps.</p>
+<p>I disagree with the claim that hot laps and streaks are needed as recovery. A placing purse with a floor for finishing does the same job in one line.</p>
+<h3>The Course Is the Other Players</h3>
+<ol>
+<li>Build fantasy: 3. Levels are stacking with a name, which the sim already does. The three archetypes fall out of the seed table rather than being designed, and the only comes-online moment is a Mk III seed spanning two slots.</li>
+<li>Tradeoffs: 3. Income is flat on purpose, and the proposal says the gap between players is run hull, not money. That is half the brief&#39;s second gap left open. Greed early is nearly always right by its own account.</li>
+<li>Interaction: 5. This is the reason to read it. A part is a shield and a weapon at once, the course is built by the players every heat, and every hazard carries the name of who laid it.</li>
+<li>Stakes: 4. The run hull table is plain arithmetic, nobody is out before heat 3, and fifth every heat scrapes home. Standing as health with ship hull repaired between heats is the right split.</li>
+<li>Legibility: 3. Attribution is the most legible single thing in all four proposals: &quot;18 hull to Bulwark&#39;s rock&quot; is exactly what I need to see in ten seconds. Everything around it is not. Six seeds times three levels is eighteen hazard variants I have to know to read a course. Two seeding waves on ten-second timers with a tie rule is a desktop moment. The star&#39;s dissipation curve is one number per heat that changes what every part is worth, invisibly.</li>
+<li>Fit: 4. Seeds, buys and rerolls are all inputs, the sim stays pure, and the timed phases live in the UI. But the timers are the wrong call for a phone whatever layer they live in.</li>
+<li>Buildable: 2. Eighteen PRs, twelve to playable, and the proposal calls itself S2 and S3 again. That is honest and it is a lot.</li>
+<li>Measurable: 4. A fixed seeder against a ribbon reader is the right test for whether seeding degenerates.</li>
+</ol>
+<p>Best idea: attribution. Every hazard names who laid it, and the results screen reads hazard by hazard. This is the one thing every merge should take.</p>
+<p>Fatal flaw: it cannot be held in one head on a phone. The proposal says &quot;two hulls are two systems to hold in one head&quot; and then adds a star curve, an eighteen-entry seed table and a two-wave seeding phase on timers. Right diagnosis, wrong prescription.</p>
+<h3>The Cut</h3>
+<ol>
+<li>Build fantasy: 4. Two of a tag is a direction and three changes a rule, twelve parts in three tiers, and a greedy ship can hold two sets by the final. It lacks the second tier that Hardpoints&#39; overdrive gives, so the build has a middle but no late.</li>
+<li>Tradeoffs: 4. Tier gating is the best save reason in the round: the part that completes your set costs 4 or 6 the heat it appears, and a ship that spent 2 a heat on tier 1 cannot afford its own plan. Repairs at 1 per 20 hull compete with the draft for the same credits. The line &quot;rich in seventh place and about to be cut&quot; is the whole tension in nine words.</li>
+<li>Interaction: 4. Leader lays the course, tail shops first, the draft is shared and visible, denial is a legal move. Seven of eight ships do nothing to the track each heat, which is less than interaction-first offers and exactly as much as I can follow.</li>
+<li>Stakes: 4. One cut per heat from heat 3, the line drawn on the ladder, a crash is a zero and a return at 40 hull. The ladder is relative, so a bad heat can be climbed back from, which Hardpoints&#39; standing cannot.</li>
+<li>Legibility: 5. Three screens in a fixed order, each one or two taps, no timers: ladder, course, draft. Everything is public. Points are 8 down to 1, the purse is 6, 5, 4, 3, interest is 1 per 4. I can say after any heat exactly why I have what I have. The season is drawn end to end in the lobby, so the black hole in heat 4 is a plan, not a surprise.</li>
+<li>Fit: 5. A rules block resolved beside the stats, race.ts reading five numbers from the build instead of tuning, and hazards, actives and pilot untouched. Nothing bends.</li>
+<li>Buildable: 4. Thirteen PRs, nine to playable, with the biggest change confined to run.ts. Believable.</li>
+<li>Measurable: 4. Save, spend, set-chase, counter-pick and deny bots, and the stated test that a runaway leader after heat 3 is caught a third of the time.</li>
+</ol>
+<p>Best idea: the three fixed screens. Ladder, course, draft, in that order, one glance each. That is the shape of a between-round on a phone, and no other proposal has it.</p>
+<p>Fatal flaw: none. Two things to fix. Leader-lays-course is a snowball, and the worked run shows it: Redline lays heats 2 to 5 for itself, then the player lays two black holes that end Halo. The proposal&#39;s own counterweights are tail-shops-first and the double final, and the harness has to prove them. Second, the pace claim is wrong in the good direction: seven heats of 15 seconds and six garages of three taps is 8 to 9 minutes, not 14, and that is the right length. Also, do not name a tag and a rival both Sling.</p>
+<p>I disagree that Ledger taking Grav Keel because it was expensive is &quot;the moment&quot;. It is a bot with a bad rule being annoying. The moment is the tail-shops-first draft that let the player take it back a heat later.</p>
+<h3>Hardpoints</h3>
+<ol>
+<li>Build fantasy: 5. Cores at three and overdrives at five are the best comes-online in the round, the six-slot arithmetic makes archetypes something you can count on your fingers, and Gravity overdrive diving the black hole everyone else crawls through is the fantasy the brief asked for.</li>
+<li>Tradeoffs: 4. Hardpoints at 6, 8 and 10 credits are a clean long bet that buys nothing this heat; interest at 1 per 10; and the stated test that the greedy bot wins sector 1 and the banker sector 3 is the right one. But the worked run&#39;s banker is eliminated at round 6 having banked to 40, which says the tradeoff is not balanced yet.</li>
+<li>Interaction: 4. Everyone drops a beacon every round, the family decides which, denial is priced at 2 credits and a round, and the pool bars say who is crowded. The pip strip is the best build-reading device in the round.</li>
+<li>Stakes: 3. Standing starts at 20 and only goes down. The recovery levers are credits and drop order, not standing, so a bad sector 1 is permanent. The arithmetic that fifth every round ends at exactly 0 is tidy for a tuner and invisible to a player.</li>
+<li>Legibility: 3. Four colours of pip, core at 3, overdrive at 5: that part is holdable. Eight beacons per round on three segments, three per segment, on a course that already escalates by sector, is not. Plus bridges that count twice, sector adders on standing loss, and two timed screens.</li>
+<li>Fit: 4. Ten modifiers as a hard ceiling is a good discipline. Beacons laid into a track so the sim never knows who dropped what is the right shape.</li>
+<li>Buildable: 3. Fourteen PRs, seven to playable, but ten modifiers threaded through hazards and race is more than the proposal&#39;s &quot;reads three of them&quot; suggests.</li>
+<li>Measurable: 4. Six archetypes plus greedy, banker and switcher, and the check that no family is unreachable in more than a few percent of runs.</li>
+</ol>
+<p>Best idea: coloured pips with a count. Three red pips is a Burn ship one part from its core. That is a build read in under a second, and it should be on every ladder screen in the game.</p>
+<p>Fatal flaw: the beacon pile. Eight players each drop one beacon per round, up to three on a segment, each doubled by a core. By round 5 the course is a stack of labelled boxes I cannot read in the 15-second drop window, and the proposal&#39;s own risk section says the cap may have to go to one. It should start at one. The rock-paper-scissors &quot;nobody has to be taught&quot; is a four by four matrix, and it does have to be taught.</p>
+<h3>Recommended merge</h3>
+<p>Build from The Cut. It is the only proposal I can play in a gap: no timers, three screens between heats, everything public, a season drawn in the lobby, and a run that is 8 to 9 minutes by its own numbers. Its ladder is a relative health that can be climbed, which the brief asked for and Hardpoints&#39; standing cannot do.</p>
+<p>Graft four things onto it.</p>
+<p>From interaction-first, attribution. The leader&#39;s card carries the leader&#39;s name, and the results screen reads &quot;lost 30 hull to Redline&#39;s asteroid field, cooked 2 seconds at the ringed planet you dropped&quot;. That is the whole of &quot;understand why you lost in the time it takes to show it&quot;, and The Cut does not have it.</p>
+<p>From Hardpoints, coloured pips. The Cut already has tags and set counts on the ladder as &quot;Burner 2/3&quot;. Make the tags four colours and the counts pips. Nothing else changes.</p>
+<p>From Hardpoints, the overdrive tier, later. The Cut&#39;s set comes online at 3 and stops. A second threshold at 5 gives the build a late game. Do not do it in the first playable; do it when the harness says sets at 3 are balanced.</p>
+<p>From interaction-first, tie the leader&#39;s card to the leader&#39;s build, if the snowball proves real. Instead of three cards from a deck, the leader chooses from the hazards its own sets answer. The course then reads from the ribbon, and a Brick leader dropping rock is a thing the whole field saw coming.</p>
+<p>Take nothing from The Purse but the discipline: one coin for parts and repairs, which The Cut already has. Leave hot laps, streaks, slots, Mk II and secret flags where they are.</p>
+<p>Two calls the owner has to make before a PR is opened. Keep the run at seven heats; do not stretch it to nine or twelve. Cap between-heat screens at three and refuse a fourth.</p>
+</div>
+</details>
+</section>
+
+<section id="critique">
+  <h2>What the recommendation dodged</h2>
+  <h2>Critique</h2>
+<ol>
+<li><p><strong>The player never lays a card.</strong> Only the leader and the tail lay cards, so six of eight ships have no move on the track in any heat. In the worked run the player is never leader or tail, lays nothing in seven heats, and wins; the brief&#39;s fourth gap is the one it says matters most, and the synthesis&#39;s own example answers it with seven draft picks and two repairs. For a mid-ladder ship the track interaction is a rival&#39;s name printed on a hazard, which is PvE with a label.</p>
+</li>
+<li><p><strong>The economy has no scarcity, so saving costs nothing.</strong> Start at 4, tier 1 at 2, purse at least 3, interest from 5 banked: a ship that finishes heats 1 and 2 and buys at both drafts holds 8 at the heat-3 draft, so &quot;walks into that draft with 3 credits&quot; cannot happen to a finisher. Over a season a fourth-place ship earns about 30 and the full set path (2, 2, 2, 4, 4, 6, 6) costs 26; the worked-run player buys at every draft, repairs twice, and ends with 16 unspent. Fourth to eighth all earn the same 3, so position barely pays.</p>
+</li>
+<li><p><strong>Bots or players is decided without being asked.</strong> Timers between heats are rejected &quot;because every rival is a bot&quot;, which settles single-player versus multiplayer in a rejection note rather than in the eleven decisions for the owner. The brief&#39;s fourth gap is other players; the synthesis delivers seven scripted characters and parks ghosts in one clause. The lobby, the draft and the harness all depend on this call, and it is the owner&#39;s, not the synthesiser&#39;s.</p>
+</li>
+<li><p><strong>Mirror 3 contradicts the worked run.</strong> Shields hold 150 ticks at Mirror 2, so a burst laid 200 ticks after the fixed one lands with shields down, and a pool that refills on landing refills nothing. Halo&#39;s heat-5 win and the player&#39;s final are both credited to a refill &quot;through both bursts&quot; that the stated rule cannot deliver. A base pool of 50 already stops a 45 burst, so the synthesis owes one concrete course where Mirror 3 changes the result.</p>
+</li>
+<li><p><strong>Brick&#39;s online moment rewards a stat Brick removes.</strong> Brick 3 makes rock scale with speed instead of speed squared, on a ship that paid 0.08 speed per plate and 0.12 for Ram Prow. Brick and Mirror also have one tier-1 part each, four copies, against eight red and eight purple copies, so two Bricks cannot both reach 3 before heat 3, and the deck rather than the draft decides who gets a set.</p>
+</li>
+<li><p><strong>Hull is not run health at 1 credit per 20.</strong> The brief offered hull as the thing greed spends across rounds; here a ship on 40 is back to 100 for 3 credits, less than one tier-2 part. Redline dies on 22 hull &quot;after three fast heats and no repairs&quot;, but no bot repair rule is given except that Scrap never repairs, so that death is scripted rather than earned. The rejected &quot;free repair between heats&quot; is back at a price nobody will notice.</p>
+</li>
+<li><p><strong>The tail has no reason to lay a real card.</strong> A laid hazard hits every ship on the course, including the one that laid it, and the tail is the ship least able to survive it. The worked run shows this: Scrap lays Open Run twice, Ledger can only lay Open Run, and the one tail card that decides anything is Bulwark&#39;s rock in the final, laid by a Brick 3 immune to its own card. &quot;Sequence&quot; is asserted as the comeback lever and demonstrated once, by the only ship for which it was free.</p>
+</li>
+<li><p><strong>The cost estimate hides hazards.ts.</strong> Four of the eight modifiers, the asteroid exponent and multiplier, the black hole multiplier and the hazard heat multiplier, live inside hazard functions that read tuning.ts today, so HazardContext changes, four functions change and four test files change; &quot;survives unchanged apart from one new function&quot; is wrong. Sixteen PRs is not a handful, and three of them (lobby and ladder with pips; course and draft UI; results with attribution plus an eight-lane render) are each larger than any UI PR the slice shipped.</p>
+</li>
+<li><p><strong>The draft&#39;s deal is not specified.</strong> Ten cards from a deck of 44 copies, dealt seven times, is 70 deals from 44 cards; whether unbought cards return, whether a cut ship&#39;s parts return, and whether the deal guarantees every tag appears are all unsaid. A random ten with no tag guarantee means a Brick can go two drafts without seeing Plating, and the harness cannot separate &quot;choosing well pays&quot; from &quot;the deck was kind&quot;.</p>
+</li>
+<li><p><strong>Counter-picking mostly means copying the leader.</strong> The answer to rock is Plating, the answer to a hole is hull, the answer to a flare is dissipation, the answer to a burst is a base pool and timing; each is the laying tag&#39;s own part, which the leader has been draining from a four-copy supply for three drafts. The synthesis promises &quot;they are going for X, so I want Y&quot; and never names a Y that is not X.</p>
+</li>
+<li><p><strong>Several numbers do not hold.</strong> Fourth entering the final can be 18 points back, not &quot;at most 16&quot;: a ship that wins six heats has 48, and three rivals on 7, 6 and 5 a heat leave fourth on 30. The player&#39;s bank after heat 4 is 15, which pays 3 interest, not 14 paying 2. The Solar Flare has no heat figure, a slot has no length so a 130-tick black hole may not fit one, and &quot;seven drafts&quot; sits two paragraphs from &quot;six garages&quot;.</p>
+</li>
+<li><p><strong>Nobody counted the systems.</strong> Fourteen parts, four tags with eight threshold rules, three tiers, five hazards, four card menus, two slots, purse, salvage, interest, repair, ladder points, a cut, a tiebreak and a double final. The slice had six parts and four hazards; the rubric asks whether a phone player can hold this in one head, and the synthesis never asks.</p>
+</li>
+</ol>
+<h3>What the next round should be asked</h3>
+<p>Not &quot;take this as fixed&quot;. The spine can be fixed: seven heats, a ladder with a cut line from heat 3, reverse-order face-up draft, tags with a direction at 2 and a rule at 3. The economy numbers, the two-card rule and the bots-or-players question cannot, because each fails against the brief as written.</p>
+<p>Ask for the player on the track every heat. A proposal for every ship laying one card, or every ship below the line, or the two cards going to the two ships with the fewest points, priced in screens and bot rules, with a worked run in which the player lays at least four cards and one of them decides a heat.</p>
+<p>Ask for prices that bite. Targets, not adjectives: a ship that buys at every draft holds under 4 credits at the heat-3 draft; a full repair from 40 hull costs more than a tier-2 part; the purse for fourth differs from eighth. Show the credit table per heat for a spender, a saver and a switcher, and say which one reaches the final most often.</p>
+<p>Ask the owner, in the decisions list, whether rivals are bots, ghosts of other runs, or live players, and let the proposal say what each needs recorded and what each costs.</p>
+<p>Ask for each set&#39;s third part to be visible in fifteen seconds. One line per set: on a course carrying that set&#39;s own card, a set-3 ship beats a set-2 ship by at least 20% of races. Rewrite Mirror 3 and Brick 3 until they pass it, and fix the Mirror 2 duration or the burst spacing so the worked run is legal.</p>
+<p>Ask for the deal and the tail&#39;s menu in full: what returns to the deck, whether ten cards guarantee four tags, and why a tail with no set lays anything but Open Run.</p>
+<p>Ask for the cost again with hazards.ts on the list, and either a first playable in eight PRs or a plain statement that it is eleven and the slice&#39;s one-PR-a-session pace is the real schedule.</p>
+
+</section>
+
+
+
+<section id="feedback">
+  <h2>How to reply</h2>
+  <div class="feedback-how">
+    <p>Answer the decisions above, or push back on anything here, in any shape. Put it in <code>design\rounds\round-01/feedback.md</code>, or send it as a message and ask for it to be filed there. The next round's proposers read it before the brief. Anything that should hold for every future round goes into <code>design/BRIEF.md</code> too.</p>
+    <p>To start the next round: <em>run the framework-round workflow for round 2</em>.</p>
+  </div>
+</section>
+
+<footer>Rendered from <code>design\rounds\round-01/</code> by <code>npm run design-page</code>. The markdown is the record; this page is the reading copy.</footer>
+</div>
+</body>
+</html>

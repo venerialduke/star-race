@@ -160,6 +160,11 @@ After three stages: finish time per stage, total, damage taken, what killed you
 if anything, and the build you ended with. One tap to run again.
 Done when: a finished run lands on the results screen and can be replayed.
 
+**S4 is done.** All eight items are merged: the loop is under test, the course
+fits a phone, pilots fly the rivals, three ships race every stage, the results
+screen shows the standings, time slows before a burst, and a run prints its
+telemetry. The vertical slice is complete.
+
 ## S4 — the field, and feel
 
 S4 is done when: three ships fly every stage, the results screen shows where you

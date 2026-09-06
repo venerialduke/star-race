@@ -10,11 +10,22 @@
 // This is a script, not part of the game: it may use the console and process,
 // which src/sim may not.
 
-import { flyRace, startRace, type RaceOutcome } from '../src/sim/race';
+import { flyField, type Field } from '../src/sim/field';
+import { flyRace, startRace, type PlayerInput, type RaceOutcome } from '../src/sim/race';
 import { STANDARD_BUILDS, type StandardBuild } from '../src/sim/builds';
 import { makePilot } from '../src/sim/pilot';
 import { makeRng } from '../src/sim/rng';
-import { resolveBuild } from '../src/sim/ship';
+import { resolveBuild, type Part, type PartId } from '../src/sim/ship';
+import {
+  choosePart,
+  runStage,
+  runStandings,
+  startRun,
+  startStageField,
+  totalTicks,
+  wonRun,
+  type Run,
+} from '../src/sim/run';
 import { SLICE_TRACK, type Track } from '../src/sim/track';
 
 interface Row {
@@ -99,6 +110,201 @@ function formatTable(rows: readonly Row[]): string {
   ].join('\n');
 }
 
+
+// ---------------------------------------------------------------------------
+// Whole runs, against the rivals.
+//
+// The race table above measures one ship against the course. This measures a
+// player against the field: three stages, a garage between each, and a pilot on
+// the player's own stick so the taps are as good as a rival's. What it answers
+// is the only balance question that matters now — can a player win, and does
+// choosing well change that?
+// ---------------------------------------------------------------------------
+
+/** How a player picks in the garage. */
+interface Strategy {
+  readonly name: string;
+  /** Parts this player wants, best first; anything unlisted is a last resort. */
+  readonly wants: readonly PartId[];
+  /**
+   * A player who looks at the ship before choosing. Given the run so far, it
+   * returns the shopping list to use this time.
+   */
+  readonly adapt?: (run: Run) => readonly PartId[];
+}
+
+const STRATEGIES: readonly Strategy[] = [
+  {
+    name: 'First card',
+    // Takes whatever is on the left. The floor: no thought at all.
+    wants: [],
+  },
+  {
+    name: 'All speed',
+    wants: ['ionThruster', 'overclockedReactor', 'inertialAnchor'],
+  },
+  {
+    name: 'All armour',
+    wants: ['ablativePlating', 'radiatorFins', 'mirrorShielding'],
+  },
+  {
+    name: 'Speed, then cover',
+    wants: ['ionThruster', 'inertialAnchor', 'radiatorFins', 'mirrorShielding'],
+  },
+  {
+    name: 'Reads the ship',
+    // Buys speed while the hull can afford it, armour when it cannot. This is
+    // the player the garage is supposed to reward.
+    wants: [],
+    adapt: (run) => {
+      const stats = resolveBuild(run.build);
+      const thin = run.hull < stats.hull * 0.6;
+      return thin
+        ? ['ablativePlating', 'mirrorShielding', 'radiatorFins', 'ionThruster']
+        : ['ionThruster', 'inertialAnchor', 'overclockedReactor', 'radiatorFins'];
+    },
+  },
+];
+
+function pick(strategy: Strategy, offer: readonly Part[], run: Run): Part {
+  const first = offer[0];
+  if (first === undefined) throw new Error('An empty garage offer.');
+  const wants = strategy.adapt === undefined ? strategy.wants : strategy.adapt(run);
+  let best = first;
+  let bestRank = wants.indexOf(best.id);
+  offer.forEach((part) => {
+    const rank = wants.indexOf(part.id);
+    const better =
+      (rank !== -1 && bestRank === -1) || (rank !== -1 && bestRank !== -1 && rank < bestRank);
+    if (better) {
+      best = part;
+      bestRank = rank;
+    }
+  });
+  return best;
+}
+
+/** Play one run, with a pilot flying the player's ship as well as the rivals'. */
+export function playRun(strategy: Strategy, seed: number, track: Track = SLICE_TRACK): Run {
+  let run = startRun(track, seed);
+  while (run.phase !== 'done') {
+    if (run.phase === 'garage') {
+      run = choosePart(run, pick(strategy, run.offer, run));
+      continue;
+    }
+    // Fly the stage with a pilot on the player's stick, recording what it taps,
+    // then hand those taps to runStage — which replays the same stage from the
+    // same seed and gets the same result.
+    const pilot = makePilot(track, makeRng(run.seed + run.stage).fork());
+    const field: Field = startStageField(run);
+    const mine = field.racers.find((racer) => racer.id === 'player');
+    if (mine === undefined) throw new Error('unreachable: the player is always on the grid');
+    const taps: PlayerInput[] = [];
+    flyField(field, (tick) => {
+      const tapped = pilot.taps(mine.state);
+      tapped.forEach((active) => taps.push({ tick, active }));
+      return tapped;
+    });
+    run = runStage(run, taps);
+  }
+  return run;
+}
+
+interface RunRow {
+  readonly name: string;
+  readonly runs: number;
+  readonly winRate: number;
+  readonly survivalRate: number;
+  readonly meanPosition: number;
+  /** Mean total ticks over the runs that finished — a dead run is not "quick". */
+  readonly meanTicks: number;
+  /** Mean total ticks Redline took in those same runs, to race against. */
+  readonly rivalTicks: number;
+  /** How often Redline got through all three stages. */
+  readonly rivalSurvival: number;
+  /** How often the player beat Redline on time, having both finished. */
+  readonly beatOnTime: number;
+}
+
+function summariseRuns(strategy: Strategy, runs: number, track: Track): RunRow {
+  let wins = 0;
+  let survived = 0;
+  let positions = 0;
+  let ticks = 0;
+  let rivalTicks = 0;
+  let rivalFinished = 0;
+  let bothFinished = 0;
+  let beatOnTime = 0;
+  for (let seed = 0; seed < runs; seed++) {
+    const run = playRun(strategy, seed, track);
+    if (wonRun(run)) wins++;
+    const table = runStandings(run);
+    positions += table.find((row) => row.id === 'player')?.position ?? 3;
+    const redline = table.find((row) => row.id === 'redline');
+    const stageCount = run.results.length;
+    const redlineHome = redline !== undefined && redline.stagesFinished === 3;
+    if (redlineHome) rivalFinished++;
+    if (run.alive && redlineHome && stageCount === 3) {
+      bothFinished++;
+      if (totalTicks(run) < (redline?.totalTicks ?? Infinity)) beatOnTime++;
+    }
+    if (run.alive) {
+      // Only finished runs have a meaningful time: a ship that died in stage 1
+      // is not quick, it is gone.
+      survived++;
+      ticks += totalTicks(run);
+      rivalTicks += table.find((row) => row.id === 'redline')?.totalTicks ?? 0;
+    }
+  }
+  return {
+    name: strategy.name,
+    runs,
+    winRate: wins / runs,
+    survivalRate: survived / runs,
+    meanPosition: positions / runs,
+    meanTicks: survived === 0 ? NaN : ticks / survived,
+    rivalTicks: survived === 0 ? NaN : rivalTicks / survived,
+    rivalSurvival: rivalFinished / runs,
+    beatOnTime: bothFinished === 0 ? NaN : beatOnTime / bothFinished,
+  };
+}
+
+/** Every strategy against the field. */
+export function runTheField(runs: number, track: Track = SLICE_TRACK): RunRow[] {
+  return STRATEGIES.map((strategy) => summariseRuns(strategy, runs, track));
+}
+
+function formatRunTable(rows: readonly RunRow[]): string {
+  const headers = [
+    'Player',
+    'Runs',
+    'Won',
+    'Survived',
+    'Avg place',
+    'Ticks (finished)',
+    'Redline',
+    'R. home',
+    'Beat R. on time',
+  ];
+  const body = rows.map((row) => [
+    row.name,
+    String(row.runs),
+    `${(row.winRate * 100).toFixed(1)}%`,
+    `${(row.survivalRate * 100).toFixed(1)}%`,
+    row.meanPosition.toFixed(2),
+    Number.isNaN(row.meanTicks) ? '—' : row.meanTicks.toFixed(0),
+    Number.isNaN(row.rivalTicks) ? '—' : row.rivalTicks.toFixed(0),
+    `${(row.rivalSurvival * 100).toFixed(0)}%`,
+    Number.isNaN(row.beatOnTime) ? '—' : `${(row.beatOnTime * 100).toFixed(0)}%`,
+  ]);
+  const widths = headers.map((header, i) =>
+    Math.max(header.length, ...body.map((cells) => (cells[i] ?? '').length)),
+  );
+  const line = (cells: readonly string[]): string =>
+    cells.map((cell, i) => cell.padEnd(widths[i] ?? 0)).join('  ');
+  return [line(headers), widths.map((w) => '-'.repeat(w)).join('  '), ...body.map(line)].join('\n');
+}
+
 function parseRaces(argv: readonly string[]): number {
   const flag = argv.indexOf('--races');
   if (flag === -1) return 1000;
@@ -109,11 +315,27 @@ function parseRaces(argv: readonly string[]): number {
   return value;
 }
 
-const races = parseRaces(process.argv.slice(2));
+function parseCount(argv: readonly string[], flag: string, fallback: number): number {
+  const at = argv.indexOf(flag);
+  if (at === -1) return fallback;
+  const value = Number(argv[at + 1]);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${flag} needs a positive whole number, got ${argv[at + 1]}.`);
+  }
+  return value;
+}
+
+const argv = process.argv.slice(2);
+const races = parseRaces(argv);
+const runs = parseCount(argv, '--runs', 200);
 const started = Date.now();
 const rows = runBalance(races);
+const runRows = runTheField(runs);
 const elapsed = (Date.now() - started) / 1000;
 
 console.log(`\nStar Race — ${races} seeded races per build on the slice track\n`);
 console.log(formatTable(rows));
-console.log(`\nFinish times count finishers only. Ran in ${elapsed.toFixed(2)}s.\n`);
+console.log(`\nFinish times count finishers only.\n`);
+console.log(`Whole runs against the rivals — ${runs} per player, pilot-flown\n`);
+console.log(formatRunTable(runRows));
+console.log(`\nRan in ${elapsed.toFixed(2)}s.\n`);

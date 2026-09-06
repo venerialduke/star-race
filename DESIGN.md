@@ -130,9 +130,31 @@ the black hole quickly and badly equipped for it.
 
 ### Hazards (four in the slice)
 
-Seen in the plan's track figure: ringed planet, asteroid field, gamma-ray
-burst, black hole. Each hazard is one function in `src/sim/hazards.ts` and
-has its own test. Effects to be specified here as each is implemented.
+Ringed planet, asteroid field, gamma-ray burst, black hole. Each hazard is one
+function in `src/sim/hazards.ts` with its own test. A hazard is asked, once per
+tick the ship is inside it, what it does; it returns hull damage, heat, a
+multiplier on top speed, and whether the ship is lost outright. The race loop
+applies the answer — hazards never change anything themselves.
+
+A hazard catches the ship if the ship's movement **this tick overlaps the
+hazard's stretch of track**, so a fast ship cannot skip over a short hazard
+between one tick and the next.
+
+Every hazard that rolls dice draws from **its own stream**, forked per placement
+from the race seed. Adding a roll to one hazard cannot change what another
+hazard on the same track does.
+
+#### Asteroid field
+
+Rock chews on the hull for every tick the ship spends inside. Damage per tick
+scales with the **square** of the ship's speed, with a variance band rolled each
+tick.
+
+Squaring is what makes the field a real decision. A ship going twice as fast
+spends half as many ticks inside but takes four times the damage in each, so it
+comes out having taken roughly twice as much. Crossing a field fast is
+expensive; armour or restraint is the answer. Ablative Plating both raises hull
+and lowers speed, so it pays twice here.
 
 ### Actives (two in the slice)
 

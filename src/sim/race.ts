@@ -12,8 +12,10 @@
 //      from a standstill.
 // Hazards and actives hook into this loop in S2.6 onwards.
 
+import { hazardEffect } from './hazards';
+import { makeRng, type Rng } from './rng';
 import { resolveBuild, type Build, type DerivedStats } from './ship';
-import { segmentStartTick, totalLengthTicks, type Track } from './track';
+import { segmentStartTick, totalLengthTicks, type HazardKind, type Track } from './track';
 import { LAUNCH_SPEED, MAX_RACE_TICKS } from './tuning';
 
 /** The two actives in the slice. They do nothing until S2.10. */
@@ -25,7 +27,7 @@ export interface PlayerInput {
   readonly active: ActiveId;
 }
 
-export type RaceEventKind = 'start' | 'stageEnd' | 'finish' | 'abandoned';
+export type RaceEventKind = 'start' | 'stageEnd' | 'finish' | 'abandoned' | 'destroyed';
 
 export interface RaceEvent {
   readonly tick: number;
@@ -43,6 +45,8 @@ export interface RaceOutcome {
   readonly damageTaken: number;
   /** Did the ship reach the finish line in one piece? */
   readonly survived: boolean;
+  /** Hull remaining at the end, floored at 0. */
+  readonly hullLeft: number;
   /** What happened, in order. Enough to narrate a race after the fact. */
   readonly log: readonly RaceEvent[];
   /** The seed this race was run with, so an interesting race can be replayed. */
@@ -71,24 +75,82 @@ export function simulate(
     (gate) => segmentStartTick(track, gate) + segmentLength(track, gate),
   );
 
+  // Each placement gets its own stream, forked once up front, so adding a roll
+  // to one hazard cannot shift what another one does.
+  const raceRng = makeRng(seed);
+  const placements: PlacedHazard[] = [];
+  track.segments.forEach((segment, index) => {
+    const segmentStart = segmentStartTick(track, index);
+    segment.hazards.forEach((hazard) => {
+      placements.push({
+        kind: hazard.kind,
+        from: segmentStart + hazard.startTick,
+        to: segmentStart + hazard.startTick + hazard.lengthTicks,
+        rng: raceRng.fork(),
+      });
+    });
+  });
+
   const log: RaceEvent[] = [];
   let tick = 0;
   let distance = 0;
   let speed = LAUNCH_SPEED;
   let stage = 0;
-  const damageTaken = 0;
+  let hull = stats.hull;
+  let heat = 0;
+  let damageTaken = 0;
+  let destroyed = false;
 
   log.push({ tick, kind: 'start', distance, stage });
 
-  while (distance < finishDistance && tick < MAX_RACE_TICKS) {
-    // 1. Close on top speed. A ship never overshoots the speed it can hold.
-    speed = Math.min(speed + stats.acceleration, stats.speed);
+  while (distance < finishDistance && tick < MAX_RACE_TICKS && !destroyed) {
+    // 1. Work out where the ship would reach this tick if nothing interfered,
+    //    so a hazard the ship flies straight through still catches it.
+    const freeSpeed = Math.min(speed + stats.acceleration, stats.speed);
+    const active = placements.filter(
+      (placement) => placement.from < distance + freeSpeed && placement.to > distance,
+    );
 
-    // 2. Fly.
+    // 2. Ask each hazard what it does this tick, and combine the answers.
+    let hullDamage = 0;
+    let addedHeat = 0;
+    let speedMultiplier = 1;
+    active.forEach((placement) => {
+      const effect = hazardEffect(placement.kind, {
+        stats,
+        speed: freeSpeed,
+        heat,
+        hull,
+        shieldsUp: false, // S2.10 raises shields here.
+        rng: placement.rng,
+      });
+      hullDamage += effect.hullDamage;
+      addedHeat += effect.heat;
+      speedMultiplier *= effect.speedMultiplier;
+      if (effect.destroyed) destroyed = true;
+    });
+
+    // 3. Apply damage and heat, then close on whatever top speed the hazards
+    //    left the ship with.
+    if (hullDamage > 0) {
+      hull -= hullDamage;
+      damageTaken += hullDamage;
+    }
+    heat += addedHeat;
+    if (hull <= 0) destroyed = true;
+
+    speed = Math.min(speed + stats.acceleration, stats.speed * speedMultiplier);
+
+    // 4. Fly.
     distance += speed;
     tick++;
 
-    // 3. Stage gate: the race pauses, the garage costs no ticks, and the ship
+    if (destroyed) {
+      log.push({ tick, kind: 'destroyed', distance, stage });
+      break;
+    }
+
+    // 5. Stage gate: the race pauses, the garage costs no ticks, and the ship
     //    sets off again from a standstill.
     const nextStageEnd = stageEnds[stage];
     if (nextStageEnd !== undefined && distance >= nextStageEnd) {
@@ -102,22 +164,35 @@ export function simulate(
     }
   }
 
-  const finished = distance >= finishDistance;
-  log.push({
-    tick,
-    kind: finished ? 'finish' : 'abandoned',
-    distance,
-    stage,
-  });
+  const finished = !destroyed && distance >= finishDistance;
+  if (!destroyed) {
+    log.push({
+      tick,
+      kind: finished ? 'finish' : 'abandoned',
+      distance,
+      stage,
+    });
+  }
 
   return {
     finishTicks: tick,
     damageTaken,
     survived: finished,
+    hullLeft: Math.max(hull, 0),
     log,
     seed,
     stats,
   };
+}
+
+/** A hazard resolved to absolute race distances, with its own dice. */
+interface PlacedHazard {
+  readonly kind: HazardKind;
+  /** Distance at which the hazard starts, from the start line. */
+  readonly from: number;
+  /** Distance at which it ends. */
+  readonly to: number;
+  readonly rng: Rng;
 }
 
 function segmentLength(track: Track, index: number): number {

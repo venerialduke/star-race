@@ -34,12 +34,22 @@ describe('simulate', () => {
     expect(a).toEqual(b);
   });
 
-  it('finishes the slice track and survives, with no hazards yet', () => {
+  it('finishes the slice track, hurt but alive on a bare build', () => {
     const outcome = simulate(SLICE_TRACK, bare, noInputs, 1);
     expect(outcome.survived).toBe(true);
-    expect(outcome.damageTaken).toBe(0);
     expect(outcome.finishTicks).toBeGreaterThan(0);
     expect(outcome.finishTicks).toBeLessThan(MAX_RACE_TICKS);
+    // The two asteroid fields cost a bare ship roughly half its hull.
+    expect(outcome.damageTaken).toBeGreaterThan(0);
+    expect(outcome.hullLeft).toBeGreaterThan(0);
+    expect(outcome.hullLeft).toBeLessThan(outcome.stats.hull);
+  });
+
+  it('a hazard-free track costs nothing', () => {
+    const clear = makeTrack([seg('clear', 200)], [], line);
+    const outcome = simulate(clear, bare, noInputs, 1);
+    expect(outcome.damageTaken).toBe(0);
+    expect(outcome.hullLeft).toBe(outcome.stats.hull);
   });
 
   it('reports the build it resolved and the seed it ran with', () => {

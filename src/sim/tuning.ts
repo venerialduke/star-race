@@ -69,6 +69,19 @@ export const LAUNCH_SPEED = 0;
  */
 export const MAX_RACE_TICKS = 20000;
 
+// --- Hazards ---------------------------------------------------------------
+
+/**
+ * Asteroid field: hull damage per tick inside the field at base speed. Damage
+ * scales with the square of speed, so a fast ship spends fewer ticks in the
+ * field but takes more in each of them, and crossing quickly costs more
+ * overall.
+ */
+export const ASTEROID_DAMAGE_PER_TICK = 0.25;
+
+/** Asteroid field: how much a roll can swing damage, as a fraction. 0.4 = ±40%. */
+export const ASTEROID_DAMAGE_VARIANCE = 0.4;
+
 // --- Parts -----------------------------------------------------------------
 // Six parts in the slice. Each is one upside and one cost; DESIGN.md says what
 // each is for and which hazard it answers.

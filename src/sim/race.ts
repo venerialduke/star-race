@@ -51,7 +51,8 @@ export type RaceEventKind =
   | 'abandoned'
   | 'destroyed'
   | 'activeFired'
-  | 'activeIgnored';
+  | 'activeIgnored'
+  | 'hazardFired';
 
 export interface RaceEvent {
   readonly tick: number;
@@ -62,6 +63,10 @@ export interface RaceEvent {
   readonly stage: number;
   /** Which active the event is about, for activeFired and activeIgnored. */
   readonly active?: ActiveId;
+  /** Which hazard, for hazardFired. */
+  readonly hazard?: HazardKind;
+  /** Were shields up when it landed? The whole story of a gamma burst. */
+  readonly shielded?: boolean;
 }
 
 /** Why a ship was lost. Undefined when it finished. */
@@ -290,7 +295,20 @@ export function stepRace(state: RaceState, taps: readonly ActiveId[] = []): Race
       shieldsUp,
       rng: placement.rng,
     });
-    if (isOneShot(placement.kind)) state.fired.add(placement);
+    if (isOneShot(placement.kind)) {
+      state.fired.add(placement);
+      // One-shot hazards are worth a line in the log: there are few of them, and
+      // whether the ship was covered when one landed is the whole story of the
+      // stage.
+      state.log.push({
+        tick: state.tick,
+        kind: 'hazardFired',
+        distance: state.distance,
+        stage: state.stage,
+        hazard: placement.kind,
+        shielded: shieldsUp,
+      });
+    }
     hullDamage += effect.hullDamage;
     addedHeat += effect.heat;
     speedMultiplier *= effect.speedMultiplier;

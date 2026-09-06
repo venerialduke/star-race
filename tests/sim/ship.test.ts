@@ -96,8 +96,12 @@ describe('the six parts', () => {
     expect(deltaOf(PARTS.ablativePlating)).toEqual({ hull: 40, speed: -0.08 });
   });
 
-  it('Mirror Shielding buys shield capacity with speed', () => {
-    expect(deltaOf(PARTS.mirrorShielding)).toEqual({ shieldCapacity: 35, speed: -0.05 });
+  it('Mirror Shielding buys shield capacity and a little hull with speed', () => {
+    expect(deltaOf(PARTS.mirrorShielding)).toEqual({
+      shieldCapacity: 35,
+      hull: 12,
+      speed: -0.05,
+    });
   });
 
   it('Radiator Fins buy heat tolerance with hull', () => {

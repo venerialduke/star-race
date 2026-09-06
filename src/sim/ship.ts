@@ -26,6 +26,7 @@ import {
   MIN_HULL,
   MIN_SHIELD_CAPACITY,
   MIN_SPEED,
+  MIRROR_SHIELDING_HULL,
   MIRROR_SHIELDING_SHIELD_CAPACITY,
   MIRROR_SHIELDING_SPEED,
   OVERCLOCKED_REACTOR_ACCELERATION,
@@ -111,9 +112,10 @@ export const PARTS: Readonly<Record<PartId, Part>> = {
   mirrorShielding: {
     id: 'mirrorShielding',
     name: 'Mirror Shielding',
-    blurb: 'Deeper shields for gamma bursts. Costs a little speed.',
+    blurb: 'Deeper shields, on plating that helps anyway. Costs a little speed.',
     effect: {
       shieldCapacity: MIRROR_SHIELDING_SHIELD_CAPACITY,
+      hull: MIRROR_SHIELDING_HULL,
       speed: MIRROR_SHIELDING_SPEED,
     },
   },

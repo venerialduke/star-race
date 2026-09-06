@@ -39,11 +39,56 @@ Success test: you play three runs and want to try a different build.
 
 ### Track
 
-- One star system, one visible track, three stages.
-- The track is a spline through a list of segments. Each segment may carry
-  hazards. Stage gates sit between stages; the race pauses there and you
-  return to the garage.
-- Hazard placement is visible before the run starts.
+One star system, one visible track, three stages. Hazard placement is visible
+before the run starts: you can see the black hole in stage 3 from the start
+line and build for it.
+
+A track is an ordered list of **segments**. A segment has:
+
+- a **name**, shown in the garage and in logs;
+- a **length in ticks at base speed** — a whole number. A ship faster than base
+  crosses it in fewer ticks, a slowed ship in more, so segment length is a
+  distance, not a duration;
+- a list of **hazard placements**, each a hazard kind plus a start tick
+  measured from the beginning of the segment and a length in ticks. A placement
+  must lie entirely inside its segment. An instantaneous hazard, such as the
+  gamma-ray burst, has length 1.
+
+**Stage gates** are segment indices at whose end the race pauses and the player
+returns to the garage. Gates are sorted and unique, and the final segment never
+carries one — the race ends there rather than pausing. Three stages means two
+gates.
+
+**Geometry is separate from timing.** A track also carries a spline path, used
+only to draw the course and place the ship on screen. The simulation never
+reads it; lengths, hazards and gates decide everything that happens. Progress
+along the drawn line is linear in ticks at base speed, so a long segment takes
+up more of the line.
+
+Track numbers — segment lengths, hazard placements, control points — are level
+data, not balance constants, and live with the track rather than in
+`tuning.ts`.
+
+#### The slice track
+
+Nine segments, 1,320 ticks at base speed (about 22 seconds at 60 ticks per
+second), three stages of three segments each. All four slice hazards appear.
+
+| #   | Segment         | Ticks | Hazard                                              |
+| --- | --------------- | ----- | --------------------------------------------------- |
+| 0   | Launch          | 120   | —                                                   |
+| 1   | Asteroid belt   | 180   | asteroid field, ticks 30–150                        |
+| 2   | Open run        | 120   | — _(gate: stage 1 ends)_                            |
+| 3   | Ringed planet   | 150   | ringed planet, ticks 20–130                         |
+| 4   | Gamma corridor  | 160   | gamma-ray burst at tick 80                          |
+| 5   | Debris tail     | 140   | asteroid field, ticks 40–120 _(gate: stage 2 ends)_ |
+| 6   | Inner system    | 130   | —                                                   |
+| 7   | Black hole      | 200   | black hole, ticks 40–170                            |
+| 8   | Finish straight | 120   | —                                                   |
+
+Stage 1 teaches the asteroid field on a build with no parts yet. Stage 2 pairs
+the ringed planet's gravity assist with a burst to shield against. Stage 3 is
+the black hole the player has been able to see all along.
 
 ### Ship
 

@@ -6,7 +6,14 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createResults, type Results } from '../../src/ui/results';
-import { choosePart, runStage, startRun, type Run } from '../../src/sim/run';
+import {
+  choosePart,
+  runStage,
+  runStandings,
+  startRun,
+  wonRun,
+  type Run,
+} from '../../src/sim/run';
 import { SLICE_TRACK } from '../../src/sim/track';
 import { TICK_RATE } from '../../src/sim/tuning';
 
@@ -19,8 +26,17 @@ const screen = (): HTMLElement => {
 const text = (selector: string): string =>
   document.querySelector(selector)?.textContent ?? '';
 
-const rows = (): string[] =>
-  Array.from(document.querySelectorAll('.results-row')).map((r) => r.textContent ?? '');
+/** The player's per-stage table, which is the first of the two. */
+const rows = (): string[] => {
+  const table = document.querySelectorAll('.results-table')[0];
+  return Array.from(table?.querySelectorAll('.results-row') ?? []).map((r) => r.textContent ?? '');
+};
+
+/** The standings table, which is the second. */
+const fieldRows = (): string[] => {
+  const table = document.querySelectorAll('.results-table')[1];
+  return Array.from(table?.querySelectorAll('.results-row') ?? []).map((r) => r.textContent ?? '');
+};
 
 /** Play a run to its end, taking the first part offered each time. */
 const playRun = (seed: number): Run => {
@@ -59,14 +75,52 @@ describe('the results screen', () => {
   it('reports a completed run with its total time', () => {
     const finished = findRun((run) => run.alive);
     results.show(finished, () => {});
-    expect(text('.results-title')).toBe('Run complete');
     expect(document.querySelector('.results-title')?.classList.contains('is-lost')).toBe(
       false,
     );
     expect(text('.results-note')).toContain('Three stages');
   });
 
-  it('lists every stage, with time and damage', () => {
+  it('calls a win a win', () => {
+    const won = findRun((run) => run.alive && wonRun(run));
+    results.show(won, () => {});
+    expect(text('.results-title')).toBe('Run won');
+    expect(document.querySelector('.results-title')?.classList.contains('is-won')).toBe(true);
+    expect(text('.results-note')).toContain('beat them both');
+  });
+
+  it('calls surviving and coming last a loss, and names who beat you', () => {
+    const beaten = findRun((run) => run.alive && !wonRun(run));
+    results.show(beaten, () => {});
+    expect(text('.results-title')).toMatch(/^Beaten — \d(st|nd|rd) of 3$/);
+    expect(document.querySelector('.results-title')?.classList.contains('is-won')).toBe(false);
+    const ahead = runStandings(beaten).filter((row) => row.id !== 'player' && row.position < 
+      (runStandings(beaten).find((r) => r.id === 'player')?.position ?? 4));
+    ahead.forEach((row) => expect(text('.results-note')).toContain(row.name));
+  });
+
+  it('shows the standings across the whole field', () => {
+    const finished = findRun((run) => run.alive);
+    results.show(finished, () => {});
+    const standings = runStandings(finished);
+    expect(fieldRows()).toHaveLength(standings.length);
+    standings.forEach((entry, i) => {
+      expect(fieldRows()[i]).toContain(entry.name);
+      expect(fieldRows()[i]).toContain(String(entry.position));
+    });
+    // The player's own row is picked out.
+    expect(document.querySelectorAll('.results-row.is-player')).toHaveLength(1);
+  });
+
+  it('says where a ship dropped out, rather than pretending it finished', () => {
+    const withCasualty = findRun(
+      (run) => run.results.length === 3 && runStandings(run).some((row) => !row.survived),
+    );
+    results.show(withCasualty, () => {});
+    expect(fieldRows().some((line) => line.includes('out in stage'))).toBe(true);
+  });
+
+  it('lists every stage, with position, time and damage', () => {
     const finished = findRun((run) => run.alive);
     const lines = rows();
     results.show(finished, () => {});
@@ -74,6 +128,7 @@ describe('the results screen', () => {
     expect(rows()).toHaveLength(4); // three stages and a total
     expect(rows()[0]).toContain('Stage 1');
     expect(rows()[0]).toContain('damage');
+    expect(rows()[0]).toMatch(/\d(st|nd|rd)/); // where they came
     expect(rows()[3]).toContain('Total');
   });
 

@@ -6,7 +6,14 @@
 // actually killed it, named plainly.
 
 import type { LossCause } from '../sim/race';
-import { completed, totalDamage, totalTicks, type Run } from '../sim/run';
+import {
+  completed,
+  runStandings,
+  totalDamage,
+  totalTicks,
+  wonRun,
+  type Run,
+} from '../sim/run';
 import { stages } from '../sim/track';
 import { TICK_RATE } from '../sim/tuning';
 
@@ -39,6 +46,7 @@ const STYLE = `
 .results[hidden] { display: none; }
 .results-title { font-size: 22px; letter-spacing: 0.04em; }
 .results-title.is-lost { color: #e2685f; }
+.results-title.is-won { color: #7fd48c; }
 .results-note { color: #b9b7ae; font-size: 14px; }
 .results-table { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .results-row { display: flex; justify-content: space-between; gap: 10px; }
@@ -46,6 +54,9 @@ const STYLE = `
 .results-row.is-unraced { color: #6f7b93; }
 .results-label { color: #b9b7ae; }
 .results-build { color: #8ea2c8; font-size: 13px; }
+.results-heading { color: #b9b7ae; font-size: 12px; letter-spacing: 0.08em; margin-top: 4px; }
+.results-row.is-player { color: #f2a93b; }
+.results-row.is-out { color: #6f7b93; }
 .results-spacer { flex: 1 1 auto; }
 .results-again {
   width: 100%;
@@ -73,6 +84,12 @@ function el<K extends keyof HTMLElementTagNameMap>(
 
 const seconds = (ticks: number): string => `${(ticks / TICK_RATE).toFixed(1)}s`;
 
+/** 1 -> 1st. Three ships, so this never has to be clever. */
+const ordinal = (position: number): string => {
+  const suffix = position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th';
+  return `${position}${suffix}`;
+};
+
 function row(label: string, value: string, className = ''): HTMLElement {
   const line = el('div', `results-row ${className}`.trim());
   const left = el('span', 'results-label');
@@ -93,13 +110,28 @@ export function createResults(root: HTMLElement): Results {
   screen.hidden = true;
   const title = el('div', 'results-title');
   const note = el('div', 'results-note');
+  const stagesHeading = el('div', 'results-heading');
+  stagesHeading.textContent = 'YOUR STAGES';
   const table = el('div', 'results-table');
+  const fieldHeading = el('div', 'results-heading');
+  fieldHeading.textContent = 'THE FIELD';
+  const fieldTable = el('div', 'results-table');
   const build = el('div', 'results-build');
   const spacer = el('div', 'results-spacer');
   const again = el('button', 'results-again');
   again.type = 'button';
   again.textContent = 'Run again';
-  screen.append(title, note, table, build, spacer, again);
+  screen.append(
+    title,
+    note,
+    stagesHeading,
+    table,
+    fieldHeading,
+    fieldTable,
+    build,
+    spacer,
+    again,
+  );
   root.append(screen);
 
   let onAgain: () => void = () => {};
@@ -113,19 +145,30 @@ export function createResults(root: HTMLElement): Results {
       onAgain = again_;
       const stageCount = stages(run.track).length;
       const finished = completed(run);
+      const won = wonRun(run);
+      const table_ = runStandings(run);
+      const place = table_.findIndex((row) => row.id === 'player') + 1;
       const lastResult = run.results[run.results.length - 1];
 
-      title.textContent = finished
-        ? 'Run complete'
-        : `Lost in stage ${run.results.length}`;
+      // Surviving is not winning. A run that came home third says so.
+      title.textContent = won
+        ? 'Run won'
+        : finished
+          ? `Beaten — ${ordinal(place)} of ${table_.length}`
+          : `Lost in stage ${run.results.length}`;
       title.classList.toggle('is-lost', !finished);
+      title.classList.toggle('is-won', won);
 
       if (finished) {
-        note.textContent = `Three stages, ${seconds(totalTicks(run))}, ${Math.round(run.hull)} hull left.`;
+        const ahead = table_.filter((row) => row.id !== 'player' && row.position < place);
+        note.textContent = won
+          ? `Three stages, ${seconds(totalTicks(run))}, and you beat them both.`
+          : `Three stages, ${seconds(totalTicks(run))}. ${ahead
+              .map((row) => row.name)
+              .join(' and ')} got there first.`;
       } else {
         const cause = lastResult?.outcome.lostTo;
-        note.textContent =
-          cause === undefined ? 'The ship did not make it.' : LOSS_TEXT[cause];
+        note.textContent = cause === undefined ? 'The ship did not make it.' : LOSS_TEXT[cause];
       }
 
       table.textContent = '';
@@ -137,17 +180,26 @@ export function createResults(root: HTMLElement): Results {
         }
         const { outcome } = result;
         const value = outcome.survived
-          ? `${seconds(outcome.finishTicks)} · ${Math.round(outcome.damageTaken)} damage`
+          ? `${ordinal(result.position)} · ${seconds(outcome.finishTicks)} · ${Math.round(outcome.damageTaken)} damage`
           : `lost · ${Math.round(outcome.damageTaken)} damage`;
         table.append(row(`Stage ${stage + 1}`, value));
       }
       table.append(
-        row(
-          'Total',
-          `${seconds(totalTicks(run))} · ${Math.round(totalDamage(run))} damage`,
-          'is-total',
-        ),
+        row('Total', `${seconds(totalTicks(run))} · ${Math.round(totalDamage(run))} damage`, 'is-total'),
       );
+
+      fieldTable.textContent = '';
+      table_.forEach((entry) => {
+        const out = entry.stagesFinished < stageCount;
+        const label = `${entry.position}. ${entry.name}`;
+        const value = out
+          ? `out in stage ${entry.stagesFinished + 1} · ${seconds(entry.totalTicks)}`
+          : seconds(entry.totalTicks);
+        const classes = [entry.id === 'player' ? 'is-player' : '', out ? 'is-out' : '']
+          .filter((c) => c.length > 0)
+          .join(' ');
+        fieldTable.append(row(label, value, classes));
+      });
 
       build.textContent =
         run.build.length === 0

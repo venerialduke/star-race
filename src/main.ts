@@ -1,6 +1,7 @@
 // Wires the browser to the sim: fixed timestep in, canvas frames out.
 
-import { INITIAL_STATE, TICK_RATE, step, type DemoState } from './sim/demo';
+import { INITIAL_STATE, step, type DemoState } from './sim/demo';
+import { TICK_RATE } from './sim/tuning';
 import { draw, type Viewport } from './render/draw';
 
 function getCanvas(): HTMLCanvasElement {

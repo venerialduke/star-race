@@ -58,6 +58,17 @@ export const MIN_SHIELD_CAPACITY = 0;
 export const MIN_HEAT_TOLERANCE = 10;
 export const MIN_HULL = 10;
 
+// --- Race ------------------------------------------------------------------
+
+/** Speed the ship leaves the start line, and every stage gate, with. */
+export const LAUNCH_SPEED = 0;
+
+/**
+ * Hard stop on a race, in ticks. A ship crawling at MIN_SPEED needs about
+ * 3,800 ticks for the slice track, so this only ever catches a bug.
+ */
+export const MAX_RACE_TICKS = 20000;
+
 // --- Parts -----------------------------------------------------------------
 // Six parts in the slice. Each is one upside and one cost; DESIGN.md says what
 // each is for and which hazard it answers.

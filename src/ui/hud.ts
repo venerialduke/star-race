@@ -16,6 +16,8 @@ export interface Hud {
   update(state: RaceState): void;
   /** Show or hide the whole HUD, for the garage and results screens. */
   setVisible(visible: boolean): void;
+  /** A word across the middle of the screen — the countdown, mostly. */
+  setMessage(message: string | null): void;
 }
 
 interface Bar {
@@ -74,6 +76,19 @@ const STYLE = `
 .hud-heat .hud-bar-fill { background: #f2a93b; }
 .hud-heat.is-over .hud-bar-fill { background: #e2685f; }
 .hud-shield .hud-bar-fill { background: #63d2ff; }
+
+.hud-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  color: #f2a93b;
+  text-shadow: 0 0 24px rgba(242, 169, 59, 0.4);
+  pointer-events: none;
+}
+.hud-message[hidden] { display: none; }
 
 .hud-actives {
   display: flex;
@@ -181,7 +196,10 @@ export function createHud(root: HTMLElement, onTap: (active: ActiveId) => void):
     return { active, button, cooldown, hint };
   });
 
-  hud.append(top, actives);
+  const message = el('div', 'hud-message');
+  message.hidden = true;
+
+  hud.append(top, message, actives);
   root.append(hud);
 
   return {
@@ -234,6 +252,10 @@ export function createHud(root: HTMLElement, onTap: (active: ActiveId) => void):
     },
     setVisible(visible: boolean): void {
       hud.hidden = !visible;
+    },
+    setMessage(text: string | null): void {
+      message.textContent = text ?? '';
+      message.hidden = text === null;
     },
   };
 }

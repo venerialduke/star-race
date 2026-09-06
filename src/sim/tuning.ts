@@ -123,6 +123,16 @@ export const BLACK_HOLE_ESCAPE_HULL = 15;
  */
 export const GAMMA_BURST_DAMAGE = 45;
 
+// --- The screen -------------------------------------------------------------
+// Feel, not balance, but they are numbers that change how the game plays and
+// they belong with the rest of them.
+
+/** Ticks the ship sits on the grid before a stage starts. Time to read the course. */
+export const COUNTDOWN_TICKS = 180;
+
+/** Ticks a finished stage stays on screen before the garage opens. */
+export const HOLD_AFTER_STAGE_TICKS = 90;
+
 // --- Garage ----------------------------------------------------------------
 
 /** How many parts the garage offers between stages. Three is a real choice. */

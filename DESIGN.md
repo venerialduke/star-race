@@ -121,7 +121,7 @@ about raw pace.
 | Ablative Plating    | +40 hull                         | −0.08 speed        | Asteroid fields.                                |
 | Mirror Shielding    | +35 shield capacity              | −0.05 speed        | Gamma-ray bursts.                               |
 | Radiator Fins       | +45 heat tolerance               | −15 hull           | The ringed planet's gravity assist.             |
-| Inertial Anchor     | +0.03 acceleration               | −0.04 speed        | Black holes: clawing speed back after the pull. |
+| Inertial Anchor     | +0.03 acceleration               | −0.02 speed        | Black holes: clawing speed back after the pull. |
 | Overclocked Reactor | +0.10 speed, +0.015 acceleration | −30 heat tolerance | Going fast and accepting the heat risk.         |
 
 The intended tension: hull and shields are bought with speed, and speed is
@@ -166,6 +166,19 @@ call the player got wrong, not bad luck.
 
 The burst is **one-shot**: a ship moving about one track-tick per tick overlaps
 a one-tick window on two consecutive ticks, and must still only be hit once.
+
+#### Black hole
+
+The pull holds the ship at a little over half the top speed it could otherwise
+make, for every tick it is inside. It deals no damage at all — the danger is a
+**threshold**: a ship that arrives already battered, below the escape hull,
+cannot pull away and is lost with it.
+
+The threshold is a flat number, not a fraction of the ship's hull, so extra
+plating raises what you arrive with but never lowers the bar you have to clear.
+This is why the black hole sits in stage 3: it charges the player for the hull
+they spent in stages 1 and 2. Climbing back out afterwards is an acceleration
+problem, which is where Inertial Anchor earns its place.
 
 #### Shields
 

@@ -75,21 +75,26 @@ describe('simulate', () => {
     expect(outcome.finishTicks).toBeLessThan(length * 1.5);
   });
 
-  it('better acceleration finishes sooner at the same top speed', () => {
-    const anchored = simulate(SLICE_TRACK, [PARTS.inertialAnchor], noInputs, 1);
-    const bareRun = simulate(SLICE_TRACK, bare, noInputs, 1);
-    // The anchor trades top speed for acceleration, so it is slower overall...
-    expect(anchored.finishTicks).toBeGreaterThan(bareRun.finishTicks);
-    // ...but on a track that is all launches, acceleration wins. Four short
-    // stages means four standing starts.
+  it('acceleration is worth buying on a course with standing starts', () => {
+    // The Inertial Anchor trades a little top speed for a lot of acceleration.
+    // On the slice track's three standing starts that is a net gain...
+    expect(simulate(SLICE_TRACK, [PARTS.inertialAnchor], noInputs, 1).finishTicks).toBeLessThan(
+      simulate(SLICE_TRACK, bare, noInputs, 1).finishTicks,
+    );
+    // ...and it gains more the more often the ship has to launch again.
     const stopStart = makeTrack(
       [seg('a', 20), seg('b', 20), seg('c', 20), seg('d', 20)],
       [0, 1, 2],
       line,
     );
-    expect(
-      simulate(stopStart, [PARTS.inertialAnchor], noInputs, 1).finishTicks,
-    ).toBeLessThan(simulate(stopStart, bare, noInputs, 1).finishTicks);
+    const oneLaunch = makeTrack([seg('a', 80)], [], line);
+    const gainStopStart =
+      simulate(stopStart, bare, noInputs, 1).finishTicks -
+      simulate(stopStart, [PARTS.inertialAnchor], noInputs, 1).finishTicks;
+    const gainOneLaunch =
+      simulate(oneLaunch, bare, noInputs, 1).finishTicks -
+      simulate(oneLaunch, [PARTS.inertialAnchor], noInputs, 1).finishTicks;
+    expect(gainStopStart).toBeGreaterThan(gainOneLaunch);
   });
 
   it('does not care what order the parts were bolted on', () => {

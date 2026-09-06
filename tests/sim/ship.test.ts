@@ -105,7 +105,7 @@ describe('the six parts', () => {
   });
 
   it('Inertial Anchor buys acceleration with speed', () => {
-    expect(deltaOf(PARTS.inertialAnchor)).toEqual({ acceleration: 0.03, speed: -0.04 });
+    expect(deltaOf(PARTS.inertialAnchor)).toEqual({ acceleration: 0.03, speed: -0.02 });
   });
 
   it('Overclocked Reactor buys speed and acceleration with heat tolerance', () => {

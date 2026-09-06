@@ -20,8 +20,16 @@ forbids `Math.random` in `src/sim`.
 
 Add `src/sim/tuning.ts` exporting every balance constant as a named export
 with a one-line comment. Move `TICK_RATE` and `SPEED` out of `demo.ts`.
-Done when: `grep` finds no numeric literals in `src/sim` outside `tuning.ts`
-and `spline.ts`, and all tests pass.
+Done when: `grep` finds no _balance_ numeric literals in `src/sim` outside
+`tuning.ts`, and all tests pass. Three kinds of number are not balance and
+stay where they are:
+
+- **Algorithm internals**: the Catmull-Rom basis in `spline.ts`, the
+  mulberry32 constants in `rng.ts`. Changing one is a bug, not a tuning call.
+- **Level data**: spline control points (`demo.ts` today, `track.ts` from
+  S2.3). The shape of a track is content, not a knob.
+- **Structural numbers**: array indices, `+ 1` in a counter, `/ 2` for a
+  midpoint.
 
 ### S2.3 Track model
 

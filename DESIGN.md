@@ -31,7 +31,8 @@ between rounds, and the round itself should be watchable, legible and short.
 
 ## The vertical slice (S1 to S4)
 
-One system, three stages, six parts, two actives, four hazard types. Not
+One system, three stages, three ships, six parts, two actives, four hazard
+types. Not
 balanced, not pretty, but a complete loop: build, race, build, race, build,
 race, result screen. Playable on a phone, one thumb.
 
@@ -289,14 +290,67 @@ there is no garage after a loss.
 Within a stage, ticks are counted from the start of that stage, so the player's
 taps are timed against the piece of course in front of them.
 
+### The field
+
+**Three ships fly every stage: the player and two rivals.** A race you can only
+lose by dying is a race with soft stakes — a cautious build survives everything
+and never has to answer for being slow. Rivals fix that: finishing last is a
+loss even when the ship comes home in one piece.
+
+**The ships do not touch.** No collisions, no blocking, no drafting. Each ship
+flies the same course under the same rules, and the hazards apply to all of them
+the same way. Two reasons: contact between ships is a whole design of its own,
+and without it the field costs the simulation nothing but three ships stepped
+side by side. What the player races is the clock and the other two ships'
+choices, which is the auto-battler bet — the interesting decisions are between
+rounds.
+
+**Lanes are a drawing problem, not a rule.** Three ships on one line would
+overlap, so the renderer offsets each one across the track. The simulation has a
+single line and one distance per ship; nothing about a lane changes what a
+hazard does.
+
+#### The rivals
+
+Two ships with fixed characters, so the player learns what they are:
+
+| Rival | Build | What it does |
+|-------|-------|--------------|
+| Redline | Ion Thruster, then Overclocked Reactor, then a second thruster | Quick and greedy. Sets the time to beat, and sometimes does not finish. |
+| Bulwark | Ablative Plating, then Radiator Fins, then more plating | Slow and hard to kill. Always there at the end. |
+
+Rivals do not visit the garage. They bolt on one part per stage on a fixed
+schedule, so they grow at the same rate the player does and a run stays a
+contest to the last stage.
+
+#### Pilots
+
+A rival is flown by a **pilot**: a rule that looks at the race each tick and
+decides whether to tap anything. The pilot raises shields when a burst is close
+enough ahead, and reroutes power on clear track. Its timing is deliberately
+imperfect, seeded per race, so a rival can misjudge a burst exactly as a player
+can — and so the balance harness measures what real play is like rather than
+what frame-perfect play is like.
+
+The same pilot flies the rivals and the harness's reference builds. One rule,
+one place.
+
+#### Winning
+
+A stage produces a finishing order. A ship that is lost is placed behind every
+ship that finished. A run produces standings across all three stages, by total
+time, with lost ships last. The player wins a run by beating both rivals — which
+means a ship that survives but crawls loses, and that is the point.
+
 ### Outcome
 
 A race produces: finish time, damage taken, whether the ship survived, what hull
 and heat it has left, how much its shields swallowed, and — when it ends badly —
 **what killed it**: the black hole, its own heat, or the hull simply giving out.
 
-A run produces a results screen after three stages: each stage's time and
-damage, the total, the build the player ended with, and one tap to run again.
+A run produces a results screen after three stages: each stage's time, damage
+and **finishing position**, the standings across the field, the build the player
+ended with, and one tap to run again.
 Stages the run never reached are listed as not reached, because a run that died
 in stage 2 should look different from one that finished.
 

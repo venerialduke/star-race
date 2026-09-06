@@ -180,13 +180,14 @@ describe('the tick loop', () => {
     expect(outcome.log[outcome.log.length - 1]?.kind).toBe('abandoned');
   });
 
-  it('ignores player inputs for now, but accepts them', () => {
-    const inputs: readonly PlayerInput[] = [
-      { tick: 10, active: 'shields' },
-      { tick: 200, active: 'powerReroute' },
-    ];
-    expect(simulate(SLICE_TRACK, bare, inputs, 5)).toEqual(
-      simulate(SLICE_TRACK, bare, noInputs, 5),
+  it('an empty tap list and no taps at all are the same race', () => {
+    expect(simulate(SLICE_TRACK, bare, [], 5)).toEqual(simulate(SLICE_TRACK, bare, noInputs, 5));
+  });
+
+  it('taps change the race: what the player does matters', () => {
+    const inputs: readonly PlayerInput[] = [{ tick: 10, active: 'powerReroute' }];
+    expect(simulate(SLICE_TRACK, bare, inputs, 5).finishTicks).not.toBe(
+      simulate(SLICE_TRACK, bare, noInputs, 5).finishTicks,
     );
   });
 });

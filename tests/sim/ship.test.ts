@@ -52,7 +52,7 @@ describe('base stats', () => {
     expect(BASE_STATS).toEqual({
       speed: 1,
       acceleration: 0.02,
-      shieldCapacity: 20,
+      shieldCapacity: 50,
       heatTolerance: 100,
       hull: 100,
     });

@@ -171,12 +171,12 @@ describe('shields against a burst', () => {
     expect(absorb(burst, capacity).toHull).toBe(0);
   });
 
-  it('base shields blunt a burst without stopping it', () => {
+  it('base shields stop one burst dead, and are nearly spent doing it', () => {
     const capacity = BASE_STATS.shieldCapacity;
     const { toHull, poolLeft } = absorb(burst, capacity);
-    expect(toHull).toBe(burst - capacity);
-    expect(toHull).toBeGreaterThan(0);
-    expect(poolLeft).toBe(0);
+    expect(toHull).toBe(0);
+    expect(poolLeft).toBe(capacity - burst);
+    expect(poolLeft).toBeLessThan(burst); // not enough left for a second one
   });
 
   it('leaves what it did not need in the pool', () => {

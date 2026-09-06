@@ -5,10 +5,12 @@
 // screen also shows the ship as it stands, because "should I take more hull?"
 // is not answerable without knowing how much is left.
 
-import type { Run } from '../sim/run';
+import { drawCourse } from '../render/draw';
+import { runStandings, type Run } from '../sim/run';
 import type { Part, StatName } from '../sim/ship';
 import { resolveBuild } from '../sim/ship';
 import { stages } from '../sim/track';
+import { TICK_RATE } from '../sim/tuning';
 
 export interface Garage {
   /** Show the offer for this run. */
@@ -41,6 +43,24 @@ const STYLE = `
 .garage[hidden] { display: none; }
 .garage-title { font-size: 20px; letter-spacing: 0.04em; }
 .garage-ship { color: #8ea2c8; font-size: 13px; }
+.garage-map {
+  width: 100%;
+  height: 34vh;
+  min-height: 140px;
+  border-radius: 12px;
+  background: #101c36;
+  display: block;
+}
+.garage-standings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  color: #8ea2c8;
+}
+.garage-standings .is-player { color: #f2a93b; }
+.garage-standings .is-out { color: #6f7b93; }
+
 .garage-cards {
   display: flex;
   flex-direction: column;
@@ -79,6 +99,8 @@ function el<K extends keyof HTMLElementTagNameMap>(
   if (className !== undefined) node.className = className;
   return node;
 }
+
+const seconds = (ticks: number): string => `${(ticks / TICK_RATE).toFixed(1)}s`;
 
 /** "+40 hull", "−0.08 speed" — signed, in the stat's own units. */
 function describeDelta(stat: StatName, delta: number): string {
@@ -124,9 +146,36 @@ export function createGarage(root: HTMLElement): Garage {
   screen.hidden = true;
   const title = el('div', 'garage-title');
   const ship = el('div', 'garage-ship');
+  // The course the player is about to fly, with the next stage picked out. The
+  // design bet is that you can see the black hole coming and build for it, and
+  // that only works if the course is in front of you while you choose.
+  const map = el('canvas', 'garage-map');
+  const standings = el('div', 'garage-standings');
   const cards = el('div', 'garage-cards');
-  screen.append(title, ship, cards);
+  screen.append(title, ship, map, standings, cards);
   root.append(screen);
+
+  /** Draw the course into the little map. Silent where there is no canvas. */
+  function drawMap(run: Run): void {
+    const width = map.clientWidth || map.width || 0;
+    const height = map.clientHeight || map.height || 0;
+    if (width === 0 || height === 0) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    map.width = Math.round(width * dpr);
+    map.height = Math.round(height * dpr);
+    const ctx = map.getContext('2d');
+    // jsdom has no canvas, and a browser can refuse a context under memory
+    // pressure. The garage still works without its map.
+    if (ctx === null) return;
+    // No HUD over this one, so it gets nearly the whole canvas.
+    drawCourse(ctx, run.track, run.stage, {
+      width,
+      height,
+      dpr,
+      insetTop: 6,
+      insetBottom: 6,
+    });
+  }
 
   return {
     show(run: Run, onChoose: (part: Part) => void): void {
@@ -140,9 +189,24 @@ export function createGarage(root: HTMLElement): Garage {
           : run.build.map((p) => p.name).join(', ');
       ship.textContent = `Hull ${Math.round(run.hull)}/${Math.round(stats.hull)} · speed ${stats.speed.toFixed(2)} · ${parts}`;
 
+      // Where the race stands, so "speed or armour?" is answerable. Nothing to
+      // show before the first stage: everyone is level on the grid.
+      standings.textContent = '';
+      if (run.results.length > 0) {
+        runStandings(run).forEach((entry) => {
+          const chip = el('span');
+          chip.textContent = `${entry.position}. ${entry.name} ${seconds(entry.totalTicks)}`;
+          if (entry.id === 'player') chip.className = 'is-player';
+          if (entry.stagesFinished < run.results.length) chip.className = 'is-out';
+          standings.append(chip);
+        });
+      }
+
       cards.textContent = '';
       run.offer.forEach((part) => cards.append(cardFor(part, onChoose)));
       screen.hidden = false;
+      // After it is visible, so the canvas has a size to measure.
+      drawMap(run);
     },
     hide(): void {
       screen.hidden = true;

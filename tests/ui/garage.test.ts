@@ -6,7 +6,13 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createGarage, type Garage } from '../../src/ui/garage';
-import { choosePart, startRun, type Run } from '../../src/sim/run';
+import {
+  choosePart,
+  runStage,
+  runStandings,
+  startRun,
+  type Run,
+} from '../../src/sim/run';
 import { PARTS, type Part } from '../../src/sim/ship';
 import { SLICE_TRACK } from '../../src/sim/track';
 
@@ -112,5 +118,63 @@ describe('the garage screen', () => {
     garage.show(later, (part) => chosen.push(part));
     expect(cards()).toHaveLength(1);
     expect(cards()[0]?.textContent).toContain(PARTS.ionThruster.name);
+  });
+});
+
+describe('what the garage tells you', () => {
+  let garage: Garage;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    document.head.innerHTML = '';
+    garage = createGarage(document.body);
+  });
+
+  /** Play one stage so there is a race to have standings from. */
+  const afterOneStage = (seed = 4): Run => {
+    let run = startRun(SLICE_TRACK, seed);
+    run = choosePart(run, run.offer[0]!);
+    return runStage(run, []);
+  };
+
+  it('draws the course you are about to fly', () => {
+    garage.show(startRun(SLICE_TRACK, 1), () => {});
+    expect(document.querySelector('canvas.garage-map')).not.toBeNull();
+  });
+
+  it('survives having no canvas to draw on', () => {
+    // jsdom gives no 2d context, which is exactly what a browser under memory
+    // pressure does. The garage still has to work.
+    const map = document.querySelector<HTMLCanvasElement>('canvas.garage-map');
+    expect(map?.getContext('2d') ?? null).toBeNull();
+    expect(() => garage.show(startRun(SLICE_TRACK, 1), () => {})).not.toThrow();
+    expect(document.querySelectorAll('.garage-card').length).toBeGreaterThan(0);
+  });
+
+  it('shows nothing about the field before the first stage', () => {
+    garage.show(startRun(SLICE_TRACK, 1), () => {});
+    expect(document.querySelector('.garage-standings')?.textContent).toBe('');
+  });
+
+  it('shows where the race stands once there is a race', () => {
+    const run = afterOneStage();
+    garage.show(run, () => {});
+    const line = document.querySelector('.garage-standings')?.textContent ?? '';
+    runStandings(run).forEach((entry) => {
+      expect(line).toContain(entry.name);
+    });
+    // The player's own place is picked out.
+    expect(document.querySelectorAll('.garage-standings .is-player').length).toBe(1);
+  });
+
+  it('puts the standings in finishing order', () => {
+    const run = afterOneStage();
+    garage.show(run, () => {});
+    const chips = Array.from(
+      document.querySelectorAll('.garage-standings span'),
+    ).map((chip) => chip.textContent ?? '');
+    runStandings(run).forEach((entry, i) => {
+      expect(chips[i]).toContain(`${entry.position}. ${entry.name}`);
+    });
   });
 });

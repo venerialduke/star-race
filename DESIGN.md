@@ -354,6 +354,13 @@ ship that finished. A run produces standings across all three stages, by total
 time, with lost ships last. The player wins a run by beating both rivals — which
 means a ship that survives but crawls loses, and that is the point.
 
+Where the slice sits today: a player who takes the first part offered and never
+taps wins about one run in six. A player who picks for speed and taps as well as
+a pilot does wins about one in three. Redline is the ship to beat; Bulwark
+almost always finishes, so a bad run drops the player to third rather than
+second. If that turns out to be too hard, the knob is Redline's schedule rather
+than the hazards.
+
 ### Outcome
 
 A race produces: finish time, damage taken, whether the ship survived, what hull

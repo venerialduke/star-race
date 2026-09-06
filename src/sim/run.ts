@@ -13,8 +13,18 @@
 //      player for what they spent surviving stages 1 and 2.
 
 import { offerParts } from './garage';
+import {
+  flyField,
+  standings,
+  startField,
+  type Entry,
+  type Field,
+  type ShipId,
+  type Standing,
+} from './field';
 import { makeRng, type Rng } from './rng';
-import { simulate, startRace, type PlayerInput, type RaceOutcome, type RaceState } from './race';
+import { raceOutcome, type PlayerInput, type RaceOutcome } from './race';
+import { RIVALS, rivalBuild, rivalStartingHull } from './rivals';
 import type { Build, Part } from './ship';
 import { resolveBuild } from './ship';
 import { stages, type Track } from './track';
@@ -24,7 +34,22 @@ export type RunPhase = 'garage' | 'racing' | 'done';
 export interface StageResult {
   /** Which stage this was, counting from 0. */
   readonly stage: number;
+  /** The player's race. */
   readonly outcome: RaceOutcome;
+  /** Where every ship came, the winner first. */
+  readonly standings: readonly Standing[];
+  /** Where the player came, 1 for a win. */
+  readonly position: number;
+}
+
+/** A rival as it stands: what it is flying, and what is left of it. */
+export interface RivalState {
+  readonly id: ShipId;
+  readonly name: string;
+  readonly build: Build;
+  readonly hull: number;
+  /** False once it has been lost; a lost rival takes no further part. */
+  readonly alive: boolean;
 }
 
 export interface Run {
@@ -41,6 +66,8 @@ export interface Run {
   readonly results: readonly StageResult[];
   /** False once the ship has been lost. */
   readonly alive: boolean;
+  /** The two ships the player is racing. */
+  readonly rivals: readonly RivalState[];
 }
 
 /**
@@ -51,18 +78,29 @@ export function stageSeed(run: Run): number {
   return run.seed + run.stage;
 }
 
+/** The grid for this stage: the player, then whichever rivals are still going. */
+function entriesFor(run: Run): Entry[] {
+  const grid: Entry[] = [
+    { id: 'player', name: 'You', build: run.build, hull: run.hull },
+  ];
+  run.rivals.forEach((rival) => {
+    if (!rival.alive) return;
+    grid.push({ id: rival.id, name: rival.name, build: rival.build, hull: rival.hull });
+  });
+  return grid;
+}
+
 /**
- * A live race for the stage the run is on, set up exactly as `runStage` will
+ * A live field for the stage the run is on, set up exactly as `runStage` will
  * replay it. The screen flies this one; `runStage` re-runs the same seed with
- * the taps the player made and produces the same outcome.
+ * the taps the player made and produces the same result.
  */
-export function startStageRace(run: Run): RaceState {
+export function startStageField(run: Run): Field {
   if (run.phase !== 'racing') {
     throw new Error(`Nothing to race: the run is ${run.phase}.`);
   }
-  return startRace(run.track, run.build, stageSeed(run), {
+  return startField(run.track, entriesFor(run), stageSeed(run), {
     stage: run.stage,
-    startHull: run.hull,
   });
 }
 
@@ -103,6 +141,15 @@ export function startRun(track: Track, seed: number): Run {
     offer: offerParts(garageRng(seed, 0)),
     results: [],
     alive: true,
+    // Rivals line up with their first part already bolted on: they are not
+    // waiting in a garage, they are on the grid.
+    rivals: RIVALS.map((rival) => ({
+      id: rival.id,
+      name: rival.name,
+      build: rivalBuild(rival, 0),
+      hull: rivalStartingHull(rival),
+      alive: true,
+    })),
   };
 }
 
@@ -138,18 +185,60 @@ export function runStage(run: Run, inputs: readonly PlayerInput[]): Run {
   if (run.phase !== 'racing') {
     throw new Error(`Nothing to race: the run is ${run.phase}.`);
   }
-  const outcome = simulate(run.track, run.build, inputs, stageSeed(run), {
-    stage: run.stage,
-    startHull: run.hull,
+
+  // The player's taps, by the tick they landed on.
+  const tapsByTick = new Map<number, PlayerInput['active'][]>();
+  inputs.forEach((input) => {
+    const taps = tapsByTick.get(input.tick);
+    if (taps === undefined) tapsByTick.set(input.tick, [input.active]);
+    else taps.push(input.active);
   });
-  const results = [...run.results, { stage: run.stage, outcome }];
+
+  const field = flyField(startStageField(run), (tick) => tapsByTick.get(tick) ?? []);
+  const order = standings(field);
+
+  const player = field.racers.find((racer) => racer.id === 'player');
+  if (player === undefined) throw new Error('unreachable: the player is always on the grid');
+  const outcome = raceOutcome(player.state);
+  const position = order.find((row) => row.id === 'player')?.position ?? order.length;
+
+  const results = [...run.results, { stage: run.stage, outcome, standings: order, position }];
   const lastStage = run.stage >= stages(run.track).length - 1;
   const alive = outcome.survived;
 
-  if (!alive || lastStage) {
-    return { ...run, phase: 'done', results, hull: outcome.hullLeft, alive, offer: [] };
-  }
+  // Rivals carry their hull too, and a lost rival is out of the run.
   const nextStage = run.stage + 1;
+  const rivals = run.rivals.map((rival) => {
+    const racer = field.racers.find((entry) => entry.id === rival.id);
+    if (racer === undefined) return rival;
+    const rivalOutcome = raceOutcome(racer.state);
+    const definition = RIVALS.find((candidate) => candidate.id === rival.id);
+    const grown =
+      definition === undefined || !rivalOutcome.survived
+        ? rival.build
+        : rivalBuild(definition, nextStage);
+    // A part that raises maximum hull adds to the ship as it stands; it does not
+    // repair what is already gone. Same rule as the player's garage.
+    const gained = resolveBuild(grown).hull - resolveBuild(rival.build).hull;
+    return {
+      ...rival,
+      build: grown,
+      hull: Math.max(rivalOutcome.hullLeft + gained, 1),
+      alive: rival.alive && rivalOutcome.survived,
+    };
+  });
+
+  if (!alive || lastStage) {
+    return {
+      ...run,
+      phase: 'done',
+      results,
+      hull: outcome.hullLeft,
+      alive,
+      offer: [],
+      rivals,
+    };
+  }
   return {
     ...run,
     phase: 'garage',
@@ -158,5 +247,54 @@ export function runStage(run: Run, inputs: readonly PlayerInput[]): Run {
     results,
     offer: offerParts(garageRng(run.seed, nextStage)),
     alive,
+    rivals,
   };
+}
+
+/** Total ticks each ship has flown, for the standings across a whole run. */
+export interface RunStanding {
+  readonly id: ShipId;
+  readonly name: string;
+  readonly position: number;
+  readonly totalTicks: number;
+  /** Stages it got through in one piece. */
+  readonly stagesFinished: number;
+  readonly survived: boolean;
+}
+
+/**
+ * Standings across the whole run: every stage a ship finished counts, and a
+ * ship that was lost is placed behind every ship that was not. A player who
+ * survives all three stages and is slower than both rivals comes third, which is
+ * the point of having them.
+ */
+export function runStandings(run: Run): RunStanding[] {
+  const ids: ShipId[] = ['player', ...run.rivals.map((rival) => rival.id)];
+  const rows = ids.map((id) => {
+    let totalTicks = 0;
+    let stagesFinished = 0;
+    let survived = true;
+    run.results.forEach((result) => {
+      const row = result.standings.find((entry) => entry.id === id);
+      if (row === undefined) return;
+      totalTicks += row.finishTicks;
+      if (row.survived) stagesFinished++;
+      else survived = false;
+    });
+    const name =
+      id === 'player' ? 'You' : (run.rivals.find((rival) => rival.id === id)?.name ?? id);
+    return { id, name, totalTicks, stagesFinished, survived };
+  });
+
+  rows.sort((a, b) => {
+    if (a.stagesFinished !== b.stagesFinished) return b.stagesFinished - a.stagesFinished;
+    return a.totalTicks - b.totalTicks;
+  });
+
+  return rows.map((row, index) => ({ ...row, position: index + 1 }));
+}
+
+/** Did the player beat both rivals? */
+export function wonRun(run: Run): boolean {
+  return runStandings(run)[0]?.id === 'player';
 }

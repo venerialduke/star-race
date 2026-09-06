@@ -11,8 +11,9 @@
 // because they are the same code with the same inputs.
 
 import type { ActiveId } from '../sim/actives';
-import { stepRace, type PlayerInput, type RaceState } from '../sim/race';
-import { choosePart, runStage, startRun, startStageRace, type Run } from '../sim/run';
+import { stepField, type Field } from '../sim/field';
+import { type PlayerInput, type RaceState } from '../sim/race';
+import { choosePart, runStage, startRun, startStageField, type Run } from '../sim/run';
 import type { Part } from '../sim/ship';
 import { SLICE_TRACK, type Track } from '../sim/track';
 import { COUNTDOWN_TICKS, HOLD_AFTER_STAGE_TICKS, TICK_RATE } from '../sim/tuning';
@@ -40,8 +41,10 @@ export interface Game {
   screen(): Screen;
   /** The run as it stands. */
   run(): Run;
-  /** The race being flown, if one is. */
+  /** The player's race, if one is being flown. */
   race(): RaceState | undefined;
+  /** The whole grid, if one is racing. */
+  field(): Field | undefined;
 }
 
 const TICK_MS = 1000 / TICK_RATE;
@@ -57,7 +60,7 @@ export function createGame(options: GameOptions): Game {
   const hud = createHud(options.root, (active) => tap(active));
 
   let run: Run = startRun(track, options.seed);
-  let race: RaceState | undefined;
+  let field: Field | undefined;
   let screen: Screen = 'garage';
   /** Ticks left before the ship launches, or before the garage opens again. */
   let waiting = 0;
@@ -68,15 +71,21 @@ export function createGame(options: GameOptions): Game {
   let accumulator = 0;
   let last: number | undefined;
 
+  /** The player's own race, out of the field. */
+  function playerRace(): RaceState | undefined {
+    return field?.racers.find((racer) => racer.id === 'player')?.state;
+  }
+
   function tap(active: ActiveId): void {
     // Taps before the flag and after the finish are not taps.
-    if (screen !== 'racing' || race === undefined || race.over) return;
+    const mine = playerRace();
+    if (screen !== 'racing' || mine === undefined || mine.over) return;
     pending.push(active);
-    recorded.push({ tick: race.tick, active });
+    recorded.push({ tick: mine.tick, active });
   }
 
   function openGarage(): void {
-    race = undefined;
+    field = undefined;
     screen = 'garage';
     hud.setVisible(false);
     results.hide();
@@ -84,7 +93,7 @@ export function createGame(options: GameOptions): Game {
   }
 
   function showResults(): void {
-    race = undefined;
+    field = undefined;
     screen = 'results';
     hud.setVisible(false);
     garage.hide();
@@ -101,7 +110,7 @@ export function createGame(options: GameOptions): Game {
     hud.setVisible(true);
     recorded = [];
     pending = [];
-    race = startStageRace(run);
+    field = startStageField(run);
     screen = 'countdown';
     waiting = COUNTDOWN_TICKS;
     hud.setMessage(countdownText(waiting));
@@ -134,10 +143,10 @@ export function createGame(options: GameOptions): Game {
         return;
       }
       case 'racing': {
-        if (race === undefined) return;
-        stepRace(race, pending);
+        if (field === undefined) return;
+        stepField(field, pending);
         pending = [];
-        if (race.over) {
+        if (field.over) {
           // Hold the finished stage on screen for a beat before taking stock.
           screen = 'held';
           waiting = HOLD_AFTER_STAGE_TICKS;
@@ -167,13 +176,15 @@ export function createGame(options: GameOptions): Game {
         accumulator -= TICK_MS;
       }
 
-      if (race !== undefined) {
-        options.render(race);
-        hud.update(race);
+      const mine = playerRace();
+      if (mine !== undefined) {
+        options.render(mine);
+        hud.update(mine);
       }
     },
     screen: () => screen,
     run: () => run,
-    race: () => race,
+    race: () => playerRace(),
+    field: () => field,
   };
 }

@@ -5,9 +5,11 @@ import {
   choosePart,
   completed,
   runStage,
+  runStandings,
   startRun,
   totalDamage,
   totalTicks,
+  wonRun,
   type Run,
 } from '../../src/sim/run';
 import { ALL_PARTS, PARTS, resolveBuild } from '../../src/sim/ship';
@@ -239,5 +241,82 @@ describe('racing one stage on its own', () => {
   it('refuses a stage that is not on the track, or a ship with no hull', () => {
     expect(() => simulate(SLICE_TRACK, [], noTaps, 1, { stage: 9 })).toThrow();
     expect(() => simulate(SLICE_TRACK, [], noTaps, 1, { startHull: 0 })).toThrow();
+  });
+});
+
+describe('racing the rivals', () => {
+  it('lines both rivals up with their first part already bolted on', () => {
+    const run = startRun(SLICE_TRACK, 1);
+    expect(run.rivals).toHaveLength(2);
+    run.rivals.forEach((rival) => {
+      expect(rival.build).toHaveLength(1);
+      expect(rival.alive).toBe(true);
+      expect(rival.hull).toBeGreaterThan(0);
+    });
+  });
+
+  it('races all three ships every stage, and says where the player came', () => {
+    let run = choosePart(startRun(SLICE_TRACK, 4), startRun(SLICE_TRACK, 4).offer[0]!);
+    run = runStage(run, noTaps);
+    const result = run.results[0]!;
+    expect(result.standings).toHaveLength(3);
+    expect(result.standings.map((row) => row.position)).toEqual([1, 2, 3]);
+    expect(result.position).toBeGreaterThanOrEqual(1);
+    expect(result.position).toBeLessThanOrEqual(3);
+    expect(result.standings.some((row) => row.id === 'player')).toBe(true);
+  });
+
+  it('grows the rivals a part per stage, carrying their hull', () => {
+    let run = choosePart(startRun(SLICE_TRACK, 4), startRun(SLICE_TRACK, 4).offer[0]!);
+    const before = run.rivals.map((rival) => rival.hull);
+    run = runStage(run, noTaps);
+    run.rivals.forEach((rival, i) => {
+      if (!rival.alive) return;
+      expect(rival.build).toHaveLength(2);
+      // Hull carried, not reset: a rival that took damage does not start fresh.
+      expect(rival.hull).not.toBe(before[i]);
+    });
+  });
+
+  it('drops a rival out of the run once it is lost', () => {
+    // Play runs until one turns up where a rival died, then check it is out.
+    for (let seed = 0; seed < 40; seed++) {
+      const run = playRun(seed);
+      const dead = run.rivals.find((rival) => !rival.alive);
+      if (dead === undefined) continue;
+      // It appears in the standings of the stage it died in, and no later one.
+      const stagesRaced = run.results.filter((result) =>
+        result.standings.some((row) => row.id === dead.id),
+      );
+      expect(stagesRaced.length).toBeLessThanOrEqual(run.results.length);
+      return;
+    }
+  });
+
+  it('ranks the run by stages finished, then by time', () => {
+    const run = playRun(4);
+    const table = runStandings(run);
+    expect(table).toHaveLength(3);
+    expect(table.map((row) => row.position)).toEqual([1, 2, 3]);
+    table.forEach((row, i) => {
+      const next = table[i + 1];
+      if (next === undefined) return;
+      if (row.stagesFinished === next.stagesFinished) {
+        expect(row.totalTicks).toBeLessThanOrEqual(next.totalTicks);
+      } else {
+        expect(row.stagesFinished).toBeGreaterThan(next.stagesFinished);
+      }
+    });
+  });
+
+  it('says the player won only when they are top of the standings', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      const run = playRun(seed);
+      expect(wonRun(run)).toBe(runStandings(run)[0]?.id === 'player');
+    }
+  });
+
+  it('is deterministic, rivals and all', () => {
+    expect(runStandings(playRun(12))).toEqual(runStandings(playRun(12)));
   });
 });

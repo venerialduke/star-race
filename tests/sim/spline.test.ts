@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { evaluate, makeSpline, sample } from '../../src/sim/spline';
-import { INITIAL_STATE, SPEED, TRACK, position, step } from '../../src/sim/demo';
+import { INITIAL_STATE, TRACK, position, step } from '../../src/sim/demo';
+import { DEMO_SPEED } from '../../src/sim/tuning';
 
 const square = makeSpline([
   { x: 0, y: 0 },
@@ -37,8 +38,8 @@ describe('demo tick loop', () => {
     expect(step(INITIAL_STATE)).toEqual(step(INITIAL_STATE));
   });
 
-  it('advances exactly SPEED per tick and wraps around the track', () => {
-    const ticksPerLap = Math.ceil(TRACK.segmentCount / SPEED);
+  it('advances exactly DEMO_SPEED per tick and wraps around the track', () => {
+    const ticksPerLap = Math.ceil(TRACK.segmentCount / DEMO_SPEED);
     let s = INITIAL_STATE;
     for (let i = 0; i < ticksPerLap; i++) s = step(s);
     expect(s.tick).toBe(ticksPerLap);

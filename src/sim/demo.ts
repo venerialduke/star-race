@@ -2,12 +2,10 @@
 // This file exists to prove the pipeline. S2 replaces it with race.ts.
 
 import { evaluate, makeSpline, type Spline, type Vec2 } from './spline';
+import { DEMO_SPEED } from './tuning';
 
-/** Ticks per second. Everything in sim advances in whole ticks. */
-export const TICK_RATE = 60;
-
-/** Spline parameter advanced per tick. One segment takes 1 / SPEED ticks. */
-export const SPEED = 0.6 / TICK_RATE;
+// Speed and tick rate live in tuning.ts. The control points below are level
+// data — the shape of the track, not a balance knob.
 
 /** Coordinates are in a normalised 0..1 square; the renderer scales them. */
 export const TRACK: Spline = makeSpline([
@@ -36,7 +34,7 @@ export const INITIAL_STATE: DemoState = { tick: 0, u: 0 };
 
 /** Advance the simulation by exactly one tick. Pure. */
 export function step(state: DemoState): DemoState {
-  let u = state.u + SPEED;
+  let u = state.u + DEMO_SPEED;
   if (u >= TRACK.segmentCount) u -= TRACK.segmentCount;
   return { tick: state.tick + 1, u };
 }

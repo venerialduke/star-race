@@ -147,6 +147,35 @@ export function segmentAtTick(track: Track, tick: number): number {
   return track.segments.length - 1;
 }
 
+/** A hazard placed on the track, as distances from the start line. */
+export interface HazardAt {
+  readonly kind: HazardKind;
+  /** Distance at which it begins. */
+  readonly from: number;
+  /** Distance at which it ends. */
+  readonly to: number;
+}
+
+/**
+ * Every hazard on the track as a distance, in order. Wanted by anything that
+ * looks ahead: a pilot deciding when to raise shields, and the screen deciding
+ * when to slow time down.
+ */
+export function hazardsOnTrack(track: Track): HazardAt[] {
+  const out: HazardAt[] = [];
+  track.segments.forEach((segment, index) => {
+    const start = segmentStartTick(track, index);
+    segment.hazards.forEach((hazard) => {
+      out.push({
+        kind: hazard.kind,
+        from: start + hazard.startTick,
+        to: start + hazard.startTick + hazard.lengthTicks,
+      });
+    });
+  });
+  return out.sort((a, b) => a.from - b.from);
+}
+
 /** The stages, split at the gates. Three stages on the slice track. */
 export function stages(track: Track): Stage[] {
   const out: Stage[] = [];

@@ -140,6 +140,27 @@ Player-timed controls with cooldowns, for example raise shields, reroute
 power, dump heat. Big tap targets, visible cooldown. To be specified here as
 each is implemented.
 
+### The race loop
+
+`simulate(track, build, inputs, seed) → outcome`. Once per tick, in this order:
+
+1. **Speed closes on top speed by acceleration.** A ship never exceeds the top
+   speed its build can hold, and never gains more than its acceleration in a
+   tick.
+2. **The ship advances by its current speed**, measured in track-ticks — so a
+   ship at speed 1.0 covers a 180-tick segment in 180 ticks.
+3. **If it has crossed a gate line, the stage ends.** The ship stops exactly on
+   the gate line rather than carrying its overshoot into the next stage, so
+   every stage is exactly as long as the track says.
+
+The ship leaves the start line, and every stage gate, **from a standstill**.
+The garage pause itself costs no ticks — the clock only counts flying — but a
+gate still costs time, because the ship has to get back up to speed. This is
+what makes acceleration worth buying: a course with more stages rewards it more.
+
+A race also ends if it runs past a hard tick cap. That only happens if the loop
+is broken, and the outcome says the ship was abandoned rather than finished.
+
 ### Outcome
 
 A race produces: finish time, damage taken, did you survive. A run produces

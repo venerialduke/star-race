@@ -7,6 +7,7 @@
 
 import type { RaceState } from '../sim/race';
 import { sample, evaluate, type Vec2 } from '../sim/spline';
+import { fitTrack, project, type Fit, type Viewport } from './project';
 import {
   segmentStartTick,
   splineParamAtTick,
@@ -37,23 +38,11 @@ const HAZARD_COLOR: Readonly<Record<HazardKind, string>> = {
   ringedPlanet: COLORS.ringedPlanet,
 };
 
-export interface Viewport {
-  readonly width: number;
-  readonly height: number;
-  readonly dpr: number;
-}
-
-/** Map normalised 0..1 coordinates onto the largest centred square. */
-function toScreen(p: Vec2, vp: Viewport): Vec2 {
-  const side = Math.min(vp.width, vp.height);
-  const ox = (vp.width - side) / 2;
-  const oy = (vp.height - side) / 2;
-  return { x: ox + p.x * side, y: oy + p.y * side };
-}
+export type { Viewport } from './project';
 
 /** Where a distance along the course sits on screen. */
-function pointAtDistance(track: Track, distance: number, vp: Viewport): Vec2 {
-  return toScreen(evaluate(track.path, splineParamAtTick(track, distance)), vp);
+function pointAtDistance(track: Track, distance: number, fit: Fit): Vec2 {
+  return project(evaluate(track.path, splineParamAtTick(track, distance)), fit);
 }
 
 function strokePath(
@@ -76,16 +65,10 @@ function strokePath(
 }
 
 /** The stretch of course a hazard covers, as screen points. */
-function hazardRun(
-  track: Track,
-  from: number,
-  to: number,
-  vp: Viewport,
-  steps = 12,
-): Vec2[] {
+function hazardRun(track: Track, from: number, to: number, fit: Fit, steps = 12): Vec2[] {
   const points: Vec2[] = [];
   for (let i = 0; i <= steps; i++) {
-    points.push(pointAtDistance(track, from + ((to - from) * i) / steps, vp));
+    points.push(pointAtDistance(track, from + ((to - from) * i) / steps, fit));
   }
   return points;
 }
@@ -158,7 +141,10 @@ function drawHazardMarker(
 
 export function draw(ctx: CanvasRenderingContext2D, state: RaceState, vp: Viewport): void {
   const { track } = state;
-  const side = Math.min(vp.width, vp.height);
+  // The course is fitted to the strip between the readouts and the buttons, so
+  // markers and the ship scale with the course rather than with the screen.
+  const fit = fitTrack(track.path, vp);
+  const unit = fit.scale;
 
   ctx.save();
   ctx.setTransform(vp.dpr, 0, 0, vp.dpr, 0, 0);
@@ -167,7 +153,7 @@ export function draw(ctx: CanvasRenderingContext2D, state: RaceState, vp: Viewpo
   ctx.fillRect(0, 0, vp.width, vp.height);
 
   // The whole course, dimmed.
-  const whole = sample(track.path, 16).map((p) => toScreen(p, vp));
+  const whole = sample(track.path, 16).map((p) => project(p, fit));
   strokePath(ctx, whole, COLORS.track, 3);
 
   // The stage being raced, bright, so it is obvious what is in play.
@@ -175,7 +161,12 @@ export function draw(ctx: CanvasRenderingContext2D, state: RaceState, vp: Viewpo
   const current = stageList[Math.min(state.stage, stageList.length - 1)];
   if (current !== undefined) {
     const from = segmentStartTick(track, current.firstSegment);
-    strokePath(ctx, hazardRun(track, from, from + current.lengthTicks, vp, 48), COLORS.trackLive, 3);
+    strokePath(
+      ctx,
+      hazardRun(track, from, from + current.lengthTicks, fit, 48),
+      COLORS.trackLive,
+      3,
+    );
   }
 
   // Hazards: the stretch they cover, then a marker at the middle of it.
@@ -186,23 +177,28 @@ export function draw(ctx: CanvasRenderingContext2D, state: RaceState, vp: Viewpo
       const to = from + hazard.lengthTicks;
       if (hazard.lengthTicks > 1) {
         ctx.globalAlpha = 0.55;
-        strokePath(ctx, hazardRun(track, from, to, vp), HAZARD_COLOR[hazard.kind], 7);
+        strokePath(ctx, hazardRun(track, from, to, fit), HAZARD_COLOR[hazard.kind], 7);
         ctx.globalAlpha = 1;
       }
-      drawHazardMarker(ctx, hazard.kind, pointAtDistance(track, (from + to) / 2, vp), side * 0.018);
+      drawHazardMarker(
+        ctx,
+        hazard.kind,
+        pointAtDistance(track, (from + to) / 2, fit),
+        unit * 0.022,
+      );
     });
   });
 
   // Stage gates: a tick across the course where the race pauses.
   track.gates.forEach((gate) => {
     const at = segmentStartTick(track, gate) + (track.segments[gate]?.lengthTicks ?? 0);
-    const here = pointAtDistance(track, at, vp);
-    const just = pointAtDistance(track, Math.max(at - 4, 0), vp);
+    const here = pointAtDistance(track, at, fit);
+    const just = pointAtDistance(track, Math.max(at - 4, 0), fit);
     const dx = here.x - just.x;
     const dy = here.y - just.y;
     const length = Math.hypot(dx, dy) || 1;
-    const nx = (-dy / length) * side * 0.02;
-    const ny = (dx / length) * side * 0.02;
+    const nx = (-dy / length) * unit * 0.025;
+    const ny = (dx / length) * unit * 0.025;
     strokePath(
       ctx,
       [
@@ -215,8 +211,8 @@ export function draw(ctx: CanvasRenderingContext2D, state: RaceState, vp: Viewpo
   });
 
   // The ship.
-  const ship = pointAtDistance(track, state.distance, vp);
-  const radius = Math.max(6, side * 0.014);
+  const ship = pointAtDistance(track, state.distance, fit);
+  const radius = Math.max(6, unit * 0.018);
   ctx.beginPath();
   ctx.arc(ship.x, ship.y, radius * 2.2, 0, Math.PI * 2);
   ctx.fillStyle = COLORS.shipGlow;

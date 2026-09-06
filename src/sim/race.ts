@@ -12,6 +12,13 @@
 //      from a standstill.
 // Hazards and actives hook into this loop in S2.6 onwards.
 
+import {
+  POWER_REROUTE_EFFECT,
+  activeById,
+  isReady,
+  readyAgainAt,
+  type ActiveId,
+} from './actives';
 import { absorb, hazardEffect, isOneShot } from './hazards';
 import { makeRng, type Rng } from './rng';
 import { resolveBuild, type Build, type DerivedStats } from './ship';
@@ -23,8 +30,7 @@ import {
   OVERHEAT_DAMAGE_PER_TICK,
 } from './tuning';
 
-/** The two actives in the slice. They do nothing until S2.10. */
-export type ActiveId = 'shields' | 'powerReroute';
+export type { ActiveId } from './actives';
 
 /** A tap: the player firing an active on a given tick. */
 export interface PlayerInput {
@@ -32,7 +38,14 @@ export interface PlayerInput {
   readonly active: ActiveId;
 }
 
-export type RaceEventKind = 'start' | 'stageEnd' | 'finish' | 'abandoned' | 'destroyed';
+export type RaceEventKind =
+  | 'start'
+  | 'stageEnd'
+  | 'finish'
+  | 'abandoned'
+  | 'destroyed'
+  | 'activeFired'
+  | 'activeIgnored';
 
 export interface RaceEvent {
   readonly tick: number;
@@ -41,6 +54,8 @@ export interface RaceEvent {
   readonly distance: number;
   /** Which stage the event belongs to, counting from 0. */
   readonly stage: number;
+  /** Which active the event is about, for activeFired and activeIgnored. */
+  readonly active?: ActiveId;
 }
 
 export interface RaceOutcome {
@@ -67,15 +82,15 @@ export interface RaceOutcome {
 }
 
 /**
- * Run a race. `inputs` are the player's active taps; they are accepted and
- * carried through now, and consumed once actives exist in S2.10.
+ * Run a race. `inputs` are the player's active taps: each is honoured on its
+ * own tick if that active is off cooldown, and ignored otherwise. Taps do not
+ * queue — a tap during a cooldown is a tap wasted, which is the whole game of
+ * timing them.
  */
 export function simulate(
   track: Track,
   build: Build,
-  // Underscored because nothing reads it yet; S2.10 drops the underscore when
-  // actives start consuming taps.
-  _inputs: readonly PlayerInput[],
+  inputs: readonly PlayerInput[],
   seed: number,
 ): RaceOutcome {
   const stats = resolveBuild(build);
@@ -105,6 +120,20 @@ export function simulate(
   // One-shot hazards, such as a gamma burst, fire once and are then spent.
   const fired = new Set<PlacedHazard>();
 
+  // Taps, grouped by the tick they were made on. Two taps of the same active on
+  // one tick are one tap: the second finds it already on cooldown.
+  const tapsByTick = new Map<number, ActiveId[]>();
+  inputs.forEach((input) => {
+    const taps = tapsByTick.get(input.tick);
+    if (taps === undefined) tapsByTick.set(input.tick, [input.active]);
+    else taps.push(input.active);
+  });
+
+  /** When each active can next be fired. Undefined means it never has been. */
+  const readyAt = new Map<ActiveId, number>();
+  /** The tick each active stops being on. */
+  const activeUntil = new Map<ActiveId, number>();
+
   const log: RaceEvent[] = [];
   let tick = 0;
   let distance = 0;
@@ -121,6 +150,24 @@ export function simulate(
   log.push({ tick, kind: 'start', distance, stage });
 
   while (distance < finishDistance && tick < MAX_RACE_TICKS && !destroyed) {
+    // 0. The player's taps for this tick, honoured in the order they were made.
+    (tapsByTick.get(tick) ?? []).forEach((id) => {
+      const active = activeById(id);
+      if (!isReady(readyAt.get(id), tick)) {
+        log.push({ tick, kind: 'activeIgnored', distance, stage, active: id });
+        return;
+      }
+      readyAt.set(id, readyAgainAt(active, tick));
+      activeUntil.set(id, tick + active.durationTicks);
+      if (id === 'shields') shieldPool = stats.shieldCapacity;
+      log.push({ tick, kind: 'activeFired', distance, stage, active: id });
+    });
+
+    const shieldsUp = tick < (activeUntil.get('shields') ?? 0);
+    const rerouting = tick < (activeUntil.get('powerReroute') ?? 0);
+    // Shields that have run out drop whatever was left in the pool.
+    if (!shieldsUp) shieldPool = 0;
+
     // 1. Work out where the ship would reach this tick if nothing interfered,
     //    so a hazard the ship flies straight through still catches it.
     const freeSpeed = Math.min(speed + stats.acceleration, stats.speed);
@@ -141,7 +188,7 @@ export function simulate(
         speed: freeSpeed,
         heat,
         hull,
-        shieldsUp: false, // S2.10 raises shields here.
+        shieldsUp,
         rng: placement.rng,
       });
       if (isOneShot(placement.kind)) fired.add(placement);
@@ -151,9 +198,15 @@ export function simulate(
       if (effect.destroyed) destroyed = true;
     });
 
-    // 3. Apply damage and heat, then close on whatever top speed the hazards
-    //    left the ship with. Shields eat damage before the hull does; the pool
-    //    is empty until actives fill it in S2.10.
+    // 3. Rerouted power is speed bought with heat, and joins the hazards'
+    //    contributions rather than overriding them.
+    if (rerouting) {
+      speedMultiplier *= POWER_REROUTE_EFFECT.speedMultiplier;
+      addedHeat += POWER_REROUTE_EFFECT.heatPerTick;
+    }
+
+    // 4. Apply damage and heat, then close on whatever top speed the hazards
+    //    left the ship with. Shields eat damage before the hull does.
     if (hullDamage > 0) {
       const { toHull, poolLeft } = absorb(hullDamage, shieldPool);
       shieldPool = poolLeft;
@@ -175,7 +228,7 @@ export function simulate(
 
     speed = Math.min(speed + stats.acceleration, stats.speed * speedMultiplier);
 
-    // 4. Fly.
+    // 5. Fly.
     distance += speed;
     tick++;
 
@@ -184,7 +237,7 @@ export function simulate(
       break;
     }
 
-    // 5. Stage gate: the race pauses, the garage costs no ticks, and the ship
+    // 6. Stage gate: the race pauses, the garage costs no ticks, and the ship
     //    sets off again from a standstill.
     const nextStageEnd = stageEnds[stage];
     if (nextStageEnd !== undefined && distance >= nextStageEnd) {

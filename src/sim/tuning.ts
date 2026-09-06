@@ -35,8 +35,12 @@ export const BASE_SPEED = 1;
 /** Base acceleration: how much speed closes on its target each tick. */
 export const BASE_ACCELERATION = 0.02;
 
-/** Base shield capacity, in points of damage absorbed while shields are up. */
-export const BASE_SHIELD_CAPACITY = 20;
+/**
+ * Base shield capacity, in points of damage absorbed while shields are up.
+ * Above one gamma burst on purpose: shields timed right stop a burst dead, and
+ * are then nearly spent.
+ */
+export const BASE_SHIELD_CAPACITY = 50;
 
 /** Base heat tolerance: heat points the ship can hold before it cooks. */
 export const BASE_HEAT_TOLERANCE = 100;
@@ -124,6 +128,28 @@ export const BLACK_HOLE_ESCAPE_HULL = 15;
  * hull, in a single tick, with no dice: the answer is to see it coming.
  */
 export const GAMMA_BURST_DAMAGE = 45;
+
+// --- Actives ---------------------------------------------------------------
+// Both are timing tools. Duration is how long the tap lasts, cooldown is how
+// long until the next one. At 60 ticks per second these read as seconds.
+
+/** Shields: how long they hold, in ticks. 90 is a second and a half. */
+export const SHIELDS_DURATION_TICKS = 90;
+
+/** Shields: ticks until they can be raised again. Roughly one per stage. */
+export const SHIELDS_COOLDOWN_TICKS = 420;
+
+/** Reroute: how long the boost lasts, in ticks. */
+export const POWER_REROUTE_DURATION_TICKS = 120;
+
+/** Reroute: ticks until it can be used again. */
+export const POWER_REROUTE_COOLDOWN_TICKS = 420;
+
+/** Reroute: what the boost does to top speed while it is on. */
+export const POWER_REROUTE_SPEED_MULTIPLIER = 1.3;
+
+/** Reroute: heat per tick while it is on. Enough to cook a base ship if held. */
+export const POWER_REROUTE_HEAT_PER_TICK = 1.2;
 
 // --- Parts -----------------------------------------------------------------
 // Six parts in the slice. Each is one upside and one cost; DESIGN.md says what

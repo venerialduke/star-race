@@ -99,7 +99,7 @@ of these.
 | --------------- | -------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------- |
 | Speed           | track-ticks per tick | 1.0  | How fast the ship covers the course. Base speed is 1.0 by definition: that is what "a segment is 180 ticks long" means. |
 | Acceleration    | speed per tick       | 0.02 | How quickly speed closes on its target after something changes it.                                                      |
-| Shield capacity | damage points        | 20   | How much damage shields absorb while they are up.                                                                       |
+| Shield capacity | damage points        | 50    | How much damage shields absorb while they are up.                                                                       |
 | Heat tolerance  | heat points          | 100  | How much heat the ship holds before it cooks.                                                                           |
 | Hull            | damage points        | 100  | How much damage the ship survives.                                                                                      |
 
@@ -215,15 +215,35 @@ point of hazard damage passes through the pool first: the pool absorbs what it
 can and the rest reaches the hull. Absorption happens in one place, so every
 hazard is shielded the same way.
 
-A base pool of 20 blunts a 45-point burst without stopping it. Mirror Shielding
-takes the pool past the burst's damage, so a well-timed shield swallows one
-whole. The pool is empty until an active fills it (S2.10).
+A base pool of 50 stops a 45-point burst dead and is nearly spent doing it —
+there is not enough left for a second. Mirror Shielding takes the pool to 85, so
+it covers a burst and the asteroid damage around it. The pool is filled by
+raising shields, and whatever is left drops when they run out.
 
 ### Actives (two in the slice)
 
-Player-timed controls with cooldowns, for example raise shields, reroute
-power, dump heat. Big tap targets, visible cooldown. To be specified here as
-each is implemented.
+Two taps, each with a duration and a cooldown. Everything about them is timing:
+the hazards are drawn on the course before the start, so a shield raised into a
+gamma burst is a call the player made, not luck.
+
+| Active | What it does | Holds for | Cooldown |
+|--------|--------------|-----------|----------|
+| Raise Shields | Fills the shield pool to the ship's shield capacity. Costs nothing but the tap. | 90 ticks (1.5s) | 420 ticks (7s) |
+| Reroute Power | Top speed × 1.3, and heat every tick it is on. | 120 ticks (2s) | 420 ticks (7s) |
+
+Rules that matter:
+
+- **A tap during a cooldown is a tap wasted.** Taps do not queue. Mistiming one
+  costs you the use, which is the whole game of timing them.
+- **Shields fill the pool when raised, and drop whatever is left when they run
+  out.** They are not a bank; holding damage over from a previous stage is not a
+  thing.
+- **Rerouted power stacks with a gravity assist** rather than replacing it — the
+  multipliers multiply, and so does the heat.
+- Each active is on its own cooldown: using one never blocks the other.
+
+Roughly one shield per stage is the intent, so the player picks which hazard to
+answer rather than answering all of them.
 
 ### The race loop
 

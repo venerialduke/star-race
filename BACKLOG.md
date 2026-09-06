@@ -160,13 +160,77 @@ After three stages: finish time per stage, total, damage taken, what killed you
 if anything, and the build you ended with. One tap to run again.
 Done when: a finished run lands on the results screen and can be replayed.
 
-## S4 — actives and feel (not yet broken down)
+## S4 — the field, and feel
 
-The actives themselves landed in S2.10 and their buttons in S3.3, so what is
-left of S4 is feel:
+S4 is done when: three ships fly every stage, the results screen shows where you
+came, and three runs on a phone make you want a different build.
 
-- A slow-motion beat when a hazard is imminent, so a burst is something the
-  player sees coming rather than reacts to late.
-- Telemetry to the console: taps made, taps wasted on cooldown, near-misses.
-- Whatever three runs on a phone say is missing. The success test is unchanged:
-  you play three runs and want to try a different build.
+Done in the order below. The two fixes come first because they are cheap and
+everything after them is easier to trust.
+
+### S4.1 Close the main.ts gap, and a beat before the stage starts
+
+`main.ts` is the only untested code in the repo — the glue that moves between
+garage, race and results. Add `tests/ui/loop.test.ts` driving a whole run
+through it with a fake clock. While in there: the race currently starts the
+instant a part is tapped, with no moment to look at the course. Add a short
+countdown before the ship launches.
+Done when: a test plays garage, stage, results and run-again without a browser,
+and a stage opens with a beat rather than a jump.
+
+### S4.2 Fit the course to the screen
+
+The course is drawn into the largest centred square, which on a phone wastes the
+top and bottom of the screen. Fit the track's bounding box to the viewport
+instead, leaving room for the HUD. Three ships need more room, not less.
+Done when: the course fills the space between the readouts and the buttons at
+phone sizes.
+
+### S4.3 Pilots
+
+Add `src/sim/pilot.ts`: a rule that reads a race each tick and returns the taps
+to make — shields when a burst is close ahead, reroute on clear track — with
+seeded imperfect timing. Move the balance harness's reference player onto it, so
+one rule flies rivals and the harness both.
+Done when: `tests/sim/pilot.test.ts` shows a pilot shielding a burst it can see,
+missing sometimes, never tapping into a cooldown, and being deterministic per
+seed. The balance table still reads sensibly.
+
+### S4.4 The field
+
+Add `src/sim/field.ts`: three ships stepped in lockstep through one stage, each
+with its own race state and its own hazard dice, no contact between them.
+Produces a finishing order, with lost ships behind finishers. `run.ts` carries
+two rivals with the fixed builds and upgrade schedule in `DESIGN.md`, their hull
+carried between stages like the player's.
+Done when: `tests/sim/field.test.ts` covers finishing order, lost ships placed
+last, determinism per seed, and rivals growing a part per stage.
+
+### S4.5 Draw the field
+
+Three ships on screen, offset into lanes so they are legible, each with its own
+colour, and a position readout in the HUD.
+Done when: three ships fly the course without overlapping, and the player can
+tell at a glance whether they are winning.
+
+### S4.6 Results with standings
+
+Per-stage position, overall standings across the field, and a headline that says
+whether the run was won — including the case where the ship survived and still
+came last.
+Done when: the results screen shows the field, and a surviving-but-slow run
+reads as a loss.
+
+### S4.7 Slow-motion beat when a hazard is imminent
+
+The renderer slows time as the ship closes on a burst, so it is something the
+player sees coming rather than reacts to late. The simulation never learns about
+it: only the rate ticks are fed to it changes.
+Done when: approaching a burst visibly slows, the sim's tick count is unchanged
+by it, and a race replays identically with or without slow motion.
+
+### S4.8 Telemetry to the console
+
+Taps made, taps wasted on cooldown, near-misses, per-stage positions. What
+tells us whether the timing windows are right.
+Done when: a finished run prints one readable block.

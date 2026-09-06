@@ -12,7 +12,7 @@
 //      from a standstill.
 // Hazards and actives hook into this loop in S2.6 onwards.
 
-import { hazardEffect } from './hazards';
+import { absorb, hazardEffect, isOneShot } from './hazards';
 import { makeRng, type Rng } from './rng';
 import { resolveBuild, type Build, type DerivedStats } from './ship';
 import { segmentStartTick, totalLengthTicks, type HazardKind, type Track } from './track';
@@ -41,12 +41,14 @@ export interface RaceEvent {
 export interface RaceOutcome {
   /** Ticks spent flying. Garage pauses at the gates cost nothing. */
   readonly finishTicks: number;
-  /** Hull lost over the race. Always 0 until hazards land in S2.6. */
+  /** Hull actually lost over the race, after shields took their share. */
   readonly damageTaken: number;
   /** Did the ship reach the finish line in one piece? */
   readonly survived: boolean;
   /** Hull remaining at the end, floored at 0. */
   readonly hullLeft: number;
+  /** Damage shields swallowed, so the results screen can show what they were worth. */
+  readonly damageAbsorbed: number;
   /** What happened, in order. Enough to narrate a race after the fact. */
   readonly log: readonly RaceEvent[];
   /** The seed this race was run with, so an interesting race can be replayed. */
@@ -91,6 +93,9 @@ export function simulate(
     });
   });
 
+  // One-shot hazards, such as a gamma burst, fire once and are then spent.
+  const fired = new Set<PlacedHazard>();
+
   const log: RaceEvent[] = [];
   let tick = 0;
   let distance = 0;
@@ -99,6 +104,8 @@ export function simulate(
   let hull = stats.hull;
   let heat = 0;
   let damageTaken = 0;
+  let damageAbsorbed = 0;
+  let shieldPool = 0;
   let destroyed = false;
 
   log.push({ tick, kind: 'start', distance, stage });
@@ -108,7 +115,10 @@ export function simulate(
     //    so a hazard the ship flies straight through still catches it.
     const freeSpeed = Math.min(speed + stats.acceleration, stats.speed);
     const active = placements.filter(
-      (placement) => placement.from < distance + freeSpeed && placement.to > distance,
+      (placement) =>
+        placement.from < distance + freeSpeed &&
+        placement.to > distance &&
+        !fired.has(placement),
     );
 
     // 2. Ask each hazard what it does this tick, and combine the answers.
@@ -124,6 +134,7 @@ export function simulate(
         shieldsUp: false, // S2.10 raises shields here.
         rng: placement.rng,
       });
+      if (isOneShot(placement.kind)) fired.add(placement);
       hullDamage += effect.hullDamage;
       addedHeat += effect.heat;
       speedMultiplier *= effect.speedMultiplier;
@@ -131,10 +142,14 @@ export function simulate(
     });
 
     // 3. Apply damage and heat, then close on whatever top speed the hazards
-    //    left the ship with.
+    //    left the ship with. Shields eat damage before the hull does; the pool
+    //    is empty until actives fill it in S2.10.
     if (hullDamage > 0) {
-      hull -= hullDamage;
-      damageTaken += hullDamage;
+      const { toHull, poolLeft } = absorb(hullDamage, shieldPool);
+      shieldPool = poolLeft;
+      damageAbsorbed += hullDamage - toHull;
+      hull -= toHull;
+      damageTaken += toHull;
     }
     heat += addedHeat;
     if (hull <= 0) destroyed = true;
@@ -179,6 +194,7 @@ export function simulate(
     damageTaken,
     survived: finished,
     hullLeft: Math.max(hull, 0),
+    damageAbsorbed,
     log,
     seed,
     stats,

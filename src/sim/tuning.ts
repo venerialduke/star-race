@@ -82,6 +82,12 @@ export const ASTEROID_DAMAGE_PER_TICK = 0.25;
 /** Asteroid field: how much a roll can swing damage, as a fraction. 0.4 = ±40%. */
 export const ASTEROID_DAMAGE_VARIANCE = 0.4;
 
+/**
+ * Gamma-ray burst: hull damage from one unshielded burst. Nearly half a base
+ * hull, in a single tick, with no dice: the answer is to see it coming.
+ */
+export const GAMMA_BURST_DAMAGE = 45;
+
 // --- Parts -----------------------------------------------------------------
 // Six parts in the slice. Each is one upside and one cost; DESIGN.md says what
 // each is for and which hazard it answers.

@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   NO_EFFECT,
+  absorb,
   asteroidField,
+  gammaBurst,
   hazardEffect,
+  isOneShot,
   type HazardContext,
 } from '../../src/sim/hazards';
 import { makeRng } from '../../src/sim/rng';
@@ -10,7 +13,7 @@ import { BASE_STATS, PARTS, resolveBuild } from '../../src/sim/ship';
 import { simulate, type PlayerInput } from '../../src/sim/race';
 import { makeSpline } from '../../src/sim/spline';
 import { makeTrack, type Segment } from '../../src/sim/track';
-import { ASTEROID_DAMAGE_PER_TICK } from '../../src/sim/tuning';
+import { ASTEROID_DAMAGE_PER_TICK, GAMMA_BURST_DAMAGE } from '../../src/sim/tuning';
 
 const line = makeSpline([
   { x: 0, y: 0 },
@@ -18,6 +21,12 @@ const line = makeSpline([
 ]);
 
 const noInputs: readonly PlayerInput[] = [];
+
+const seg = (name: string, lengthTicks: number, hazards: Segment['hazards'] = []): Segment => ({
+  name,
+  lengthTicks,
+  hazards,
+});
 
 const context = (overrides: Partial<HazardContext> = {}): HazardContext => ({
   stats: BASE_STATS,
@@ -83,6 +92,97 @@ describe('asteroid field', () => {
   });
 });
 
+describe('gamma-ray burst', () => {
+  it('takes a large bite out of the hull in one tick', () => {
+    const effect = gammaBurst();
+    expect(effect.hullDamage).toBe(GAMMA_BURST_DAMAGE);
+    expect(effect.hullDamage).toBeGreaterThan(BASE_STATS.hull * 0.4);
+    expect(effect.heat).toBe(0);
+    expect(effect.speedMultiplier).toBe(1);
+  });
+
+  it('is the same burst every time: no dice, no context, no speed to duck it', () => {
+    // The burst takes no arguments at all — that is the point of it. Nothing
+    // about the ship changes what arrives; only whether shields are up.
+    expect(gammaBurst()).toEqual(gammaBurst());
+  });
+
+  it('is survivable unshielded on a fresh hull, but only just', () => {
+    expect(GAMMA_BURST_DAMAGE).toBeLessThan(BASE_STATS.hull);
+  });
+
+  it('is a one-shot: it fires once, not once per overlapping tick', () => {
+    expect(isOneShot('gammaBurst')).toBe(true);
+    expect(isOneShot('asteroidField')).toBe(false);
+    expect(isOneShot('blackHole')).toBe(false);
+    expect(isOneShot('ringedPlanet')).toBe(false);
+  });
+
+  it('hits a ship exactly once however fast it crosses the burst', () => {
+    // A ship moving about one track-tick per tick overlaps a one-tick window on
+    // two consecutive ticks. It must still only be hit once.
+    const burstTrack = makeTrack(
+      [
+        seg('run-up', 60),
+        seg('corridor', 200, [{ kind: 'gammaBurst', startTick: 100, lengthTicks: 1 }]),
+      ],
+      [],
+      line,
+    );
+    [
+      [],
+      [PARTS.ionThruster],
+      [PARTS.ablativePlating],
+      [PARTS.overclockedReactor],
+    ].forEach((build) => {
+      expect(simulate(burstTrack, build, noInputs, 1).damageTaken).toBe(
+        GAMMA_BURST_DAMAGE,
+      );
+    });
+  });
+
+  it('costs nothing if the burst is not on the course', () => {
+    const clear = makeTrack([seg('run-up', 60), seg('corridor', 200)], [], line);
+    expect(simulate(clear, [], noInputs, 1).damageTaken).toBe(0);
+  });
+});
+
+describe('shields against a burst', () => {
+  const burst = gammaBurst().hullDamage;
+
+  it('an unshielded ship eats the whole burst', () => {
+    expect(absorb(burst, 0)).toEqual({ toHull: burst, poolLeft: 0 });
+  });
+
+  it('a shielded ship with capacity to spare takes nothing', () => {
+    const capacity = resolveBuild([PARTS.mirrorShielding]).shieldCapacity;
+    expect(capacity).toBeGreaterThanOrEqual(burst);
+    expect(absorb(burst, capacity).toHull).toBe(0);
+  });
+
+  it('base shields blunt a burst without stopping it', () => {
+    const capacity = BASE_STATS.shieldCapacity;
+    const { toHull, poolLeft } = absorb(burst, capacity);
+    expect(toHull).toBe(burst - capacity);
+    expect(toHull).toBeGreaterThan(0);
+    expect(poolLeft).toBe(0);
+  });
+
+  it('leaves what it did not need in the pool', () => {
+    expect(absorb(5, 30)).toEqual({ toHull: 0, poolLeft: 25 });
+  });
+
+  it('survives a burst that a bare hull would not', () => {
+    // 45 damage against a hull already down to 30: fatal bare, fine shielded.
+    const hurtHull = 30;
+    expect(hurtHull - absorb(burst, 0).toHull).toBeLessThan(0);
+    expect(
+      hurtHull -
+        absorb(burst, resolveBuild([PARTS.mirrorShielding]).shieldCapacity).toHull,
+    ).toBeGreaterThan(0);
+  });
+});
+
 describe('hazard dispatch', () => {
   it('routes asteroid fields to the asteroid field', () => {
     const shared = makeRng(3);
@@ -91,24 +191,17 @@ describe('hazard dispatch', () => {
     expect(viaDispatch).toEqual(direct);
   });
 
+  it('routes gamma bursts to the burst', () => {
+    expect(hazardEffect('gammaBurst', context())).toEqual(gammaBurst());
+  });
+
   it('leaves the hazards that have not landed yet inert', () => {
-    expect(hazardEffect('gammaBurst', context())).toEqual(NO_EFFECT);
     expect(hazardEffect('blackHole', context())).toEqual(NO_EFFECT);
     expect(hazardEffect('ringedPlanet', context())).toEqual(NO_EFFECT);
   });
 });
 
 describe('asteroid fields in a race', () => {
-  const seg = (
-    name: string,
-    lengthTicks: number,
-    hazards: Segment['hazards'] = [],
-  ): Segment => ({
-    name,
-    lengthTicks,
-    hazards,
-  });
-
   const fieldTrack = makeTrack(
     [
       seg('run-up', 60),

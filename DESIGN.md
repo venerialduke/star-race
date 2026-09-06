@@ -156,6 +156,28 @@ comes out having taken roughly twice as much. Crossing a field fast is
 expensive; armour or restraint is the answer. Ablative Plating both raises hull
 and lowers speed, so it pays twice here.
 
+#### Gamma-ray burst
+
+A single tick, no dice, and a large bite out of the hull — nearly half a base
+hull in one hit. Nothing about the ship changes what arrives: not speed, not
+luck. The only answer is to have shields up when it lands, which is why the
+burst is drawn on the course before the race starts. An unshielded hit is a
+call the player got wrong, not bad luck.
+
+The burst is **one-shot**: a ship moving about one track-tick per tick overlaps
+a one-tick window on two consecutive ticks, and must still only be hit once.
+
+#### Shields
+
+Shields hold a **pool** of points equal to the ship's shield capacity. Every
+point of hazard damage passes through the pool first: the pool absorbs what it
+can and the rest reaches the hull. Absorption happens in one place, so every
+hazard is shielded the same way.
+
+A base pool of 20 blunts a 45-point burst without stopping it. Mirror Shielding
+takes the pool past the burst's damage, so a well-timed shield swallows one
+whole. The pool is empty until an active fills it (S2.10).
+
 ### Actives (two in the slice)
 
 Player-timed controls with cooldowns, for example raise shields, reroute

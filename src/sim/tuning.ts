@@ -148,8 +148,12 @@ export const POWER_REROUTE_COOLDOWN_TICKS = 420;
 /** Reroute: what the boost does to top speed while it is on. */
 export const POWER_REROUTE_SPEED_MULTIPLIER = 1.3;
 
-/** Reroute: heat per tick while it is on. Enough to cook a base ship if held. */
-export const POWER_REROUTE_HEAT_PER_TICK = 1.2;
+/**
+ * Reroute: heat per tick while it is on. Just under what a base ship can hold
+ * for a full boost, so one reroute on clear track is free — the cost lands when
+ * it is stacked on a gravity assist, or run on a ship that already runs hot.
+ */
+export const POWER_REROUTE_HEAT_PER_TICK = 0.8;
 
 // --- Parts -----------------------------------------------------------------
 // Six parts in the slice. Each is one upside and one cost; DESIGN.md says what

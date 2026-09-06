@@ -276,6 +276,25 @@ a results screen after three stages.
 All balance constants live in `src/sim/tuning.ts`. This document describes
 what a constant does; the file holds its value.
 
+`npm run balance -- --races 1000` races three standard builds — a bare hull, a
+speed build and a survival build — against the slice track, with a reference
+player whose taps are deliberately imperfect: shields aimed at each burst and
+missed by up to a shield window either way, seeded per race. It answers "how
+often does this build survive real play?", not "how does it do under perfect
+input". Run it before and after a tuning change.
+
+At the close of S2 the table reads:
+
+| Build | Survived | Ticks (mean) | Damage (mean) |
+|-------|----------|--------------|---------------|
+| Bare hull | 100% | 1,463 | 48.9 |
+| Speed | 68% | 1,154 | 73.3 |
+| Survival | 100% | 1,575 | 34.5 |
+
+Which is the shape the slice is aiming for: the fast build is the quickest and
+the only one that loses races, and the tough build pays for its survival in
+time.
+
 ## Later
 
 <!-- Anything not in the slice goes here and stays here until S4 is done. -->

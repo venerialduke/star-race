@@ -6,6 +6,9 @@ Pick the top unblocked item, work in a branch or worktree, open a PR.
 S2 is done when: a test runs 1,000 seeded races on three builds and prints a
 stats table. No rendering changes in S2.
 
+**S2 is done.** Every item below is merged; the harness prints its table in
+under a second. Kept here as the record of what was built.
+
 ## S2 — the simulation
 
 ### S2.1 Seeded RNG

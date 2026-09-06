@@ -15,7 +15,7 @@ import { flyRace, startRace, type PlayerInput, type RaceOutcome } from '../src/s
 import { STANDARD_BUILDS, type StandardBuild } from '../src/sim/builds';
 import { makePilot } from '../src/sim/pilot';
 import { makeRng } from '../src/sim/rng';
-import { resolveBuild, type Part, type PartId } from '../src/sim/ship';
+import { ALL_PARTS, resolveBuild, type Part, type PartId } from '../src/sim/ship';
 import {
   choosePart,
   runStage,
@@ -150,6 +150,25 @@ const STRATEGIES: readonly Strategy[] = [
   {
     name: 'Speed, then cover',
     wants: ['ionThruster', 'inertialAnchor', 'radiatorFins', 'mirrorShielding'],
+  },
+  {
+    name: 'Doubles down',
+    // Takes another of whatever it took first, whenever it is offered. The
+    // question this answers: is stacking one part the whole game?
+    wants: [],
+    adapt: (run) => {
+      const first = run.build[0];
+      return first === undefined ? [] : [first.id];
+    },
+  },
+  {
+    name: 'Never repeats',
+    // The opposite extreme: refuses a part it already has.
+    wants: [],
+    adapt: (run) => {
+      const owned = new Set(run.build.map((part) => part.id));
+      return ALL_PARTS.map((part) => part.id).filter((id) => !owned.has(id));
+    },
   },
   {
     name: 'Reads the ship',

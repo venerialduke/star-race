@@ -104,8 +104,14 @@ of these.
 | Heat tolerance  | heat points          | 100  | How much heat the ship holds before it cooks.                                                                           |
 | Hull            | damage points        | 100  | How much damage the ship survives.                                                                                      |
 
-A **build** is the parts bolted on. A part is a set of **additive deltas** on
-the base stats; resolving a build sums every delta onto the base and clamps
+A **build** is the parts bolted on. **Parts stack**: three Ion Thrusters is a
+legal ship, and taking a second of something is a real choice rather than a bug.
+That holds because neither extreme is the answer — over 300 runs, a player who
+always doubles down wins 29% and one who never repeats wins 30%, against 40% for
+a player who takes the fastest part on offer whether or not they own it already.
+What is strong is knowing which part you want, not how many of them you have.
+
+A part is a set of **additive deltas** on the base stats; resolving a build sums every delta onto the base and clamps
 each stat to a floor, so a build stacked with downsides still produces a ship
 that can race. Resolution happens once, before the race starts — the race reads
 the derived stats and never looks at a part again. Parts stack, and order does

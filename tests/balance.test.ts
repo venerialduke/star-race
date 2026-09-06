@@ -136,6 +136,22 @@ describe('whole runs against the rivals', () => {
     expect(speed?.beatOnTime ?? 0).toBeGreaterThan(0.15);
   });
 
+  it('leaves stacking a choice rather than the answer', () => {
+    // Parts stack: three Ion Thrusters is a legal build. That is deliberate, and
+    // it holds only while neither extreme dominates — a player who always takes
+    // another of what they have should do no better than one who never does.
+    const doubling = rows.find((row) => row.name === 'Doubles down');
+    const spreading = rows.find((row) => row.name === 'Never repeats');
+    const best = Math.max(...rows.map((row) => row.winRate));
+    expect(doubling).toBeDefined();
+    expect(spreading).toBeDefined();
+    expect(doubling?.winRate ?? 1).toBeLessThan(best);
+    expect(spreading?.winRate ?? 1).toBeLessThan(best);
+    // Neither is far ahead of the other: stacking is a trade, not a lever.
+    const gap = Math.abs((doubling?.winRate ?? 0) - (spreading?.winRate ?? 0));
+    expect(gap).toBeLessThan(0.2);
+  });
+
   it('is deterministic: the same sweep twice gives the same table', () => {
     expect(runTheField(20)).toEqual(runTheField(20));
   });

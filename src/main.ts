@@ -4,7 +4,7 @@
 // without any of these.
 
 import { createGame } from './ui/game';
-import { draw, type Viewport } from './render/draw';
+import { drawField, type Viewport } from './render/draw';
 
 function getCanvas(): HTMLCanvasElement {
   const el = document.getElementById('game');
@@ -36,7 +36,7 @@ resize();
 
 const game = createGame({
   root: document.body,
-  render: (state) => draw(ctx, state, viewport),
+  render: (field) => drawField(ctx, field, viewport),
   seed: Math.floor(Date.now() % 100000),
 });
 

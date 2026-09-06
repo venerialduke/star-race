@@ -12,8 +12,8 @@ import { stages } from '../sim/track';
 import { TICK_RATE } from '../sim/tuning';
 
 export interface Hud {
-  /** Redraw the readouts from the current race state. */
-  update(state: RaceState): void;
+  /** Redraw the readouts from the current race state and place in the field. */
+  update(state: RaceState, position?: number, ships?: number): void;
   /** Show or hide the whole HUD, for the garage and results screens. */
   setVisible(visible: boolean): void;
   /** A word across the middle of the screen — the countdown, mostly. */
@@ -46,6 +46,8 @@ const STYLE = `
   color: #b9b7ae;
   letter-spacing: 0.04em;
 }
+.hud-place { color: #e9e4d6; }
+.hud-place.is-leading { color: #7fd48c; }
 .hud-bar {
   position: relative;
   height: 14px;
@@ -154,6 +156,12 @@ function setBar(bar: Bar, fraction: number, left: string, right: string): void {
 
 const seconds = (ticks: number): string => `${(ticks / TICK_RATE).toFixed(1)}s`;
 
+/** 1 -> 1st. Three ships, so this never has to be clever. */
+const ordinal = (position: number): string => {
+  const suffix = position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th';
+  return `${position}${suffix}`;
+};
+
 /**
  * Build the HUD over the canvas. `onTap` is called with the active the player
  * pressed; the caller decides which tick it lands on.
@@ -168,8 +176,9 @@ export function createHud(root: HTMLElement, onTap: (active: ActiveId) => void):
   const top = el('div', 'hud-top');
   const stageLine = el('div', 'hud-stage');
   const stageName = el('span');
+  const place = el('span', 'hud-place');
   const clock = el('span');
-  stageLine.append(stageName, clock);
+  stageLine.append(stageName, place, clock);
   top.append(stageLine);
 
   const hull = makeBar(top, 'hud-hull');
@@ -203,10 +212,20 @@ export function createHud(root: HTMLElement, onTap: (active: ActiveId) => void):
   root.append(hud);
 
   return {
-    update(state: RaceState): void {
+    update(state: RaceState, position?: number, ships?: number): void {
       const stageCount = stages(state.track).length;
       stageName.textContent = `Stage ${Math.min(state.stage + 1, stageCount)} / ${stageCount}`;
       clock.textContent = seconds(state.tick);
+
+      // Where the player is in the field, so winning or losing is visible
+      // without waiting for the line.
+      if (position === undefined) {
+        place.textContent = '';
+        place.classList.remove('is-leading');
+      } else {
+        place.textContent = `${ordinal(position)}${ships === undefined ? '' : ` of ${ships}`}`;
+        place.classList.toggle('is-leading', position === 1);
+      }
 
       const maxHull = state.stats.hull;
       const hullLeft = Math.max(state.hull, 0);

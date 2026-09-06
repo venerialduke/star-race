@@ -11,7 +11,7 @@
 // because they are the same code with the same inputs.
 
 import type { ActiveId } from '../sim/actives';
-import { stepField, type Field } from '../sim/field';
+import { livePositionOf, stepField, type Field } from '../sim/field';
 import { type PlayerInput, type RaceState } from '../sim/race';
 import { choosePart, runStage, startRun, startStageField, type Run } from '../sim/run';
 import type { Part } from '../sim/ship';
@@ -27,8 +27,8 @@ export type Screen = 'garage' | 'countdown' | 'racing' | 'held' | 'results';
 export interface GameOptions {
   /** Where the screens are attached. */
   readonly root: HTMLElement;
-  /** Draw a race. The canvas lives outside the loop. */
-  readonly render: (state: RaceState) => void;
+  /** Draw the field. The canvas lives outside the loop. */
+  readonly render: (field: Field) => void;
   /** The first run's seed. Each later run takes the next one. */
   readonly seed: number;
   readonly track?: Track;
@@ -177,9 +177,9 @@ export function createGame(options: GameOptions): Game {
       }
 
       const mine = playerRace();
-      if (mine !== undefined) {
-        options.render(mine);
-        hud.update(mine);
+      if (field !== undefined && mine !== undefined) {
+        options.render(field);
+        hud.update(mine, livePositionOf(field, 'player'), field.racers.length);
       }
     },
     screen: () => screen,

@@ -5,6 +5,7 @@ import {
   TOP_INSET,
   fitToViewport,
   fitTrack,
+  laneShift,
   project,
   trackBounds,
   type Viewport,
@@ -152,5 +153,48 @@ describe('other screens', () => {
     const small = fitTrack(SLICE_TRACK.path, phone).scale;
     const large = fitTrack(SLICE_TRACK.path, tablet).scale;
     expect(large).toBeGreaterThan(small);
+  });
+});
+
+describe('lanes', () => {
+  const here = { x: 100, y: 100 };
+  const behind = { x: 90, y: 100 }; // travelling due east
+
+  it('leaves the middle lane exactly on the course', () => {
+    expect(laneShift(here, behind, 0, 400)).toEqual(here);
+  });
+
+  it('puts the outside lanes either side, at right angles to travel', () => {
+    const left = laneShift(here, behind, -1, 400);
+    const right = laneShift(here, behind, 1, 400);
+    // Travelling east, so lanes are north and south of the line.
+    expect(left.x).toBeCloseTo(here.x, 9);
+    expect(right.x).toBeCloseTo(here.x, 9);
+    expect(right.y - here.y).toBeCloseTo(here.y - left.y, 9);
+    expect(right.y).not.toBeCloseTo(here.y, 3);
+  });
+
+  it('spaces lanes by the same gap however the course is turning', () => {
+    const diagonal = { x: 90, y: 90 };
+    const straight = laneShift(here, behind, 1, 400);
+    const turning = laneShift(here, diagonal, 1, 400);
+    const gapOf = (p: { x: number; y: number }): number =>
+      Math.hypot(p.x - here.x, p.y - here.y);
+    expect(gapOf(turning)).toBeCloseTo(gapOf(straight), 9);
+  });
+
+  it('scales the gap with the course, so lanes look the same on any screen', () => {
+    const small = laneShift(here, behind, 1, 200);
+    const large = laneShift(here, behind, 1, 400);
+    expect(Math.hypot(large.x - here.x, large.y - here.y)).toBeCloseTo(
+      Math.hypot(small.x - here.x, small.y - here.y) * 2,
+      9,
+    );
+  });
+
+  it('does not blow up when a ship has not moved yet', () => {
+    const shifted = laneShift(here, here, 1, 400);
+    expect(Number.isFinite(shifted.x)).toBe(true);
+    expect(Number.isFinite(shifted.y)).toBe(true);
   });
 });

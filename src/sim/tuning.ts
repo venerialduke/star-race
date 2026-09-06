@@ -130,6 +130,16 @@ export const GAMMA_BURST_DAMAGE = 45;
 /** Ticks the ship sits on the grid before a stage starts. Time to read the course. */
 export const COUNTDOWN_TICKS = 180;
 
+/**
+ * How much time slows as the ship closes on a burst. 0.4 means the world runs at
+ * two fifths speed: enough that a thumb has a chance, not so much that the race
+ * stops being a race.
+ */
+export const SLOW_MOTION_SCALE = 0.4;
+
+/** How many ticks ahead of a burst the world starts slowing. */
+export const SLOW_MOTION_LEAD_TICKS = 100;
+
 /** Ticks a finished stage stays on screen before the garage opens. */
 export const HOLD_AFTER_STAGE_TICKS = 90;
 

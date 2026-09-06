@@ -21,7 +21,7 @@
 import { ACTIVES, type ActiveId } from './actives';
 import { activeOn, activeReady, type RaceState } from './race';
 import type { Rng } from './rng';
-import { segmentStartTick, type HazardKind, type Track } from './track';
+import { hazardsOnTrack, type HazardAt, type Track } from './track';
 import {
   PILOT_JITTER_TICKS,
   PILOT_REROUTE_CLEAR_TICKS,
@@ -33,36 +33,12 @@ export interface Pilot {
   taps(state: RaceState): ActiveId[];
 }
 
-interface Marker {
-  readonly kind: HazardKind;
-  /** Distance from the start line at which it begins. */
-  readonly from: number;
-  /** Distance at which it ends. */
-  readonly to: number;
-}
-
-/** Every hazard on the track as a distance, in order. */
-function markers(track: Track): Marker[] {
-  const out: Marker[] = [];
-  track.segments.forEach((segment, index) => {
-    const start = segmentStartTick(track, index);
-    segment.hazards.forEach((hazard) => {
-      out.push({
-        kind: hazard.kind,
-        from: start + hazard.startTick,
-        to: start + hazard.startTick + hazard.lengthTicks,
-      });
-    });
-  });
-  return out.sort((a, b) => a.from - b.from);
-}
-
 /**
  * A pilot for one race. `rng` is its own stream: two pilots on the same track
  * misjudge different bursts, and the same seed always misjudges the same ones.
  */
 export function makePilot(track: Track, rng: Rng): Pilot {
-  const all = markers(track);
+  const all: HazardAt[] = hazardsOnTrack(track);
   const bursts = all.filter((marker) => marker.kind === 'gammaBurst');
   // One misjudgement per burst, drawn up front so the amount does not depend on
   // how many ticks the ship spent getting there.

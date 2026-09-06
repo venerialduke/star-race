@@ -15,8 +15,14 @@ import { livePositionOf, stepField, type Field } from '../sim/field';
 import { type PlayerInput, type RaceState } from '../sim/race';
 import { choosePart, runStage, startRun, startStageField, type Run } from '../sim/run';
 import type { Part } from '../sim/ship';
-import { SLICE_TRACK, type Track } from '../sim/track';
-import { COUNTDOWN_TICKS, HOLD_AFTER_STAGE_TICKS, TICK_RATE } from '../sim/tuning';
+import { hazardsOnTrack, SLICE_TRACK, type HazardAt, type Track } from '../sim/track';
+import {
+  COUNTDOWN_TICKS,
+  HOLD_AFTER_STAGE_TICKS,
+  SLOW_MOTION_LEAD_TICKS,
+  SLOW_MOTION_SCALE,
+  TICK_RATE,
+} from '../sim/tuning';
 import { createGarage } from './garage';
 import { createHud } from './hud';
 import { createResults } from './results';
@@ -37,6 +43,12 @@ export interface GameOptions {
 export interface Game {
   /** Advance the game to this wall-clock time, in milliseconds. */
   frame(nowMs: number): void;
+  /**
+   * How fast the world is running: 1 normally, less as the ship closes on a
+   * burst. The simulation never learns about this — it only changes how many
+   * ticks a second of wall clock buys.
+   */
+  timeScale(): number;
   /** What the player is looking at, for tests and telemetry. */
   screen(): Screen;
   /** The run as it stands. */
@@ -70,6 +82,29 @@ export function createGame(options: GameOptions): Game {
   let pending: ActiveId[] = [];
   let accumulator = 0;
   let last: number | undefined;
+
+  const bursts: HazardAt[] = hazardsOnTrack(track).filter(
+    (hazard) => hazard.kind === 'gammaBurst',
+  );
+
+  /**
+   * Time slows as the player's ship closes on a burst, so the burst is something
+   * they see coming rather than react to late. Nothing about the race changes:
+   * the ticks are the same ticks, they just arrive further apart.
+   */
+  function currentTimeScale(): number {
+    if (screen !== 'racing') return 1;
+    const mine = playerRace();
+    if (mine === undefined || mine.over) return 1;
+    const next = bursts.find((burst) => burst.to > mine.distance);
+    if (next === undefined) return 1;
+    const speed = Math.max(mine.speed, mine.stats.speed * 0.25);
+    const ticksAway = (next.from - mine.distance) / speed;
+    if (ticksAway > SLOW_MOTION_LEAD_TICKS || ticksAway < 0) return 1;
+    // Ease in: barely slowed at the edge of the lead, fully slowed on top of it.
+    const closeness = 1 - ticksAway / SLOW_MOTION_LEAD_TICKS;
+    return 1 - (1 - SLOW_MOTION_SCALE) * closeness;
+  }
 
   /** The player's own race, out of the field. */
   function playerRace(): RaceState | undefined {
@@ -168,7 +203,7 @@ export function createGame(options: GameOptions): Game {
   return {
     frame(nowMs: number): void {
       if (last === undefined) last = nowMs;
-      accumulator = Math.min(accumulator + (nowMs - last), MAX_BACKLOG_MS);
+      accumulator = Math.min(accumulator + (nowMs - last) * currentTimeScale(), MAX_BACKLOG_MS);
       last = nowMs;
 
       while (accumulator >= TICK_MS) {
@@ -183,6 +218,7 @@ export function createGame(options: GameOptions): Game {
       }
     },
     screen: () => screen,
+    timeScale: () => currentTimeScale(),
     run: () => run,
     race: () => playerRace(),
     field: () => field,

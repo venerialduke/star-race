@@ -9,7 +9,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createGame, type Game } from '../../src/ui/game';
 import { stages } from '../../src/sim/track';
-import { COUNTDOWN_TICKS, HOLD_AFTER_STAGE_TICKS, TICK_RATE } from '../../src/sim/tuning';
+import {
+  COUNTDOWN_TICKS,
+  HOLD_AFTER_STAGE_TICKS,
+  SLOW_MOTION_SCALE,
+  TICK_RATE,
+} from '../../src/sim/tuning';
 
 const TICK_MS = 1000 / TICK_RATE;
 
@@ -231,5 +236,98 @@ describe('the game loop', () => {
         .results.map((r) => [r.stage, r.outcome.finishTicks, r.outcome.damageTaken]);
     };
     expect(play()).toEqual(play());
+  });
+});
+
+describe('the slow-motion beat', () => {
+  // Its own reset: without one these tests tap the previous test's garage,
+  // which is still in the document, and drive nothing at all.
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    document.head.innerHTML = '';
+  });
+
+  /** Play into stage 2, where the slice track's gamma burst is. */
+  const flyTowardsTheBurst = (game: Game, clock: Clock): void => {
+    // Stage 1, then the garage, then stage 2.
+    pointerdown(firstCard());
+    for (let i = 0; i < 120 && game.screen() !== 'garage'; i++) clock.advance(game, TICK_RATE);
+    pointerdown(firstCard());
+    clock.advance(game, COUNTDOWN_TICKS);
+  };
+
+  it('runs at full speed on open track', () => {
+    const clock = new Clock();
+    const game = createGame({ root: document.body, render: () => {}, seed: 7 });
+    clock.prime(game);
+    pointerdown(firstCard());
+    clock.advance(game, COUNTDOWN_TICKS + 10);
+    expect(game.timeScale()).toBe(1);
+  });
+
+  it('slows as the ship closes on the burst', () => {
+    const clock = new Clock();
+    const game = createGame({ root: document.body, render: () => {}, seed: 7 });
+    clock.prime(game);
+    flyTowardsTheBurst(game, clock);
+
+    let slowest = 1;
+    for (let i = 0; i < 400 && game.screen() === 'racing'; i++) {
+      clock.advance(game, 1);
+      slowest = Math.min(slowest, game.timeScale());
+    }
+    expect(slowest).toBeLessThan(1);
+    expect(slowest).toBeGreaterThanOrEqual(SLOW_MOTION_SCALE);
+  });
+
+  it('buys fewer ticks per second while it is slow', () => {
+    const clock = new Clock();
+    const game = createGame({ root: document.body, render: () => {}, seed: 7 });
+    clock.prime(game);
+    flyTowardsTheBurst(game, clock);
+
+    // Find the slow stretch, then measure a second of wall clock inside it.
+    for (let i = 0; i < 400 && game.timeScale() === 1 && game.screen() === 'racing'; i++) {
+      clock.advance(game, 1);
+    }
+    expect(game.timeScale()).toBeLessThan(1);
+    const before = game.race()?.tick ?? 0;
+    clock.now += 1000;
+    game.frame(clock.now);
+    const ticks = (game.race()?.tick ?? 0) - before;
+    expect(ticks).toBeGreaterThan(0);
+    expect(ticks).toBeLessThan(TICK_RATE);
+  });
+
+  it('never touches the race itself: the same taps give the same run', () => {
+    // Slow motion changes when frames arrive, not what the simulation does. A
+    // run driven with taps at fixed ticks lands identically either way.
+    const play = (frameMs: number): unknown => {
+      document.body.innerHTML = '';
+      document.head.innerHTML = '';
+      const clock = new Clock();
+      const game = createGame({ root: document.body, render: () => {}, seed: 21 });
+      clock.prime(game);
+      for (let guard = 0; guard < 10 && game.screen() !== 'results'; guard++) {
+        if (game.screen() === 'garage') pointerdown(firstCard());
+        for (let i = 0; i < 4000 && game.screen() !== 'garage' && game.screen() !== 'results'; i++) {
+          clock.now += frameMs;
+          game.frame(clock.now);
+        }
+      }
+      return game.run().results.map((r) => [r.stage, r.outcome.finishTicks, r.position]);
+    };
+    // Same game, frames arriving at different rates: identical outcomes.
+    expect(play(16)).toEqual(play(33));
+  });
+
+  it('is back to full speed once the burst is behind the ship', () => {
+    const clock = new Clock();
+    const game = createGame({ root: document.body, render: () => {}, seed: 7 });
+    clock.prime(game);
+    flyTowardsTheBurst(game, clock);
+    for (let i = 0; i < 600 && game.screen() === 'racing'; i++) clock.advance(game, 2);
+    // By the end of the stage the burst is long past.
+    expect(game.timeScale()).toBe(1);
   });
 });

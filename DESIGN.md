@@ -361,6 +361,18 @@ almost always finishes, so a bad run drops the player to third rather than
 second. If that turns out to be too hard, the knob is Redline's schedule rather
 than the hazards.
 
+### Slow motion
+
+As the player's ship closes on a gamma burst, time slows — down to two fifths
+speed on top of it, easing in over the last hundred ticks of approach. The burst
+is the one hazard that is pure timing, so it is the one worth giving the player
+a moment to see coming.
+
+**The simulation never learns about this.** Slow motion changes only how many
+ticks a second of wall clock buys. The ticks are the same ticks, arriving further
+apart, so a race is identical whether it was flown slowly or not — which a test
+pins by running the same game at two frame rates and comparing the results.
+
 ### Outcome
 
 A race produces: finish time, damage taken, whether the ship survived, what hull

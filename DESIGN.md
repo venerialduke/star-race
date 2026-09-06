@@ -180,6 +180,34 @@ This is why the black hole sits in stage 3: it charges the player for the hull
 they spent in stages 1 and 2. Climbing back out afterwards is an acceleration
 problem, which is where Inertial Anchor earns its place.
 
+#### Ringed planet
+
+A gravity assist. The ship is slung through the segment about a third faster
+than it could otherwise fly, and pays for it in **heat**, every tick of the way.
+The hazard itself never damages anything.
+
+Note the assist speeds the ship up, so it spends fewer ticks inside than the
+segment is long — the faster you take it, the less heat you collect. A base ship
+comes out of the slice track's assist with about 122 heat against a tolerance of
+100, so it cooks for a few seconds. Radiator Fins take the assist for free.
+
+#### Heat
+
+Heat builds while something is adding it, and bleeds away when nothing is. Above
+the ship's heat tolerance it **cooks the hull**, a little each tick, until heat
+falls back under the line.
+
+Two rules matter here:
+
+- Heat is a resource that comes back, not a scar. Dissipation is fast enough
+  that overcooking an assist costs a few seconds of hull, not the rest of the
+  race.
+- Overheat damage is **internal**, so shields do not stop it. Shields are for
+  what the galaxy throws at the ship, not for what the ship does to itself.
+
+The same rule covers heat from an assist and heat from rerouting power (S2.10),
+which is why it lives in the race loop rather than in any one hazard.
+
 #### Shields
 
 Shields hold a **pool** of points equal to the ship's shield capacity. Every

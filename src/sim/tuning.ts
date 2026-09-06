@@ -83,6 +83,30 @@ export const ASTEROID_DAMAGE_PER_TICK = 0.12;
 export const ASTEROID_DAMAGE_VARIANCE = 0.4;
 
 /**
+ * Ringed planet: what the gravity assist does to top speed inside it. 1.35
+ * means a ship is slung through a third faster than it could otherwise fly.
+ */
+export const RINGED_PLANET_SPEED_MULTIPLIER = 1.35;
+
+/**
+ * Ringed planet: heat added per tick of the assist. The price of the speed.
+ * Note the assist speeds the ship up, so it spends fewer ticks inside than the
+ * segment is long: a base ship takes on about 122 heat crossing a 110-tick
+ * assist, which is just past what it can hold.
+ */
+export const RINGED_PLANET_HEAT_PER_TICK = 1.5;
+
+/** Hull damage per tick spent above heat tolerance. Cooking is slow, not fatal. */
+export const OVERHEAT_DAMAGE_PER_TICK = 0.4;
+
+/**
+ * Heat shed per tick when nothing is adding any. Heat is a resource that comes
+ * back, not a scar: a ship that overcooks an assist pays for it for a few
+ * seconds, not for the rest of the race.
+ */
+export const HEAT_DISSIPATION_PER_TICK = 2;
+
+/**
  * Black hole: what the pull does to top speed inside it. 0.55 means a ship
  * holds a little over half the speed it otherwise could.
  */
@@ -93,7 +117,7 @@ export const BLACK_HOLE_SPEED_MULTIPLIER = 0.55;
  * lost. Flat, not a fraction — arriving battered is what kills you, and no
  * amount of extra plating changes the number you have to beat.
  */
-export const BLACK_HOLE_ESCAPE_HULL = 25;
+export const BLACK_HOLE_ESCAPE_HULL = 15;
 
 /**
  * Gamma-ray burst: hull damage from one unshielded burst. Nearly half a base

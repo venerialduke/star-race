@@ -332,6 +332,18 @@ imperfect, seeded per race, so a rival can misjudge a burst exactly as a player
 can — and so the balance harness measures what real play is like rather than
 what frame-perfect play is like.
 
+Its rules, in full:
+
+- **Shields**: find the next burst ahead, work out roughly when the ship reaches
+  it, and raise shields to cover it — aiming at the middle of the shield window
+  and missing by a seeded amount, so a pilot eats the occasional burst.
+- **Rerouted power**: only when the next hazard is well clear ahead *and* the
+  ship has the heat headroom to hold the whole boost. A hazard the ship is
+  already inside counts as zero ticks away — boosting through an asteroid field
+  is the worst thing a pilot could do, because rock scales with the square of
+  speed.
+- It never taps into a cooldown. A wasted tap is a player's mistake to make.
+
 The same pilot flies the rivals and the harness's reference builds. One rule,
 one place.
 

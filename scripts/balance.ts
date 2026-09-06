@@ -10,52 +10,12 @@
 // This is a script, not part of the game: it may use the console and process,
 // which src/sim may not.
 
-import { simulate, type PlayerInput, type RaceOutcome } from '../src/sim/race';
+import { flyRace, startRace, type RaceOutcome } from '../src/sim/race';
 import { STANDARD_BUILDS, type StandardBuild } from '../src/sim/builds';
-import { resolveBuild, type Build } from '../src/sim/ship';
-import { SLICE_TRACK, segmentStartTick, type Track } from '../src/sim/track';
-import { ACTIVES } from '../src/sim/actives';
+import { makePilot } from '../src/sim/pilot';
 import { makeRng } from '../src/sim/rng';
-
-/** How many ticks early or late the reference player's taps can land. */
-const HUMAN_JITTER_TICKS = 60;
-
-/**
- * What a decent but human player does: shields up around each burst, and
- * rerouted power on the opening straight.
- *
- * The taps are deliberately imperfect. Timing jitters by up to a shield window
- * either way, seeded from the race, so the harness answers the question that
- * matters — how often does this build survive real play? — rather than how it
- * does under frame-perfect input. A build that only lives when the tap is exact
- * shows up here as a build that mostly dies.
- */
-export function referencePlay(track: Track, build: Build, seed: number): PlayerInput[] {
-  const stats = resolveBuild(build);
-  const rng = makeRng(seed).fork();
-  const inputs: PlayerInput[] = [];
-
-  // Shields: aim to be up when the ship reaches each burst. Distance over
-  // roughly-top-speed is a good enough estimate of the tick it arrives.
-  track.segments.forEach((segment, index) => {
-    const segmentStart = segmentStartTick(track, index);
-    segment.hazards.forEach((hazard) => {
-      if (hazard.kind !== 'gammaBurst') return;
-      const distance = segmentStart + hazard.startTick;
-      const arrivesAbout = Math.round(distance / stats.speed);
-      // Aim to raise them a third of a window early, then miss by however much
-      // a human misses by.
-      const aimFor = arrivesAbout - Math.round(ACTIVES.shields.durationTicks / 3);
-      const jitter = rng.nextInt(-HUMAN_JITTER_TICKS, HUMAN_JITTER_TICKS + 1);
-      inputs.push({ tick: Math.max(0, aimFor + jitter), active: 'shields' });
-    });
-  });
-
-  // Power: one reroute on the opening straight, where there is nothing to duck.
-  inputs.push({ tick: 0, active: 'powerReroute' });
-
-  return inputs;
-}
+import { resolveBuild } from '../src/sim/ship';
+import { SLICE_TRACK, type Track } from '../src/sim/track';
 
 interface Row {
   readonly name: string;
@@ -80,12 +40,17 @@ function mean(values: readonly number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-/** Race one build against the track for `races` seeds and summarise it. */
+/**
+ * Race one build against the track for `races` seeds and summarise it. Each race
+ * is flown by a pilot — the same rule that flies the rivals in a real run — so
+ * the table measures how a build does in play rather than on paper.
+ */
 export function summarise(standard: StandardBuild, track: Track, races: number): Row {
   const outcomes: RaceOutcome[] = [];
   for (let seed = 0; seed < races; seed++) {
-    const inputs = referencePlay(track, standard.build, seed);
-    outcomes.push(simulate(track, standard.build, inputs, seed));
+    const pilot = makePilot(track, makeRng(seed).fork());
+    const state = startRace(track, standard.build, seed);
+    outcomes.push(flyRace(state, (current) => pilot.taps(current)));
   }
   // Finish times only mean something for races that finished.
   const finishes = outcomes.filter((o) => o.survived).map((o) => o.finishTicks);

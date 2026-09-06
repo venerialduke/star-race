@@ -133,6 +133,27 @@ export const COUNTDOWN_TICKS = 180;
 /** Ticks a finished stage stays on screen before the garage opens. */
 export const HOLD_AFTER_STAGE_TICKS = 90;
 
+// --- Pilots ------------------------------------------------------------------
+// How well a rival, or the balance harness's reference build, flies.
+
+/**
+ * How many ticks early or late a pilot's shield can be. The pilot aims for the
+ * middle of its shield window, so a misjudgement inside half the window still
+ * covers the burst and one outside it does not: at 55 against a 90-tick window
+ * a pilot eats the occasional burst rather than a quarter of them.
+ */
+export const PILOT_JITTER_TICKS = 55;
+
+/** A pilot only reroutes when the next hazard is at least this many ticks away. */
+export const PILOT_REROUTE_CLEAR_TICKS = 150;
+
+/**
+ * The heat a pilot assumes a full reroute will cost it. The same figure as the
+ * boost's own heat per tick, kept separate so a cautious pilot could be made
+ * cautious without changing what the boost does.
+ */
+export const POWER_REROUTE_EFFECT_HEADROOM = 0.8;
+
 // --- Garage ----------------------------------------------------------------
 
 /** How many parts the garage offers between stages. Three is a real choice. */

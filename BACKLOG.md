@@ -160,6 +160,34 @@ After three stages: finish time per stage, total, damage taken, what killed you
 if anything, and the build you ended with. One tap to run again.
 Done when: a finished run lands on the results screen and can be replayed.
 
+## S5 — polish and balance (done)
+
+Post-slice work, driven by measurement rather than a plan. Each item started as a
+question the numbers could answer.
+
+- **S5.1 Rivals shop in the same garage.** Whole-run measurement showed picking
+  at random beat every deliberate strategy: rivals had hand-picked builds while
+  the player drew three random cards, so the garage was noise. Rivals now draw
+  from the same pool and take what is nearest the top of their wish list.
+- **S5.2 Parts stack, on purpose.** Measured: doubling down wins 25%, never
+  repeating 30%, taking the fastest part offered 39%. Stacking is a trade, not a
+  lever, so it stays — with a test that fails if that stops being true.
+- **S5.3 The garage shows the course and the standings.** The design bet is that
+  you can see the black hole in stage 3 and build for it; until now you could
+  only see the course while flying it.
+- **S5.4 Mirror Shielding earns its place.** It was the only part below a blind
+  pick — one burst on the course, and a base pool already covered it. It carries
+  hull now.
+
+**What is left, and needs a human call rather than a measurement:**
+
+- **Contact between ships.** Collisions, blocking, drafting. A real design job,
+  not a tweak: it changes what a race is.
+- **A second track, or a fourth ship.** Both are content decisions.
+- **Whether a run should be winnable more than ~40% of the time** with good play.
+  It sits a little above an even three-way split, which reads right, but it is a
+  taste call.
+
 **S4 is done.** All eight items are merged: the loop is under test, the course
 fits a phone, pilots fly the rivals, three ships race every stage, the results
 screen shows the standings, time slows before a burst, and a run prints its

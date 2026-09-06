@@ -3,6 +3,7 @@ import {
   NO_EFFECT,
   absorb,
   asteroidField,
+  blackHole,
   gammaBurst,
   hazardEffect,
   isOneShot,
@@ -13,7 +14,12 @@ import { BASE_STATS, PARTS, resolveBuild } from '../../src/sim/ship';
 import { simulate, type PlayerInput } from '../../src/sim/race';
 import { makeSpline } from '../../src/sim/spline';
 import { makeTrack, type Segment } from '../../src/sim/track';
-import { ASTEROID_DAMAGE_PER_TICK, GAMMA_BURST_DAMAGE } from '../../src/sim/tuning';
+import {
+  ASTEROID_DAMAGE_PER_TICK,
+  BLACK_HOLE_ESCAPE_HULL,
+  BLACK_HOLE_SPEED_MULTIPLIER,
+  GAMMA_BURST_DAMAGE,
+} from '../../src/sim/tuning';
 
 const line = makeSpline([
   { x: 0, y: 0 },
@@ -195,8 +201,11 @@ describe('hazard dispatch', () => {
     expect(hazardEffect('gammaBurst', context())).toEqual(gammaBurst());
   });
 
+  it('routes black holes to the black hole', () => {
+    expect(hazardEffect('blackHole', context())).toEqual(blackHole(context()));
+  });
+
   it('leaves the hazards that have not landed yet inert', () => {
-    expect(hazardEffect('blackHole', context())).toEqual(NO_EFFECT);
     expect(hazardEffect('ringedPlanet', context())).toEqual(NO_EFFECT);
   });
 });
@@ -253,5 +262,105 @@ describe('asteroid fields in a race', () => {
   it('only bites inside the field', () => {
     const clear = makeTrack([seg('run-up', 60), seg('belt', 200)], [], line);
     expect(simulate(clear, [], noInputs, 42).damageTaken).toBe(0);
+  });
+});
+
+describe('black hole', () => {
+  it('drags at the ship without touching its hull', () => {
+    const effect = blackHole(context());
+    expect(effect.speedMultiplier).toBe(BLACK_HOLE_SPEED_MULTIPLIER);
+    expect(effect.speedMultiplier).toBeLessThan(1);
+    expect(effect.hullDamage).toBe(0);
+    expect(effect.heat).toBe(0);
+    expect(effect.destroyed).toBe(false);
+  });
+
+  it('rolls no dice: the pull is the same every tick', () => {
+    expect(blackHole(context({ rng: makeRng(1) }))).toEqual(
+      blackHole(context({ rng: makeRng(2) })),
+    );
+  });
+
+  it('takes a battered ship: below the escape threshold it is lost', () => {
+    const doomed = blackHole(context({ hull: BLACK_HOLE_ESCAPE_HULL - 1 }));
+    expect(doomed.destroyed).toBe(true);
+  });
+
+  it('lets a ship exactly on the threshold pull away', () => {
+    expect(blackHole(context({ hull: BLACK_HOLE_ESCAPE_HULL })).destroyed).toBe(false);
+  });
+
+  it('does not care how much hull the ship started with, only what is left', () => {
+    // Plating raises max hull but not the number you have to beat.
+    const plated = resolveBuild([PARTS.ablativePlating]);
+    expect(
+      blackHole(context({ stats: plated, hull: BLACK_HOLE_ESCAPE_HULL - 1 })).destroyed,
+    ).toBe(true);
+  });
+});
+
+describe('black holes in a race', () => {
+  const holeTrack = makeTrack(
+    [
+      seg('approach', 60),
+      seg('hole', 200, [{ kind: 'blackHole', startTick: 20, lengthTicks: 130 }]),
+      seg('run-out', 100),
+    ],
+    [],
+    line,
+  );
+  const clearTrack = makeTrack(
+    [seg('approach', 60), seg('hole', 200), seg('run-out', 100)],
+    [],
+    line,
+  );
+
+  it('costs time, not hull', () => {
+    const pulled = simulate(holeTrack, [], noInputs, 1);
+    const clear = simulate(clearTrack, [], noInputs, 1);
+    expect(pulled.finishTicks).toBeGreaterThan(clear.finishTicks);
+    expect(pulled.damageTaken).toBe(0);
+    expect(pulled.survived).toBe(true);
+  });
+
+  it('acceleration is what gets the time back afterwards', () => {
+    // Climbing out of the pull is an acceleration problem, so the anchor gives
+    // back more time through the hole than it does on a clear run.
+    const gainClear =
+      simulate(clearTrack, [], noInputs, 1).finishTicks -
+      simulate(clearTrack, [PARTS.inertialAnchor], noInputs, 1).finishTicks;
+    const gainPulled =
+      simulate(holeTrack, [], noInputs, 1).finishTicks -
+      simulate(holeTrack, [PARTS.inertialAnchor], noInputs, 1).finishTicks;
+    expect(gainPulled).toBeGreaterThan(gainClear);
+  });
+
+  it('swallows a ship that arrives already battered', () => {
+    const battered = makeTrack(
+      [
+        seg('grinder', 800, [{ kind: 'asteroidField', startTick: 0, lengthTicks: 800 }]),
+        seg('hole', 200, [{ kind: 'blackHole', startTick: 0, lengthTicks: 200 }]),
+      ],
+      [],
+      line,
+    );
+    const outcome = simulate(battered, [], noInputs, 4);
+    expect(outcome.hullLeft).toBeLessThan(BLACK_HOLE_ESCAPE_HULL);
+    expect(outcome.survived).toBe(false);
+    expect(outcome.log[outcome.log.length - 1]?.kind).toBe('destroyed');
+  });
+
+  it('a ship that armoured up gets through the same course', () => {
+    const battered = makeTrack(
+      [
+        seg('grinder', 800, [{ kind: 'asteroidField', startTick: 0, lengthTicks: 800 }]),
+        seg('hole', 200, [{ kind: 'blackHole', startTick: 0, lengthTicks: 200 }]),
+      ],
+      [],
+      line,
+    );
+    const outcome = simulate(battered, [PARTS.ablativePlating, PARTS.ablativePlating], noInputs, 4);
+    expect(outcome.survived).toBe(true);
+    expect(outcome.hullLeft).toBeGreaterThanOrEqual(BLACK_HOLE_ESCAPE_HULL);
   });
 });

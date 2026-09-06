@@ -77,10 +77,23 @@ export const MAX_RACE_TICKS = 20000;
  * field but takes more in each of them, and crossing quickly costs more
  * overall.
  */
-export const ASTEROID_DAMAGE_PER_TICK = 0.25;
+export const ASTEROID_DAMAGE_PER_TICK = 0.12;
 
 /** Asteroid field: how much a roll can swing damage, as a fraction. 0.4 = ±40%. */
 export const ASTEROID_DAMAGE_VARIANCE = 0.4;
+
+/**
+ * Black hole: what the pull does to top speed inside it. 0.55 means a ship
+ * holds a little over half the speed it otherwise could.
+ */
+export const BLACK_HOLE_SPEED_MULTIPLIER = 0.55;
+
+/**
+ * Black hole: a ship entering with less hull than this cannot pull away and is
+ * lost. Flat, not a fraction — arriving battered is what kills you, and no
+ * amount of extra plating changes the number you have to beat.
+ */
+export const BLACK_HOLE_ESCAPE_HULL = 25;
 
 /**
  * Gamma-ray burst: hull damage from one unshielded burst. Nearly half a base
@@ -115,7 +128,7 @@ export const RADIATOR_FINS_HULL = -15;
 /** Inertial Anchor: acceleration, to claw speed back out of a black hole. */
 export const INERTIAL_ANCHOR_ACCELERATION = 0.03;
 /** Inertial Anchor: the mass costs top speed. */
-export const INERTIAL_ANCHOR_SPEED = -0.04;
+export const INERTIAL_ANCHOR_SPEED = -0.02;
 
 /** Overclocked Reactor: speed and acceleration together. */
 export const OVERCLOCKED_REACTOR_SPEED = 0.1;

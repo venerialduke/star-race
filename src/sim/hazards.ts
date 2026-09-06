@@ -12,6 +12,8 @@ import type { HazardKind } from './track';
 import {
   ASTEROID_DAMAGE_PER_TICK,
   ASTEROID_DAMAGE_VARIANCE,
+  BLACK_HOLE_ESCAPE_HULL,
+  BLACK_HOLE_SPEED_MULTIPLIER,
   GAMMA_BURST_DAMAGE,
 } from './tuning';
 
@@ -77,6 +79,22 @@ export function gammaBurst(): HazardEffect {
 }
 
 /**
+ * Black hole. The pull drags at the ship for every tick it is inside, holding
+ * it well below the speed it could otherwise make. It deals no damage at all —
+ * the danger is the threshold: a ship that arrives already battered, under
+ * BLACK_HOLE_ESCAPE_HULL, cannot pull away and is lost with it.
+ *
+ * That is why it sits in stage 3. It punishes the hull you spent on stages 1
+ * and 2, and Inertial Anchor earns its place getting speed back afterwards.
+ */
+export function blackHole(context: HazardContext): HazardEffect {
+  if (context.hull < BLACK_HOLE_ESCAPE_HULL) {
+    return { ...NO_EFFECT, destroyed: true };
+  }
+  return { ...NO_EFFECT, speedMultiplier: BLACK_HOLE_SPEED_MULTIPLIER };
+}
+
+/**
  * Shields eat damage before the hull does. Returns what reaches the hull and
  * what is left in the pool. This is the only place absorption happens, so every
  * hazard is shielded the same way.
@@ -109,9 +127,10 @@ export function hazardEffect(kind: HazardKind, context: HazardContext): HazardEf
     case 'gammaBurst':
       return gammaBurst();
     case 'blackHole':
+      return blackHole(context);
     case 'ringedPlanet':
-      // Landing in S2.8 and S2.9. Placed on the track already so the course is
-      // visible from the start line.
+      // Landing in S2.9. Placed on the track already so the course is visible
+      // from the start line.
       return NO_EFFECT;
   }
 }

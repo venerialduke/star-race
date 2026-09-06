@@ -129,6 +129,11 @@ export const BLACK_HOLE_ESCAPE_HULL = 15;
  */
 export const GAMMA_BURST_DAMAGE = 45;
 
+// --- Garage ----------------------------------------------------------------
+
+/** How many parts the garage offers between stages. Three is a real choice. */
+export const GARAGE_OFFER_SIZE = 3;
+
 // --- Actives ---------------------------------------------------------------
 // Both are timing tools. Duration is how long the tap lasts, cooldown is how
 // long until the next one. At 60 ticks per second these read as seconds.

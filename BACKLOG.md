@@ -110,11 +110,51 @@ seconds, and `tests/balance.test.ts` runs 1,000 races and asserts sanity
 bounds (survival between 5% and 95%, no NaN, finish time monotone in speed).
 This closes S2.
 
-## S3 — garage and stages (not yet broken down)
+## S3 — garage and stages
 
-Between-stage garage offering three parts, build carried forward, three
-stages on one track, results screen. Rendering shows ship, track ahead,
-hazard markers, heat/shield readout. Phone-sized, one-thumb.
+S3 is done when: on a phone, you can play three stages with a garage between
+them, see the ship fly the course, and get a results screen — and want to try a
+different build.
+
+### S3.1 Run state and the garage offer
+
+Add `src/sim/run.ts`: a run is three stages of the slice track with one build
+carried forward and **hull carried forward too** — the black hole in stage 3
+only means something if damage accumulates. A `Run` is immutable state with a
+phase (garage, racing, done); `choosePart`, `runStage` return a new one.
+`simulate()` grows options for running a single stage and starting from a given
+hull. Add `src/sim/garage.ts`: three distinct parts offered per garage, drawn
+from the seeded RNG.
+Done when: `tests/sim/run.test.ts` covers a whole three-stage run, hull
+carrying between stages, a run ending early when the ship is lost, and offers
+being deterministic per seed. `DESIGN.md` describes the run.
+
+### S3.2 Draw the course
+
+Replace the S1 demo dot: `src/render/` draws the slice track from the spline,
+the ship at its current distance, hazard markers with a shape per kind, and
+stage gates. Everything reads sim state and writes none.
+Done when: the Pages build shows the ship flying the real course with hazards
+visible ahead of it, at phone width.
+
+### S3.3 HUD and actives
+
+Hull, heat and shield readouts, plus two big tap targets with visible
+cooldowns. One thumb, bottom of the screen.
+Done when: tapping a button feeds a `PlayerInput` into the sim at the right
+tick, cooldowns are visible, and the readouts track the sim.
+
+### S3.4 Garage screen
+
+Three part cards between stages, each showing what it gives and what it costs.
+One tap picks one and starts the next stage.
+Done when: a run can be played end to end on a phone-sized screen.
+
+### S3.5 Results screen
+
+After three stages: finish time per stage, total, damage taken, what killed you
+if anything, and the build you ended with. One tap to run again.
+Done when: a finished run lands on the results screen and can be replayed.
 
 ## S4 — actives and feel (not yet broken down)
 

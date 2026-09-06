@@ -291,8 +291,18 @@ taps are timed against the piece of course in front of them.
 
 ### Outcome
 
-A race produces: finish time, damage taken, did you survive. A run produces
-a results screen after three stages.
+A race produces: finish time, damage taken, whether the ship survived, what hull
+and heat it has left, how much its shields swallowed, and — when it ends badly —
+**what killed it**: the black hole, its own heat, or the hull simply giving out.
+
+A run produces a results screen after three stages: each stage's time and
+damage, the total, the build the player ended with, and one tap to run again.
+Stages the run never reached are listed as not reached, because a run that died
+in stage 2 should look different from one that finished.
+
+The screen's real job is the design's success test — *you play three runs and
+want to try a different build* — so it names the cause of death plainly rather
+than showing a number.
 
 ## Tuning
 

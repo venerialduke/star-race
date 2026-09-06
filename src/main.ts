@@ -19,6 +19,7 @@ import { TICK_RATE } from './sim/tuning';
 import { draw, type Viewport } from './render/draw';
 import { createHud } from './ui/hud';
 import { createGarage } from './ui/garage';
+import { createResults } from './ui/results';
 
 function getCanvas(): HTMLCanvasElement {
   const el = document.getElementById('game');
@@ -49,6 +50,7 @@ window.addEventListener('resize', resize);
 resize();
 
 const garage = createGarage(document.body);
+const results = createResults(document.body);
 const hud = createHud(document.body, (active) => tap(active));
 
 let run: Run = startRun(SLICE_TRACK, Math.floor(Date.now() % 100000));
@@ -68,7 +70,18 @@ function tap(active: ActiveId): void {
 function openGarage(): void {
   race = undefined;
   hud.setVisible(false);
+  results.hide();
   garage.show(run, take);
+}
+
+function showResults(): void {
+  race = undefined;
+  hud.setVisible(false);
+  garage.hide();
+  results.show(run, () => {
+    run = startRun(SLICE_TRACK, run.seed + 1);
+    openGarage();
+  });
 }
 
 function take(part: Part): void {
@@ -84,13 +97,8 @@ function take(part: Part): void {
 /** The stage is over: replay it into the run, then move on. */
 function closeStage(): void {
   run = runStage(run, recorded);
-  if (run.phase === 'garage') {
-    openGarage();
-    return;
-  }
-  // The run is done — until the results screen lands in S3.5, start another.
-  run = startRun(SLICE_TRACK, run.seed + 1);
-  openGarage();
+  if (run.phase === 'garage') openGarage();
+  else showResults();
 }
 
 openGarage();

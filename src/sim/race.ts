@@ -64,6 +64,9 @@ export interface RaceEvent {
   readonly active?: ActiveId;
 }
 
+/** Why a ship was lost. Undefined when it finished. */
+export type LossCause = 'hull' | 'overheated' | 'blackHole';
+
 export interface RaceOutcome {
   /** Ticks spent flying. Garage pauses at the gates cost nothing. */
   readonly finishTicks: number;
@@ -73,6 +76,8 @@ export interface RaceOutcome {
   readonly survived: boolean;
   /** Hull remaining at the end, floored at 0. */
   readonly hullLeft: number;
+  /** What lost the ship, when it was lost. */
+  readonly lostTo?: LossCause;
   /** Damage shields swallowed, so the results screen can show what they were worth. */
   readonly damageAbsorbed: number;
   /** Ticks spent above heat tolerance, cooking the hull. */
@@ -126,6 +131,8 @@ export interface RaceState {
   damageAbsorbed: number;
   overheatedTicks: number;
   destroyed: boolean;
+  /** What lost the ship, set the moment it is lost. */
+  lostTo?: LossCause;
   /** True once the ship has finished, been lost, or run out of ticks. */
   over: boolean;
   readonly log: RaceEvent[];
@@ -287,7 +294,12 @@ export function stepRace(state: RaceState, taps: readonly ActiveId[] = []): Race
     hullDamage += effect.hullDamage;
     addedHeat += effect.heat;
     speedMultiplier *= effect.speedMultiplier;
-    if (effect.destroyed) state.destroyed = true;
+    if (effect.destroyed) {
+      state.destroyed = true;
+      // Only the black hole takes a ship outright, but say so by name rather
+      // than assuming: a later hazard that does the same will read correctly.
+      state.lostTo = placement.kind === 'blackHole' ? 'blackHole' : 'hull';
+    }
   });
 
   // 3. Rerouted power is speed bought with heat, and joins the hazards'
@@ -311,13 +323,19 @@ export function stepRace(state: RaceState, taps: readonly ActiveId[] = []): Race
   // stop it.
   state.heat =
     addedHeat > 0 ? state.heat + addedHeat : Math.max(state.heat - HEAT_DISSIPATION_PER_TICK, 0);
-  if (state.heat > stats.heatTolerance) {
+  const cooking = state.heat > stats.heatTolerance;
+  if (cooking) {
     state.hull -= OVERHEAT_DAMAGE_PER_TICK;
     state.damageTaken += OVERHEAT_DAMAGE_PER_TICK;
     state.overheatedTicks++;
   }
 
-  if (state.hull <= 0) state.destroyed = true;
+  if (state.hull <= 0 && !state.destroyed) {
+    state.destroyed = true;
+    // Cooking with nothing else hitting the ship is a different story to tell
+    // than being shot to pieces, so the results screen can tell it.
+    state.lostTo = cooking && hullDamage === 0 ? 'overheated' : 'hull';
+  }
 
   state.speed = Math.min(state.speed + stats.acceleration, stats.speed * speedMultiplier);
 
@@ -372,6 +390,7 @@ export function raceOutcome(state: RaceState): RaceOutcome {
     damageTaken: state.damageTaken,
     survived: !state.destroyed && state.distance >= state.finishDistance,
     hullLeft: Math.max(state.hull, 0),
+    ...(state.lostTo === undefined ? {} : { lostTo: state.lostTo }),
     damageAbsorbed: state.damageAbsorbed,
     overheatedTicks: state.overheatedTicks,
     heatLeft: state.heat,

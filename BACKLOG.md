@@ -110,6 +110,10 @@ seconds, and `tests/balance.test.ts` runs 1,000 races and asserts sanity
 bounds (survival between 5% and 95%, no NaN, finish time monotone in speed).
 This closes S2.
 
+**S3 is done.** All five items are merged: a run is three stages with a garage
+before each, the ship flies the drawn course, the HUD has two thumb-sized
+actives, and a results screen says what killed you. Kept here as the record.
+
 ## S3 — garage and stages
 
 S3 is done when: on a phone, you can play three stages with a garage between
@@ -158,5 +162,11 @@ Done when: a finished run lands on the results screen and can be replayed.
 
 ## S4 — actives and feel (not yet broken down)
 
-Two actives with big tap targets and visible cooldown. Slow-motion beat when
-a hazard is imminent. Telemetry to console.
+The actives themselves landed in S2.10 and their buttons in S3.3, so what is
+left of S4 is feel:
+
+- A slow-motion beat when a hazard is imminent, so a burst is something the
+  player sees coming rather than reacts to late.
+- Telemetry to the console: taps made, taps wasted on cooldown, near-misses.
+- Whatever three runs on a phone say is missing. The success test is unchanged:
+  you play three runs and want to try a different build.

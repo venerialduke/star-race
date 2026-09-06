@@ -1,6 +1,10 @@
 // Wires the browser to the sim: fixed timestep in, canvas frames out.
+//
+// The sim advances in whole ticks and knows nothing about frames, wall-clock
+// time or the DOM. This file is the only place the two meet.
 
-import { INITIAL_STATE, step, type DemoState } from './sim/demo';
+import { startRace, stepRace, type RaceState } from './sim/race';
+import { SLICE_TRACK } from './sim/track';
 import { TICK_RATE } from './sim/tuning';
 import { draw, type Viewport } from './render/draw';
 
@@ -32,28 +36,48 @@ function resize(): void {
 window.addEventListener('resize', resize);
 resize();
 
+// A race the player watches. The garage, the HUD and the results screen arrive
+// in S3.3 onwards; for now a bare ship flies the whole course on repeat so the
+// course itself can be looked at.
+function newRace(): RaceState {
+  return startRace(SLICE_TRACK, [], Math.floor(Date.now() % 100000));
+}
+
+let race: RaceState = newRace();
+
 // Fixed timestep: the sim advances in whole ticks regardless of frame rate.
 // Rendering happens once per animation frame with whatever state is current.
 const TICK_MS = 1000 / TICK_RATE;
-const MAX_TICKS_PER_FRAME = 10; // cap catch-up after a tab was hidden
+// A slow frame must not slow the race down: whatever time passed gets simulated,
+// up to a second of it per frame. The cap is only there so that coming back to a
+// tab that was hidden for ten minutes does not lock the page up catching up.
+const MAX_TICKS_PER_FRAME = TICK_RATE;
+const MAX_BACKLOG_MS = TICK_MS * MAX_TICKS_PER_FRAME;
+const RESTART_AFTER_MS = 2000;
 
-let state: DemoState = INITIAL_STATE;
 let accumulator = 0;
 let last = performance.now();
+let finishedAt: number | undefined;
 
 function frame(now: number): void {
-  accumulator += now - last;
+  accumulator = Math.min(accumulator + (now - last), MAX_BACKLOG_MS);
   last = now;
 
-  let ticks = 0;
-  while (accumulator >= TICK_MS && ticks < MAX_TICKS_PER_FRAME) {
-    state = step(state);
+  while (accumulator >= TICK_MS) {
+    if (!race.over) stepRace(race);
     accumulator -= TICK_MS;
-    ticks++;
   }
-  if (ticks === MAX_TICKS_PER_FRAME) accumulator = 0;
 
-  draw(ctx, state, viewport);
+  // Hold the finished course on screen for a moment, then fly it again.
+  if (race.over) {
+    if (finishedAt === undefined) finishedAt = now;
+    else if (now - finishedAt > RESTART_AFTER_MS) {
+      race = newRace();
+      finishedAt = undefined;
+    }
+  }
+
+  draw(ctx, race, viewport);
   requestAnimationFrame(frame);
 }
 

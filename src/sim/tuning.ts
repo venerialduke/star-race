@@ -18,12 +18,6 @@
 /** Ticks per second. Everything in sim advances in whole ticks. */
 export const TICK_RATE = 60;
 
-/** Demo dot: spline segments crossed per second. Replaced by ship speed in S2.5. */
-export const DEMO_SPEED_PER_SECOND = 0.6;
-
-/** Demo dot: spline parameter advanced per tick. */
-export const DEMO_SPEED = DEMO_SPEED_PER_SECOND / TICK_RATE;
-
 // --- Base ship -------------------------------------------------------------
 // A bare hull with no parts. Speed is in track-ticks per tick: at 1.0 the ship
 // covers a segment in exactly its stated length, which is what "ticks at base

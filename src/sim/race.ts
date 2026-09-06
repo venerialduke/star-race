@@ -99,18 +99,50 @@ export interface RaceOptions {
 }
 
 /**
- * Run a race. `inputs` are the player's active taps: each is honoured on its
- * own tick if that active is off cooldown, and ignored otherwise. Taps do not
- * queue — a tap during a cooldown is a tap wasted, which is the whole game of
- * timing them.
+ * A race in progress. The live game steps one of these per tick and draws it;
+ * `simulate()` steps one to the end and reports what happened. Both go through
+ * `stepRace`, so what a test measures is exactly what a player flies.
+ *
+ * The state is mutated in place by `stepRace` rather than copied — a race is
+ * stepped thousands of times in a balance run — but nothing outside this module
+ * writes to it, and the same seed always produces the same sequence.
  */
-export function simulate(
+export interface RaceState {
+  readonly track: Track;
+  readonly stats: DerivedStats;
+  readonly seed: number;
+  /** Ticks since this race started. A stage counts from zero. */
+  tick: number;
+  /** Distance from the start line, in track-ticks. */
+  distance: number;
+  /** Where this race ends. */
+  readonly finishDistance: number;
+  speed: number;
+  stage: number;
+  hull: number;
+  heat: number;
+  shieldPool: number;
+  damageTaken: number;
+  damageAbsorbed: number;
+  overheatedTicks: number;
+  destroyed: boolean;
+  /** True once the ship has finished, been lost, or run out of ticks. */
+  over: boolean;
+  readonly log: RaceEvent[];
+  readonly placements: readonly PlacedHazard[];
+  readonly fired: Set<PlacedHazard>;
+  readonly stageEnds: readonly number[];
+  readonly readyAt: Map<ActiveId, number>;
+  readonly activeUntil: Map<ActiveId, number>;
+}
+
+/** Set a race up at the start line without running any of it. */
+export function startRace(
   track: Track,
   build: Build,
-  inputs: readonly PlayerInput[],
   seed: number,
   options: RaceOptions = {},
-): RaceOutcome {
+): RaceState {
   const stats = resolveBuild(build);
 
   // A whole run starts at the start line and ends at the finish. One stage
@@ -125,14 +157,13 @@ export function simulate(
   const finishDistance =
     only === undefined ? totalLengthTicks(track) : startDistance + only.lengthTicks;
 
-  // Distance at which each stage ends: the end of every gated segment. A
-  // single-stage race has no gates of its own — it ends at one.
-  const stageEnds = wholeTrack
-    ? track.gates.map((gate) => segmentStartTick(track, gate) + segmentLength(track, gate))
-    : [];
+  const hull = options.startHull ?? stats.hull;
+  if (hull <= 0) throw new Error(`A ship cannot start a race with ${hull} hull.`);
 
   // Each placement gets its own stream, forked once up front, so adding a roll
-  // to one hazard cannot shift what another one does.
+  // to one hazard cannot shift what another one does. Every placement on the
+  // track is forked, including hazards outside this stage, so a stage's dice do
+  // not depend on which stage is being raced.
   const raceRng = makeRng(seed);
   const placements: PlacedHazard[] = [];
   track.segments.forEach((segment, index) => {
@@ -147,9 +178,222 @@ export function simulate(
     });
   });
 
-  // One-shot hazards, such as a gamma burst, fire once and are then spent.
-  const fired = new Set<PlacedHazard>();
+  // Distance at which each stage ends: the end of every gated segment. A
+  // single-stage race has no gates of its own — it ends at one.
+  const stageEnds = wholeTrack
+    ? track.gates.map((gate) => segmentStartTick(track, gate) + segmentLength(track, gate))
+    : [];
 
+  const stage = options.stage ?? 0;
+  return {
+    track,
+    stats,
+    seed,
+    tick: 0,
+    distance: startDistance,
+    finishDistance,
+    speed: LAUNCH_SPEED,
+    stage,
+    hull,
+    heat: 0,
+    shieldPool: 0,
+    damageTaken: 0,
+    damageAbsorbed: 0,
+    overheatedTicks: 0,
+    destroyed: false,
+    over: false,
+    log: [{ tick: 0, kind: 'start', distance: startDistance, stage }],
+    placements,
+    fired: new Set<PlacedHazard>(),
+    stageEnds,
+    readyAt: new Map<ActiveId, number>(),
+    activeUntil: new Map<ActiveId, number>(),
+  };
+}
+
+/** Is this active off cooldown right now? The HUD greys out the button otherwise. */
+export function activeReady(state: RaceState, id: ActiveId): boolean {
+  return isReady(state.readyAt.get(id), state.tick);
+}
+
+/** Is this active on right now? The HUD lights the button while it is. */
+export function activeOn(state: RaceState, id: ActiveId): boolean {
+  return state.tick < (state.activeUntil.get(id) ?? 0);
+}
+
+/**
+ * Advance one tick, honouring any taps made on it. Returns the same state,
+ * mutated. Stepping a race that is over does nothing.
+ */
+export function stepRace(state: RaceState, taps: readonly ActiveId[] = []): RaceState {
+  if (state.over) return state;
+
+  const { stats } = state;
+
+  // 0. The player's taps for this tick, honoured in the order they were made.
+  taps.forEach((id) => {
+    const active = activeById(id);
+    if (!isReady(state.readyAt.get(id), state.tick)) {
+      state.log.push({
+        tick: state.tick,
+        kind: 'activeIgnored',
+        distance: state.distance,
+        stage: state.stage,
+        active: id,
+      });
+      return;
+    }
+    state.readyAt.set(id, readyAgainAt(active, state.tick));
+    state.activeUntil.set(id, state.tick + active.durationTicks);
+    if (id === 'shields') state.shieldPool = stats.shieldCapacity;
+    state.log.push({
+      tick: state.tick,
+      kind: 'activeFired',
+      distance: state.distance,
+      stage: state.stage,
+      active: id,
+    });
+  });
+
+  const shieldsUp = activeOn(state, 'shields');
+  const rerouting = activeOn(state, 'powerReroute');
+  // Shields that have run out drop whatever was left in the pool.
+  if (!shieldsUp) state.shieldPool = 0;
+
+  // 1. Work out where the ship would reach this tick if nothing interfered,
+  //    so a hazard the ship flies straight through still catches it.
+  const freeSpeed = Math.min(state.speed + stats.acceleration, stats.speed);
+  const active = state.placements.filter(
+    (placement) =>
+      placement.from < state.distance + freeSpeed &&
+      placement.to > state.distance &&
+      !state.fired.has(placement),
+  );
+
+  // 2. Ask each hazard what it does this tick, and combine the answers.
+  let hullDamage = 0;
+  let addedHeat = 0;
+  let speedMultiplier = 1;
+  active.forEach((placement) => {
+    const effect = hazardEffect(placement.kind, {
+      stats,
+      speed: freeSpeed,
+      heat: state.heat,
+      hull: state.hull,
+      shieldsUp,
+      rng: placement.rng,
+    });
+    if (isOneShot(placement.kind)) state.fired.add(placement);
+    hullDamage += effect.hullDamage;
+    addedHeat += effect.heat;
+    speedMultiplier *= effect.speedMultiplier;
+    if (effect.destroyed) state.destroyed = true;
+  });
+
+  // 3. Rerouted power is speed bought with heat, and joins the hazards'
+  //    contributions rather than overriding them.
+  if (rerouting) {
+    speedMultiplier *= POWER_REROUTE_EFFECT.speedMultiplier;
+    addedHeat += POWER_REROUTE_EFFECT.heatPerTick;
+  }
+
+  // 4. Apply damage and heat, then close on whatever top speed the hazards
+  //    left the ship with. Shields eat damage before the hull does.
+  if (hullDamage > 0) {
+    const { toHull, poolLeft } = absorb(hullDamage, state.shieldPool);
+    state.shieldPool = poolLeft;
+    state.damageAbsorbed += hullDamage - toHull;
+    state.hull -= toHull;
+    state.damageTaken += toHull;
+  }
+  // Heat builds while something is adding it and bleeds away when nothing is.
+  // Above tolerance the ship cooks: that damage is internal, so shields do not
+  // stop it.
+  state.heat =
+    addedHeat > 0 ? state.heat + addedHeat : Math.max(state.heat - HEAT_DISSIPATION_PER_TICK, 0);
+  if (state.heat > stats.heatTolerance) {
+    state.hull -= OVERHEAT_DAMAGE_PER_TICK;
+    state.damageTaken += OVERHEAT_DAMAGE_PER_TICK;
+    state.overheatedTicks++;
+  }
+
+  if (state.hull <= 0) state.destroyed = true;
+
+  state.speed = Math.min(state.speed + stats.acceleration, stats.speed * speedMultiplier);
+
+  // 5. Fly.
+  state.distance += state.speed;
+  state.tick++;
+
+  if (state.destroyed) {
+    state.log.push({
+      tick: state.tick,
+      kind: 'destroyed',
+      distance: state.distance,
+      stage: state.stage,
+    });
+    state.over = true;
+    return state;
+  }
+
+  // 6. Stage gate: the race pauses, the garage costs no ticks, and the ship
+  //    sets off again from a standstill.
+  const nextStageEnd = state.stageEnds[state.stage];
+  if (nextStageEnd !== undefined && state.distance >= nextStageEnd) {
+    // The ship stops on the gate line rather than carrying its overshoot into
+    // the next stage, so every stage is exactly as long as the track says.
+    state.distance = nextStageEnd;
+    state.log.push({
+      tick: state.tick,
+      kind: 'stageEnd',
+      distance: state.distance,
+      stage: state.stage,
+    });
+    state.stage++;
+    state.speed = LAUNCH_SPEED;
+  }
+
+  if (state.distance >= state.finishDistance || state.tick >= MAX_RACE_TICKS) {
+    state.log.push({
+      tick: state.tick,
+      kind: state.distance >= state.finishDistance ? 'finish' : 'abandoned',
+      distance: state.distance,
+      stage: state.stage,
+    });
+    state.over = true;
+  }
+  return state;
+}
+
+/** What a race that is over came to. */
+export function raceOutcome(state: RaceState): RaceOutcome {
+  return {
+    finishTicks: state.tick,
+    damageTaken: state.damageTaken,
+    survived: !state.destroyed && state.distance >= state.finishDistance,
+    hullLeft: Math.max(state.hull, 0),
+    damageAbsorbed: state.damageAbsorbed,
+    overheatedTicks: state.overheatedTicks,
+    heatLeft: state.heat,
+    log: state.log,
+    seed: state.seed,
+    stats: state.stats,
+  };
+}
+
+/**
+ * Run a race from start to finish. `inputs` are the player's active taps: each
+ * is honoured on its own tick if that active is off cooldown, and ignored
+ * otherwise. Taps do not queue — a tap during a cooldown is a tap wasted, which
+ * is the whole game of timing them.
+ */
+export function simulate(
+  track: Track,
+  build: Build,
+  inputs: readonly PlayerInput[],
+  seed: number,
+  options: RaceOptions = {},
+): RaceOutcome {
   // Taps, grouped by the tick they were made on. Two taps of the same active on
   // one tick are one tap: the second finds it already on cooldown.
   const tapsByTick = new Map<number, ActiveId[]>();
@@ -159,151 +403,11 @@ export function simulate(
     else taps.push(input.active);
   });
 
-  /** When each active can next be fired. Undefined means it never has been. */
-  const readyAt = new Map<ActiveId, number>();
-  /** The tick each active stops being on. */
-  const activeUntil = new Map<ActiveId, number>();
-
-  const log: RaceEvent[] = [];
-  let tick = 0;
-  let distance = startDistance;
-  let speed = LAUNCH_SPEED;
-  let stage = options.stage ?? 0;
-  let hull = options.startHull ?? stats.hull;
-  if (hull <= 0) throw new Error(`A ship cannot start a race with ${hull} hull.`);
-  let heat = 0;
-  let damageTaken = 0;
-  let damageAbsorbed = 0;
-  let shieldPool = 0;
-  let overheatedTicks = 0;
-  let destroyed = false;
-
-  log.push({ tick, kind: 'start', distance, stage });
-
-  while (distance < finishDistance && tick < MAX_RACE_TICKS && !destroyed) {
-    // 0. The player's taps for this tick, honoured in the order they were made.
-    (tapsByTick.get(tick) ?? []).forEach((id) => {
-      const active = activeById(id);
-      if (!isReady(readyAt.get(id), tick)) {
-        log.push({ tick, kind: 'activeIgnored', distance, stage, active: id });
-        return;
-      }
-      readyAt.set(id, readyAgainAt(active, tick));
-      activeUntil.set(id, tick + active.durationTicks);
-      if (id === 'shields') shieldPool = stats.shieldCapacity;
-      log.push({ tick, kind: 'activeFired', distance, stage, active: id });
-    });
-
-    const shieldsUp = tick < (activeUntil.get('shields') ?? 0);
-    const rerouting = tick < (activeUntil.get('powerReroute') ?? 0);
-    // Shields that have run out drop whatever was left in the pool.
-    if (!shieldsUp) shieldPool = 0;
-
-    // 1. Work out where the ship would reach this tick if nothing interfered,
-    //    so a hazard the ship flies straight through still catches it.
-    const freeSpeed = Math.min(speed + stats.acceleration, stats.speed);
-    const active = placements.filter(
-      (placement) =>
-        placement.from < distance + freeSpeed &&
-        placement.to > distance &&
-        !fired.has(placement),
-    );
-
-    // 2. Ask each hazard what it does this tick, and combine the answers.
-    let hullDamage = 0;
-    let addedHeat = 0;
-    let speedMultiplier = 1;
-    active.forEach((placement) => {
-      const effect = hazardEffect(placement.kind, {
-        stats,
-        speed: freeSpeed,
-        heat,
-        hull,
-        shieldsUp,
-        rng: placement.rng,
-      });
-      if (isOneShot(placement.kind)) fired.add(placement);
-      hullDamage += effect.hullDamage;
-      addedHeat += effect.heat;
-      speedMultiplier *= effect.speedMultiplier;
-      if (effect.destroyed) destroyed = true;
-    });
-
-    // 3. Rerouted power is speed bought with heat, and joins the hazards'
-    //    contributions rather than overriding them.
-    if (rerouting) {
-      speedMultiplier *= POWER_REROUTE_EFFECT.speedMultiplier;
-      addedHeat += POWER_REROUTE_EFFECT.heatPerTick;
-    }
-
-    // 4. Apply damage and heat, then close on whatever top speed the hazards
-    //    left the ship with. Shields eat damage before the hull does.
-    if (hullDamage > 0) {
-      const { toHull, poolLeft } = absorb(hullDamage, shieldPool);
-      shieldPool = poolLeft;
-      damageAbsorbed += hullDamage - toHull;
-      hull -= toHull;
-      damageTaken += toHull;
-    }
-    // Heat builds while something is adding it and bleeds away when nothing is.
-    // Above tolerance the ship cooks: that damage is internal, so shields do
-    // not stop it.
-    heat = addedHeat > 0 ? heat + addedHeat : Math.max(heat - HEAT_DISSIPATION_PER_TICK, 0);
-    if (heat > stats.heatTolerance) {
-      hull -= OVERHEAT_DAMAGE_PER_TICK;
-      damageTaken += OVERHEAT_DAMAGE_PER_TICK;
-      overheatedTicks++;
-    }
-
-    if (hull <= 0) destroyed = true;
-
-    speed = Math.min(speed + stats.acceleration, stats.speed * speedMultiplier);
-
-    // 5. Fly.
-    distance += speed;
-    tick++;
-
-    if (destroyed) {
-      log.push({ tick, kind: 'destroyed', distance, stage });
-      break;
-    }
-
-    // 6. Stage gate: the race pauses, the garage costs no ticks, and the ship
-    //    sets off again from a standstill.
-    const nextStageEnd = stageEnds[stage];
-    if (nextStageEnd !== undefined && distance >= nextStageEnd) {
-      // The ship stops on the gate line rather than carrying its overshoot
-      // into the next stage, so every stage is exactly as long as the track
-      // says it is.
-      distance = nextStageEnd;
-      log.push({ tick, kind: 'stageEnd', distance, stage });
-      stage++;
-      speed = LAUNCH_SPEED;
-    }
+  const state = startRace(track, build, seed, options);
+  while (!state.over) {
+    stepRace(state, tapsByTick.get(state.tick));
   }
-
-  const finished = !destroyed && distance >= finishDistance;
-  if (!destroyed) {
-    log.push({
-      tick,
-      kind: finished ? 'finish' : 'abandoned',
-      distance,
-      stage,
-    });
-  }
-
-  return {
-    finishTicks: tick,
-    damageTaken,
-    survived: finished,
-    hullLeft: Math.max(hull, 0),
-    damageAbsorbed,
-    overheatedTicks,
-    heatLeft: heat,
-    log,
-    seed,
-    stats,
-  };
+  return raceOutcome(state);
 }
 
 /** A hazard resolved to absolute race distances, with its own dice. */

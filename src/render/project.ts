@@ -18,6 +18,13 @@ export interface Viewport {
   readonly width: number;
   readonly height: number;
   readonly dpr: number;
+  /**
+   * Screen to keep clear at the top and bottom, in CSS pixels. Defaults to the
+   * room the HUD needs; the garage's little map, which has no HUD over it,
+   * passes almost nothing and gets a much bigger course for the same canvas.
+   */
+  readonly insetTop?: number;
+  readonly insetBottom?: number;
 }
 
 /** The rectangle a spline occupies in its own 0..1 space. */
@@ -70,13 +77,15 @@ export function trackBounds(path: Spline): Bounds {
 
 /** The strip of screen the course is allowed to use. */
 function drawingArea(vp: Viewport): { width: number; height: number; top: number } {
-  const insets = TOP_INSET + BOTTOM_INSET;
+  const top_ = vp.insetTop ?? TOP_INSET;
+  const bottom = vp.insetBottom ?? BOTTOM_INSET;
+  const insets = top_ + bottom;
   const roomy = vp.height - insets > 40;
   const height = roomy ? vp.height - insets : Math.max(vp.height * 0.5, 1);
   return {
     width: Math.max(vp.width - EDGE_PAD * 2, 1),
     height,
-    top: roomy ? TOP_INSET : (vp.height - height) / 2,
+    top: roomy ? top_ : (vp.height - height) / 2,
   };
 }
 

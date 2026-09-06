@@ -148,15 +148,19 @@ function drawHazardMarker(
   }
 }
 
-/** The course itself: the line, the hazards on it, and the gates. */
-function drawCourse(
+/**
+ * The course itself: the line, the hazards on it, and the gates, with one stage
+ * picked out. Takes a track rather than a race, because the garage draws the
+ * course before there is anything flying on it.
+ */
+export function drawCourse(
   ctx: CanvasRenderingContext2D,
-  state: RaceState,
+  track: Track,
+  stage: number,
   vp: Viewport,
-  fit: Fit,
-  unit: number,
+  fit: Fit = fitTrack(track.path, vp),
+  unit: number = fit.scale,
 ): void {
-  const { track } = state;
 
   ctx.save();
   ctx.setTransform(vp.dpr, 0, 0, vp.dpr, 0, 0);
@@ -170,7 +174,7 @@ function drawCourse(
 
   // The stage being raced, bright, so it is obvious what is in play.
   const stageList = stages(track);
-  const current = stageList[Math.min(state.stage, stageList.length - 1)];
+  const current = stageList[Math.min(stage, stageList.length - 1)];
   if (current !== undefined) {
     const from = segmentStartTick(track, current.firstSegment);
     strokePath(
@@ -300,7 +304,7 @@ export function drawField(
 
   const fit = fitTrack(player.state.track.path, vp);
   const unit = fit.scale;
-  drawCourse(ctx, player.state, vp, fit, unit);
+  drawCourse(ctx, player.state.track, player.state.stage, vp, fit, unit);
 
   ctx.save();
   ctx.setTransform(vp.dpr, 0, 0, vp.dpr, 0, 0);

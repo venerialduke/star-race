@@ -24,7 +24,7 @@ import {
 } from './field';
 import { makeRng, type Rng } from './rng';
 import { raceOutcome, type PlayerInput, type RaceOutcome } from './race';
-import { RIVALS, rivalBuild, rivalStartingHull } from './rivals';
+import { RIVALS, growRival, startingRival } from './rivals';
 import type { Build, Part } from './ship';
 import { resolveBuild } from './ship';
 import { stages, type Track } from './track';
@@ -128,6 +128,15 @@ function garageRng(seed: number, stage: number): Rng {
   return stream;
 }
 
+/**
+ * A rival's own garage stream. Separate from the player's, so what the player is
+ * offered never depends on what a rival took, and one rival's draw never shifts
+ * the other's.
+ */
+function rivalRng(seed: number, rivalIndex: number, stage: number): Rng {
+  return makeRng(seed + 104729 * (rivalIndex + 1) + 7919 * stage).fork();
+}
+
 /** Start a run: the garage opens before the first stage. */
 export function startRun(track: Track, seed: number): Run {
   if (stages(track).length === 0) throw new Error('A run needs at least one stage.');
@@ -141,15 +150,12 @@ export function startRun(track: Track, seed: number): Run {
     offer: offerParts(garageRng(seed, 0)),
     results: [],
     alive: true,
-    // Rivals line up with their first part already bolted on: they are not
-    // waiting in a garage, they are on the grid.
-    rivals: RIVALS.map((rival) => ({
-      id: rival.id,
-      name: rival.name,
-      build: rivalBuild(rival, 0),
-      hull: rivalStartingHull(rival),
-      alive: true,
-    })),
+    // Rivals line up with their first part already bolted on: they shop in the
+    // same garage the player does, they just do it off screen.
+    rivals: RIVALS.map((rival, index) => {
+      const { build, hull } = startingRival(rival, rivalRng(seed, index, 0));
+      return { id: rival.id, name: rival.name, build, hull, alive: true };
+    }),
   };
 }
 
@@ -208,7 +214,7 @@ export function runStage(run: Run, inputs: readonly PlayerInput[]): Run {
 
   // Rivals carry their hull too, and a lost rival is out of the run.
   const nextStage = run.stage + 1;
-  const rivals = run.rivals.map((rival) => {
+  const rivals = run.rivals.map((rival, index) => {
     const racer = field.racers.find((entry) => entry.id === rival.id);
     if (racer === undefined) return rival;
     const rivalOutcome = raceOutcome(racer.state);
@@ -216,7 +222,7 @@ export function runStage(run: Run, inputs: readonly PlayerInput[]): Run {
     const grown =
       definition === undefined || !rivalOutcome.survived
         ? rival.build
-        : rivalBuild(definition, nextStage);
+        : growRival(definition, rival.build, rivalRng(run.seed, index, nextStage));
     // A part that raises maximum hull adds to the ship as it stands; it does not
     // repair what is already gone. Same rule as the player's garage.
     const gained = resolveBuild(grown).hull - resolveBuild(rival.build).hull;

@@ -11,7 +11,8 @@ import {
   type Field,
 } from '../../src/sim/field';
 import { raceOutcome } from '../../src/sim/race';
-import { RIVALS, rivalBuild, rivalStartingHull } from '../../src/sim/rivals';
+import { makeRng } from '../../src/sim/rng';
+import { RIVALS, growRival, preferred, startingRival } from '../../src/sim/rivals';
 import { PARTS, resolveBuild } from '../../src/sim/ship';
 import { makeSpline } from '../../src/sim/spline';
 import { SLICE_TRACK, makeTrack, type Segment } from '../../src/sim/track';
@@ -192,41 +193,72 @@ describe('the finishing order', () => {
 });
 
 describe('the rivals', () => {
-  it('are Redline and Bulwark, with a part for every stage', () => {
+  it('are Redline and Bulwark, each with something it reaches for', () => {
     expect(RIVALS.map((rival) => rival.id)).toEqual(['redline', 'bulwark']);
     RIVALS.forEach((rival) => {
-      expect(rival.schedule).toHaveLength(3);
+      expect(rival.wants.length).toBeGreaterThan(0);
       expect(rival.name.length).toBeGreaterThan(0);
     });
   });
 
-  it('grow one part per stage', () => {
+  it('takes the part nearest the top of its list', () => {
+    const redline = RIVALS[0]!;
+    const bulwark = RIVALS[1]!;
+    const offer = [PARTS.ablativePlating, PARTS.ionThruster, PARTS.mirrorShielding];
+    expect(preferred(redline, offer)).toBe(PARTS.ionThruster);
+    expect(preferred(bulwark, offer)).toBe(PARTS.ablativePlating);
+  });
+
+  it('takes something even when the offer holds nothing it wants', () => {
+    const redline = RIVALS[0]!;
+    const offer = [PARTS.mirrorShielding, PARTS.ablativePlating];
+    expect(offer).toContain(preferred(redline, offer));
+  });
+
+  it('shops in the same garage the player does, one part at a time', () => {
     RIVALS.forEach((rival) => {
-      expect(rivalBuild(rival, 0)).toHaveLength(1);
-      expect(rivalBuild(rival, 1)).toHaveLength(2);
-      expect(rivalBuild(rival, 2)).toHaveLength(3);
+      const first = growRival(rival, [], makeRng(1));
+      const second = growRival(rival, first, makeRng(2));
+      expect(first).toHaveLength(1);
+      expect(second).toHaveLength(2);
+      expect(second.slice(0, 1)).toEqual(first);
     });
   });
 
-  it('never grow past their schedule', () => {
+  it('draws the same parts from the same stream, and different from another', () => {
+    const rival = RIVALS[0]!;
+    expect(growRival(rival, [], makeRng(5))).toEqual(growRival(rival, [], makeRng(5)));
+    const draws = [1, 2, 3, 4, 5, 6, 7, 8].map(
+      (seed) => growRival(rival, [], makeRng(seed))[0]?.id,
+    );
+    expect(new Set(draws).size).toBeGreaterThan(1);
+  });
+
+  it('starts the run with the hull its first part leaves it', () => {
     RIVALS.forEach((rival) => {
-      expect(rivalBuild(rival, 99)).toHaveLength(rival.schedule.length);
+      const start = startingRival(rival, makeRng(3));
+      expect(start.hull).toBe(resolveBuild(start.build).hull);
     });
   });
 
-  it('start with the hull their first part leaves them', () => {
-    RIVALS.forEach((rival) => {
-      expect(rivalStartingHull(rival)).toBe(resolveBuild(rivalBuild(rival, 0)).hull);
-    });
-  });
-
-  it('have the characters the design says: Redline quick, Bulwark tough', () => {
-    const redline = RIVALS.find((rival) => rival.id === 'redline');
-    const bulwark = RIVALS.find((rival) => rival.id === 'bulwark');
-    const quick = resolveBuild(rivalBuild(redline!, 2));
-    const tough = resolveBuild(rivalBuild(bulwark!, 2));
-    expect(quick.speed).toBeGreaterThan(tough.speed);
-    expect(tough.hull).toBeGreaterThan(quick.hull);
+  it('keeps its character across many draws: Redline quicker, Bulwark tougher', () => {
+    // Any single draw is luck; over many, the wish lists show through.
+    let quick = 0;
+    let tough = 0;
+    for (let seed = 0; seed < 60; seed++) {
+      const redline = resolveBuild(growRival(RIVALS[0]!, [], makeRng(seed)));
+      const bulwark = resolveBuild(growRival(RIVALS[1]!, [], makeRng(seed)));
+      quick += redline.speed;
+      tough += bulwark.hull;
+    }
+    const redlineHull = Array.from({ length: 60 }, (_, seed) =>
+      resolveBuild(growRival(RIVALS[0]!, [], makeRng(seed))).hull,
+    ).reduce((a, b) => a + b, 0);
+    const bulwarkSpeed = Array.from({ length: 60 }, (_, seed) =>
+      resolveBuild(growRival(RIVALS[1]!, [], makeRng(seed))).speed,
+    ).reduce((a, b) => a + b, 0);
+    expect(quick).toBeGreaterThan(bulwarkSpeed);
+    expect(tough).toBeGreaterThan(redlineHull);
   });
 });
 

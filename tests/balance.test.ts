@@ -5,7 +5,7 @@
 // slice riskless, unsurvivable, or nonsense.
 
 import { describe, expect, it } from 'vitest';
-import { runBalance } from '../scripts/balance';
+import { runBalance, runTheField } from '../scripts/balance';
 import { STANDARD_BUILDS } from '../src/sim/builds';
 
 const RACES = 1000;
@@ -82,5 +82,61 @@ describe(`${RACES} races per standard build`, () => {
     const started = performance.now();
     runBalance(RACES);
     expect(performance.now() - started).toBeLessThan(10_000);
+  });
+});
+
+describe('whole runs against the rivals', () => {
+  const rows = runTheField(60);
+
+  it('measures every player strategy', () => {
+    expect(rows.length).toBeGreaterThan(2);
+    rows.forEach((row) => {
+      expect(row.runs).toBe(60);
+      expect(Number.isNaN(row.winRate)).toBe(false);
+      expect(row.winRate).toBeGreaterThanOrEqual(0);
+      expect(row.winRate).toBeLessThanOrEqual(1);
+      expect(row.meanPosition).toBeGreaterThanOrEqual(1);
+      expect(row.meanPosition).toBeLessThanOrEqual(3);
+    });
+  });
+
+  it('leaves the run winnable, and not a formality', () => {
+    // A three-way race: 33% is even. Good play should be ahead of that and well
+    // short of certain, or the rivals are decoration.
+    const best = Math.max(...rows.map((row) => row.winRate));
+    expect(best).toBeGreaterThan(0.3);
+    expect(best).toBeLessThan(0.75);
+  });
+
+  it('pays a player for choosing well', () => {
+    // The whole point of the garage. If picking at random did as well as
+    // thinking, the offer is noise and the game has no decisions in it.
+    const blind = rows.find((row) => row.name === 'First card');
+    const best = Math.max(...rows.map((row) => row.winRate));
+    expect(blind).toBeDefined();
+    expect(best).toBeGreaterThan((blind?.winRate ?? 0) * 1.2);
+  });
+
+  it('keeps armour alone from being the answer', () => {
+    // Surviving is not winning: a ship that never dies and never keeps up
+    // should not be the strongest way to play.
+    const armour = rows.find((row) => row.name === 'All armour');
+    const best = Math.max(...rows.map((row) => row.winRate));
+    expect(armour?.survivalRate ?? 0).toBeGreaterThan(0.85);
+    expect(armour?.winRate ?? 1).toBeLessThan(best);
+  });
+
+  it('leaves Redline a real threat that is beatable on time', () => {
+    const speed = rows.find((row) => row.name === 'All speed');
+    expect(speed).toBeDefined();
+    // It gets home often enough to be the ship to beat...
+    expect(speed?.rivalSurvival ?? 0).toBeGreaterThan(0.4);
+    // ...and a fast player beats it on the clock some of the time, rather than
+    // only ever inheriting the win when it crashes.
+    expect(speed?.beatOnTime ?? 0).toBeGreaterThan(0.15);
+  });
+
+  it('is deterministic: the same sweep twice gives the same table', () => {
+    expect(runTheField(20)).toEqual(runTheField(20));
   });
 });

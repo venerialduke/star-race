@@ -314,14 +314,21 @@ hazard does.
 
 Two ships with fixed characters, so the player learns what they are:
 
-| Rival | Build | What it does |
-|-------|-------|--------------|
-| Redline | Ion Thruster, then Overclocked Reactor, then a second thruster | Quick and greedy. Sets the time to beat, and sometimes does not finish. |
-| Bulwark | Ablative Plating, then Radiator Fins, then more plating | Slow and hard to kill. Always there at the end. |
+| Rival | Reaches for | What it does |
+|-------|-------------|--------------|
+| Redline | speed, then heat cover | Quick and greedy. Sets the time to beat, and gets home about two runs in three. |
+| Bulwark | armour, then cover | Slow and hard to kill. Almost always there at the end. |
 
-Rivals do not visit the garage. They bolt on one part per stage on a fixed
-schedule, so they grow at the same rate the player does and a run stays a
-contest to the last stage.
+**Rivals shop in the same garage the player does.** At every stage a rival is
+offered three parts from the same pool and takes the one nearest the top of its
+wish list. Its character is the list, not a fixed build.
+
+That fairness is load-bearing. When rivals simply bolted on a hand-picked build,
+Redline had the best speed parts in the game every single run while the player
+had whatever three cards turned up — so the player could not out-race it, only
+outlive it, and **choosing well in the garage barely changed a run**. Once
+everyone draws from the same pool, a player who picks well beats a player who
+picks blindly by half again.
 
 #### Pilots
 
@@ -354,12 +361,21 @@ ship that finished. A run produces standings across all three stages, by total
 time, with lost ships last. The player wins a run by beating both rivals — which
 means a ship that survives but crawls loses, and that is the point.
 
-Where the slice sits today: a player who takes the first part offered and never
-taps wins about one run in six. A player who picks for speed and taps as well as
-a pilot does wins about one in three. Redline is the ship to beat; Bulwark
-almost always finishes, so a bad run drops the player to third rather than
-second. If that turns out to be too hard, the knob is Redline's schedule rather
-than the hazards.
+Where the slice sits today, over 200 pilot-flown runs per player
+(`npm run balance -- --runs 200`):
+
+| Player | Won | Survived | Beat Redline on time |
+|--------|-----|----------|----------------------|
+| Takes the first card offered | 27% | 83% | 4% |
+| Picks for speed | 40% | 67% | 35% |
+| Picks armour only | 22% | 97% | 0% |
+| Reads the ship, buys what it lacks | 39% | 80% | 22% |
+
+A three-way race is even at 33%. Good play sits a little above that and blind
+play well below, which is the shape to hold: winnable, never a formality, and
+worth thinking about. Armour alone survives nearly every run and wins the fewest
+— surviving is not winning. Redline gets home about two runs in three, so a
+player who only ever inherits the win when it crashes tops out around a quarter.
 
 ### Slow motion
 

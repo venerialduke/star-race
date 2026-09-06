@@ -383,6 +383,20 @@ export function stepRace(state: RaceState, taps: readonly ActiveId[] = []): Race
   return state;
 }
 
+/**
+ * Step a race to its end, asking `taps` what to do each tick. This is the one
+ * place a race is run to completion: `simulate` uses it with a recorded tap
+ * list, the harness uses it with a pilot, and the field uses it a tick at a
+ * time.
+ */
+export function flyRace(
+  state: RaceState,
+  taps: (state: RaceState) => readonly ActiveId[],
+): RaceOutcome {
+  while (!state.over) stepRace(state, taps(state));
+  return raceOutcome(state);
+}
+
 /** What a race that is over came to. */
 export function raceOutcome(state: RaceState): RaceOutcome {
   return {
@@ -423,10 +437,7 @@ export function simulate(
   });
 
   const state = startRace(track, build, seed, options);
-  while (!state.over) {
-    stepRace(state, tapsByTick.get(state.tick));
-  }
-  return raceOutcome(state);
+  return flyRace(state, (current) => tapsByTick.get(current.tick) ?? []);
 }
 
 /** A hazard resolved to absolute race distances, with its own dice. */

@@ -3,10 +3,12 @@
 // The sim advances in whole ticks and knows nothing about frames, wall-clock
 // time or the DOM. This file is the only place the two meet.
 
+import type { ActiveId } from './sim/actives';
 import { startRace, stepRace, type RaceState } from './sim/race';
 import { SLICE_TRACK } from './sim/track';
 import { TICK_RATE } from './sim/tuning';
 import { draw, type Viewport } from './render/draw';
+import { createHud } from './ui/hud';
 
 function getCanvas(): HTMLCanvasElement {
   const el = document.getElementById('game');
@@ -45,6 +47,13 @@ function newRace(): RaceState {
 
 let race: RaceState = newRace();
 
+// Taps land on the next tick the sim runs, so a press is never lost between
+// frames and never applied twice.
+let pendingTaps: ActiveId[] = [];
+const hud = createHud(document.body, (active) => {
+  if (!race.over) pendingTaps.push(active);
+});
+
 // Fixed timestep: the sim advances in whole ticks regardless of frame rate.
 // Rendering happens once per animation frame with whatever state is current.
 const TICK_MS = 1000 / TICK_RATE;
@@ -64,7 +73,10 @@ function frame(now: number): void {
   last = now;
 
   while (accumulator >= TICK_MS) {
-    if (!race.over) stepRace(race);
+    if (!race.over) {
+      stepRace(race, pendingTaps);
+      pendingTaps = [];
+    }
     accumulator -= TICK_MS;
   }
 
@@ -73,11 +85,13 @@ function frame(now: number): void {
     if (finishedAt === undefined) finishedAt = now;
     else if (now - finishedAt > RESTART_AFTER_MS) {
       race = newRace();
+      pendingTaps = [];
       finishedAt = undefined;
     }
   }
 
   draw(ctx, race, viewport);
+  hud.update(race);
   requestAnimationFrame(frame);
 }
 

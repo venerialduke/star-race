@@ -1,14 +1,24 @@
 // Wires the browser to the sim: fixed timestep in, canvas frames out.
 //
 // The sim advances in whole ticks and knows nothing about frames, wall-clock
-// time or the DOM. This file is the only place the two meet.
+// time or the DOM. This file is the only place the two meet, and the only place
+// that decides which screen the player is looking at.
+//
+// A stage is flown live, tick by tick, and every tap is recorded as it lands.
+// When the ship crosses the line the run replays that same stage from the same
+// seed and the same taps through `runStage`, which is what actually advances the
+// run. The live race is the picture; the replay is the record. They agree
+// because they are the same code with the same inputs.
 
 import type { ActiveId } from './sim/actives';
-import { startRace, stepRace, type RaceState } from './sim/race';
+import { stepRace, type PlayerInput, type RaceState } from './sim/race';
+import { choosePart, runStage, startRun, startStageRace, type Run } from './sim/run';
+import type { Part } from './sim/ship';
 import { SLICE_TRACK } from './sim/track';
 import { TICK_RATE } from './sim/tuning';
 import { draw, type Viewport } from './render/draw';
 import { createHud } from './ui/hud';
+import { createGarage } from './ui/garage';
 
 function getCanvas(): HTMLCanvasElement {
   const el = document.getElementById('game');
@@ -38,60 +48,89 @@ function resize(): void {
 window.addEventListener('resize', resize);
 resize();
 
-// A race the player watches. The garage, the HUD and the results screen arrive
-// in S3.3 onwards; for now a bare ship flies the whole course on repeat so the
-// course itself can be looked at.
-function newRace(): RaceState {
-  return startRace(SLICE_TRACK, [], Math.floor(Date.now() % 100000));
+const garage = createGarage(document.body);
+const hud = createHud(document.body, (active) => tap(active));
+
+let run: Run = startRun(SLICE_TRACK, Math.floor(Date.now() % 100000));
+let race: RaceState | undefined;
+/** Taps made this stage, with the tick they landed on. */
+let recorded: PlayerInput[] = [];
+/** Taps waiting for the next tick to run. */
+let pending: ActiveId[] = [];
+let finishedAt: number | undefined;
+
+function tap(active: ActiveId): void {
+  if (race === undefined || race.over) return;
+  pending.push(active);
+  recorded.push({ tick: race.tick, active });
 }
 
-let race: RaceState = newRace();
+function openGarage(): void {
+  race = undefined;
+  hud.setVisible(false);
+  garage.show(run, take);
+}
 
-// Taps land on the next tick the sim runs, so a press is never lost between
-// frames and never applied twice.
-let pendingTaps: ActiveId[] = [];
-const hud = createHud(document.body, (active) => {
-  if (!race.over) pendingTaps.push(active);
-});
+function take(part: Part): void {
+  run = choosePart(run, part);
+  garage.hide();
+  hud.setVisible(true);
+  recorded = [];
+  pending = [];
+  finishedAt = undefined;
+  race = startStageRace(run);
+}
+
+/** The stage is over: replay it into the run, then move on. */
+function closeStage(): void {
+  run = runStage(run, recorded);
+  if (run.phase === 'garage') {
+    openGarage();
+    return;
+  }
+  // The run is done — until the results screen lands in S3.5, start another.
+  run = startRun(SLICE_TRACK, run.seed + 1);
+  openGarage();
+}
+
+openGarage();
 
 // Fixed timestep: the sim advances in whole ticks regardless of frame rate.
-// Rendering happens once per animation frame with whatever state is current.
 const TICK_MS = 1000 / TICK_RATE;
 // A slow frame must not slow the race down: whatever time passed gets simulated,
 // up to a second of it per frame. The cap is only there so that coming back to a
 // tab that was hidden for ten minutes does not lock the page up catching up.
 const MAX_TICKS_PER_FRAME = TICK_RATE;
 const MAX_BACKLOG_MS = TICK_MS * MAX_TICKS_PER_FRAME;
-const RESTART_AFTER_MS = 2000;
+/** How long a finished stage stays on screen before the garage opens. */
+const HOLD_AFTER_STAGE_MS = 1400;
 
 let accumulator = 0;
 let last = performance.now();
-let finishedAt: number | undefined;
 
 function frame(now: number): void {
   accumulator = Math.min(accumulator + (now - last), MAX_BACKLOG_MS);
   last = now;
 
   while (accumulator >= TICK_MS) {
-    if (!race.over) {
-      stepRace(race, pendingTaps);
-      pendingTaps = [];
+    if (race !== undefined && !race.over) {
+      stepRace(race, pending);
+      pending = [];
     }
     accumulator -= TICK_MS;
   }
 
-  // Hold the finished course on screen for a moment, then fly it again.
-  if (race.over) {
-    if (finishedAt === undefined) finishedAt = now;
-    else if (now - finishedAt > RESTART_AFTER_MS) {
-      race = newRace();
-      pendingTaps = [];
-      finishedAt = undefined;
+  if (race !== undefined) {
+    draw(ctx, race, viewport);
+    hud.update(race);
+
+    // Hold the finished stage on screen for a beat, then take stock.
+    if (race.over) {
+      if (finishedAt === undefined) finishedAt = now;
+      else if (now - finishedAt > HOLD_AFTER_STAGE_MS) closeStage();
     }
   }
 
-  draw(ctx, race, viewport);
-  hud.update(race);
   requestAnimationFrame(frame);
 }
 

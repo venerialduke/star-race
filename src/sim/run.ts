@@ -14,7 +14,7 @@
 
 import { offerParts } from './garage';
 import { makeRng, type Rng } from './rng';
-import { simulate, type PlayerInput, type RaceOutcome } from './race';
+import { simulate, startRace, type PlayerInput, type RaceOutcome, type RaceState } from './race';
 import type { Build, Part } from './ship';
 import { resolveBuild } from './ship';
 import { stages, type Track } from './track';
@@ -41,6 +41,29 @@ export interface Run {
   readonly results: readonly StageResult[];
   /** False once the ship has been lost. */
   readonly alive: boolean;
+}
+
+/**
+ * The seed the current stage races with. Stages differ so a run is not the same
+ * three races with the same dice.
+ */
+export function stageSeed(run: Run): number {
+  return run.seed + run.stage;
+}
+
+/**
+ * A live race for the stage the run is on, set up exactly as `runStage` will
+ * replay it. The screen flies this one; `runStage` re-runs the same seed with
+ * the taps the player made and produces the same outcome.
+ */
+export function startStageRace(run: Run): RaceState {
+  if (run.phase !== 'racing') {
+    throw new Error(`Nothing to race: the run is ${run.phase}.`);
+  }
+  return startRace(run.track, run.build, stageSeed(run), {
+    stage: run.stage,
+    startHull: run.hull,
+  });
 }
 
 /** Total ticks flown across every stage raced so far. */
@@ -115,7 +138,7 @@ export function runStage(run: Run, inputs: readonly PlayerInput[]): Run {
   if (run.phase !== 'racing') {
     throw new Error(`Nothing to race: the run is ${run.phase}.`);
   }
-  const outcome = simulate(run.track, run.build, inputs, run.seed + run.stage, {
+  const outcome = simulate(run.track, run.build, inputs, stageSeed(run), {
     stage: run.stage,
     startHull: run.hull,
   });

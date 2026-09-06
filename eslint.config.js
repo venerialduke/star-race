@@ -48,6 +48,13 @@ export default tseslint.config(
     },
   },
   {
+    // Scripts run in Node, not the browser: they may use process and console.
+    files: ['scripts/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2022 },
+    },
+  },
+  {
     // ---------------------------------------------------------------------
     // The simulation boundary.
     //

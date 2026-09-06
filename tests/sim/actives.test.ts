@@ -249,23 +249,49 @@ describe('power reroute', () => {
     );
   });
 
-  it('is paid for in heat', () => {
-    const boosted = simulate(openTrack, bare, [{ tick: 100, active: 'powerReroute' }], 1);
-    expect(boosted.overheatedTicks).toBeGreaterThan(0);
-    expect(boosted.damageTaken).toBeGreaterThan(0);
-    expect(simulate(openTrack, bare, noInputs, 1).damageTaken).toBe(0);
+  it('builds heat while it is on', () => {
+    // A course that ends mid-boost, so the heat is still on the ship.
+    const short = makeTrack([seg('sprint', 100)], [], line);
+    const boosted = simulate(short, bare, [{ tick: 0, active: 'powerReroute' }], 1);
+    expect(boosted.heatLeft).toBeGreaterThan(0);
+    expect(simulate(short, bare, noInputs, 1).heatLeft).toBe(0);
   });
 
-  it('costs a ship with Radiator Fins far less', () => {
-    const hot = simulate(openTrack, bare, [{ tick: 100, active: 'powerReroute' }], 1);
-    const cool = simulate(
+  it('is free on a cool ship: one boost is just under what a base hull holds', () => {
+    const boosted = simulate(openTrack, bare, [{ tick: 100, active: 'powerReroute' }], 1);
+    expect(boosted.overheatedTicks).toBe(0);
+    expect(boosted.damageTaken).toBe(0);
+  });
+
+  it('cooks a ship that already runs hot', () => {
+    const hot = simulate(
       openTrack,
-      [PARTS.radiatorFins],
+      [PARTS.overclockedReactor],
       [{ tick: 100, active: 'powerReroute' }],
       1,
     );
-    expect(cool.overheatedTicks).toBeLessThan(hot.overheatedTicks);
-    expect(cool.damageTaken).toBeLessThan(hot.damageTaken);
+    expect(hot.overheatedTicks).toBeGreaterThan(0);
+    expect(hot.damageTaken).toBeGreaterThan(0);
+    // Radiator Fins on the same hot ship put it back under the line.
+    const cooled = simulate(
+      openTrack,
+      [PARTS.overclockedReactor, PARTS.radiatorFins],
+      [{ tick: 100, active: 'powerReroute' }],
+      1,
+    );
+    expect(cooled.overheatedTicks).toBe(0);
+    expect(cooled.damageTaken).toBe(0);
+  });
+
+  it('cooks a cool ship too when stacked on a gravity assist', () => {
+    const assist = makeTrack(
+      [seg('planet', 300, [{ kind: 'ringedPlanet', startTick: 0, lengthTicks: 300 }])],
+      [],
+      line,
+    );
+    const stacked = simulate(assist, bare, [{ tick: 0, active: 'powerReroute' }], 1);
+    const assistOnly = simulate(assist, bare, noInputs, 1);
+    expect(stacked.overheatedTicks).toBeGreaterThan(assistOnly.overheatedTicks);
   });
 
   it('stacks with a gravity assist rather than replacing it', () => {

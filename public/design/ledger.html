@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1730">
+<title>Star Race Ideas Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+:root {
+  --ground: #f4efe2;
+  --surface: #fbf8f0;
+  --ink: #17203a;
+  --ink-soft: #4d5a7a;
+  --rule: #d6cdb6;
+  --accent: #b46a0c;
+  --accent-ink: #7a4706;
+  --good: #2f7a3e;
+  --bad: #b2372e;
+  --chip: #e9dcc0;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1730;
+    --surface: #152140;
+    --ink: #e9e4d6;
+    --ink-soft: #9aabcb;
+    --rule: #2c3a5e;
+    --accent: #f2a93b;
+    --accent-ink: #f2a93b;
+    --good: #7fd48c;
+    --bad: #e2685f;
+    --chip: #253359;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0d1730;
+  --surface: #152140;
+  --ink: #e9e4d6;
+  --ink-soft: #9aabcb;
+  --rule: #2c3a5e;
+  --accent: #f2a93b;
+  --accent-ink: #f2a93b;
+  --good: #7fd48c;
+  --bad: #e2685f;
+  --chip: #253359;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 17px/1.55 "Source Serif 4", Georgia, "Times New Roman", serif;
+  -webkit-text-size-adjust: 100%;
+}
+.page { max-width: 44rem; margin: 0 auto; padding: 0 20px 96px; }
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.masthead { padding: 40px 0 24px; border-bottom: 2px solid var(--ink); }
+.eyebrow {
+  font: 600 12px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+h1 {
+  font: 700 clamp(30px, 7vw, 44px)/1.05 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.01em; margin: 14px 0 12px; text-wrap: balance;
+}
+.headline { font-size: 20px; line-height: 1.4; margin: 0; color: var(--ink); text-wrap: balance; }
+
+nav.toc {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--ground); border-bottom: 1px solid var(--rule);
+  margin: 0 -20px; padding: 10px 20px;
+  display: flex; gap: 6px 16px; overflow-x: auto; white-space: nowrap;
+  font: 500 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.04em;
+}
+nav.toc a { text-decoration: none; color: var(--ink-soft); padding: 4px 0; }
+nav.toc a:hover { color: var(--accent-ink); }
+
+section { padding-top: 40px; }
+h2 {
+  font: 700 24px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+}
+h3 { font: 700 20px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 32px 0 8px; }
+h4 { font: 600 17px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 24px 0 6px; }
+h5 { font: 600 15px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 18px 0 4px; color: var(--ink-soft); }
+p { margin: 0 0 1em; }
+ul, ol { padding-left: 1.4em; margin: 0 0 1em; }
+li { margin-bottom: 0.35em; }
+blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--accent); color: var(--ink-soft); }
+code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
+pre code { background: none; padding: 0; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+.scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { font: 600 12px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+table.scores td { text-align: right; font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 14px; }
+table.scores td.mean { font-weight: 700; }
+table.scores td.hi { color: var(--good); font-weight: 700; }
+table.scores td.lo { color: var(--bad); font-weight: 700; }
+table.scores th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.caption { font-size: 14px; color: var(--ink-soft); margin: 0 0 20px; }
+.chip {
+  display: inline-block; font: 600 11px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-ink);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 4px 8px; margin-left: 8px; vertical-align: middle;
+}
+
+.questions { counter-reset: q; list-style: none; padding: 0; }
+.questions li { counter-increment: q; display: grid; grid-template-columns: 2.2rem 1fr; gap: 0 8px; padding: 14px 0; border-bottom: 1px solid var(--rule); margin: 0; }
+.questions li::before { content: counter(q, decimal-leading-zero); font: 700 18px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--accent); }
+.questions .q { font-weight: 600; }
+.questions .why { grid-column: 2; color: var(--ink-soft); font-size: 15px; }
+
+details { border-top: 1px solid var(--rule); }
+details:last-of-type { border-bottom: 1px solid var(--rule); }
+summary {
+  cursor: pointer; padding: 16px 0; list-style: none;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline;
+}
+summary::-webkit-details-marker { display: none; }
+summary .t { font: 700 19px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+summary .s { grid-column: 1; color: var(--ink-soft); font-size: 15px; }
+summary .arrow { font: 600 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; color: var(--accent-ink); text-transform: uppercase; }
+details[open] summary .arrow::after { content: "Close"; }
+details:not([open]) summary .arrow::after { content: "Read"; }
+details .body { padding: 0 0 24px; }
+details .body > h2:first-child { margin-top: 0; }
+
+.synthesis { background: var(--surface); border: 1px solid var(--rule); padding: 20px; margin: 0 -20px; }
+@media (min-width: 720px) { .synthesis { margin: 0; padding: 32px; } }
+
+.gaps { padding-left: 1.4em; }
+.gaps li { margin-bottom: 0.6em; }
+.feedback-how { background: var(--surface); border: 1px dashed var(--rule); padding: 16px 20px; }
+.feedback-how code { white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-soft); }
+
+.ledger table td:nth-child(1) { font-weight: 600; }
+.ledger table td:nth-child(3) { white-space: nowrap; font: 600 12px/1.4 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+</style>
+
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <div class="eyebrow"><span>Star Race</span><span>Ideas ledger</span></div>
+  <h1>Everything considered</h1>
+  <p class="headline">Every idea any round put forward, where it came from, and what became of it. Newest round last. Nothing is deleted; a change of mind is a new row.</p>
+</header>
+<section class="ledger">
+<div class="scroll"><h1>Ideas ledger</h1>
+<p>Every idea a round considered, and what became of it. Append-only: a round adds
+its own section and never edits an earlier one. If a later round changes its
+mind about an idea, it adds a new row saying so and citing the round it is
+overturning.</p>
+<p>Status is one of: <strong>adopted</strong> (in the current recommendation), <strong>rejected</strong>
+(with the reason), <strong>parked</strong> (good, not now), <strong>open</strong> (waiting on the owner).</p>
+<!-- The synthesiser appends a "## Round N" section below this line. --><h2>Round 1</h2>
+<table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>From</th>
+<th>Status</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Season of seven heats on one points ladder</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>Nine minutes on a phone, long enough for a set to pay off.</td>
+</tr>
+<tr>
+<td>Cut the bottom row after every heat from the third</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>A line you can see, not a leak; the stakes every reviewer praised.</td>
+</tr>
+<tr>
+<td>Tiebreak on the most recent heat, printed beside the line</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>The ship falling is the one that goes, and it is on screen before it happens.</td>
+</tr>
+<tr>
+<td>Tail shops first</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>Structural recovery with no charity in it; one sort on the ladder.</td>
+</tr>
+<tr>
+<td>Face-up draft of ten in reverse ladder order</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>The only shop the sim resolves without inventing an order; denial is legible.</td>
+</tr>
+<tr>
+<td>Tags: direction at 2, rule change at 3</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>Sets change a rule, not a number, which is the moment that feels like something.</td>
+</tr>
+<tr>
+<td>Tier gating: tier 2 from heat 3, tier 3 from heat 5</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>The best reason to save in the round; replaces sector-shifted odds.</td>
+</tr>
+<tr>
+<td>Leader lays one course card</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>Kept, paired with a second card from the tail to blunt the snowball.</td>
+</tr>
+<tr>
+<td>Lost ship returns at 40 hull with 2 salvage, build intact</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>Heats stay dangerous without a crash ending the run.</td>
+</tr>
+<tr>
+<td>Lost ship loses a part instead</td>
+<td>run-first</td>
+<td>open</td>
+<td>Nastier and a stronger reason to repair; owner&#39;s call.</td>
+</tr>
+<tr>
+<td>Three untimed screens between heats</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>Every rival is a bot, so a timer is against nobody.</td>
+</tr>
+<tr>
+<td>Season map drawn in the lobby</td>
+<td>run-first</td>
+<td>adopted</td>
+<td>The black hole in heat 4 is a plan, not a surprise.</td>
+</tr>
+<tr>
+<td>Rival wish lists printed on the ladder</td>
+<td>run-first</td>
+<td>open</td>
+<td>Legible versus a character to discover; owner&#39;s call.</td>
+</tr>
+<tr>
+<td>Interest 1 per 4 capped at 3</td>
+<td>run-first</td>
+<td>rejected</td>
+<td>Saturates at 12 banked; set to 1 per 5, cap 3, in tuning.</td>
+</tr>
+<tr>
+<td>Modifier block from resolveBuild with a hard cap</td>
+<td>build-first</td>
+<td>adopted</td>
+<td>The engineering shape every set system needs; capped at eight numbers.</td>
+</tr>
+<tr>
+<td>Coloured pips with a set count</td>
+<td>build-first</td>
+<td>adopted</td>
+<td>A build read in under a second, on every ladder screen.</td>
+</tr>
+<tr>
+<td>Copies count toward a set</td>
+<td>build-first</td>
+<td>adopted</td>
+<td>Stacking is already a feature and the harness measures it; owner may prefer distinct parts.</td>
+</tr>
+<tr>
+<td>The family decides what you can lay on the track</td>
+<td>build-first</td>
+<td>adopted</td>
+<td>Build is weapon and shield; as card menus rather than beacons.</td>
+</tr>
+<tr>
+<td>Overdrive at 5</td>
+<td>build-first</td>
+<td>parked</td>
+<td>Gives a pure build a late game; ships when sets at 3 are balanced.</td>
+</tr>
+<tr>
+<td>Six hardpoints, bought slots at 6, 8 and 10</td>
+<td>build-first</td>
+<td>rejected</td>
+<td>Seven picks give the same arithmetic without a third sink.</td>
+</tr>
+<tr>
+<td>Everyone drops a beacon every round, up to three per segment</td>
+<td>build-first</td>
+<td>rejected</td>
+<td>Unreadable on a phone and does not fit any current segment.</td>
+</tr>
+<tr>
+<td>Standing as a decreasing drain with sector multipliers</td>
+<td>build-first</td>
+<td>rejected</td>
+<td>No line under it, a bad sector is permanent, and the arithmetic did not add up.</td>
+</tr>
+<tr>
+<td>Burn overdrive: never cooks, runs faster hot</td>
+<td>build-first</td>
+<td>rejected</td>
+<td>A rule bend and balance grenade by its own account; a second reroute charge instead.</td>
+</tr>
+<tr>
+<td>Bridges counting for two families</td>
+<td>build-first</td>
+<td>parked</td>
+<td>A clean pair discount; enter as tier-2 parts once pure builds are balanced.</td>
+</tr>
+<tr>
+<td>Sector gates repair hull free</td>
+<td>build-first</td>
+<td>rejected</td>
+<td>Hull must cost credits or greed has no bill.</td>
+</tr>
+<tr>
+<td>Rivals as asynchronous ghosts of other players</td>
+<td>build-first</td>
+<td>parked</td>
+<td>A rival is a build, a card rule and a pilot, all inputs; nothing in the sim changes.</td>
+</tr>
+<tr>
+<td>Attribution: a placement carries who laid it, results read hazard by hazard</td>
+<td>interaction-first</td>
+<td>adopted</td>
+<td>The cheapest possible &quot;other players&quot;; every reviewer took it.</td>
+</tr>
+<tr>
+<td>Sequence: the later placer builds a combo on what is already laid</td>
+<td>interaction-first</td>
+<td>adopted</td>
+<td>As the tail&#39;s second card; the trailer&#39;s weapon and the comeback in one.</td>
+</tr>
+<tr>
+<td>Solar Flare, the burst&#39;s mirror</td>
+<td>interaction-first</td>
+<td>adopted</td>
+<td>One function and one test; Burner&#39;s card. Whether it is in the first playable is open.</td>
+</tr>
+<tr>
+<td>Bot seeding rule beside the tap rules</td>
+<td>interaction-first</td>
+<td>adopted</td>
+<td>The same input for a human and a bot; replayable.</td>
+</tr>
+<tr>
+<td>Every player seeds one slot per heat in two timed waves</td>
+<td>interaction-first</td>
+<td>rejected</td>
+<td>Eight player-laid hazards on one course cannot be read, and timers do not fit a phone.</td>
+</tr>
+<tr>
+<td>Part levels: Mk II and Mk III merges</td>
+<td>interaction-first</td>
+<td>rejected</td>
+<td>Stacking already does it; a merge needs a part&#39;s upside split from its cost.</td>
+</tr>
+<tr>
+<td>Ship hull repaired free, run hull lost by position</td>
+<td>interaction-first</td>
+<td>rejected</td>
+<td>Removes the F-Zero trade, and a drain has no line under it.</td>
+</tr>
+<tr>
+<td>The star: dissipation falls each heat</td>
+<td>interaction-first</td>
+<td>rejected</td>
+<td>One invisible number per heat; the season map escalates visibly.</td>
+</tr>
+<tr>
+<td>Shop shows copies remaining per part</td>
+<td>economy-first</td>
+<td>adopted</td>
+<td>One number turns a private shop into a contested one.</td>
+</tr>
+<tr>
+<td>One coin for parts, repairs and everything else</td>
+<td>economy-first</td>
+<td>adopted</td>
+<td>Hull damage is a bill you can read.</td>
+</tr>
+<tr>
+<td>Flags: a vote on the empty segment&#39;s hazard</td>
+<td>economy-first</td>
+<td>rejected</td>
+<td>A vote produces coincidence; everyone flags the burst.</td>
+</tr>
+<tr>
+<td>Five income sources: appearance, purse, hot laps, interest, streaks</td>
+<td>economy-first</td>
+<td>rejected</td>
+<td>A purse you cannot explain after a heat; hot laps need per-segment splits the sim lacks.</td>
+</tr>
+<tr>
+<td>Makers: 2 gives a stat, 4 gives a rule</td>
+<td>economy-first</td>
+<td>rejected</td>
+<td>Same job as tags, and online too late at heat 6 or 7 of 12.</td>
+</tr>
+<tr>
+<td>Twelve heats, two cuts of two ships</td>
+<td>economy-first</td>
+<td>rejected</td>
+<td>Twenty minutes is four train gaps, and between cuts nothing is at risk.</td>
+</tr>
+</tbody></table>
+</div>
+<p class="caption"><a href="index.html">Back to the rounds.</a></p>
+</section>
+</div>
+</body>
+</html>

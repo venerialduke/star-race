@@ -78,6 +78,15 @@ subagent.
 - Do not touch `main` directly. Do not force-push. Do not `rm -rf`.
 - If a task needs a rule change not covered by `DESIGN.md`, stop and ask.
 
+## Design rounds (`design/`)
+
+The slice is done; the next job is finding the game. `design/BRIEF.md` is the
+question, `design/PROCESS.md` says how a round runs, `design/LEDGER.md` is
+every idea ever considered and its fate. Rounds live under `design/rounds/`
+and are append-only: never overwrite a round folder or edit an earlier ledger
+section. `npm run design-page -- --round N` renders a round into
+`public/design/`, which the Pages site serves at `/star-race/design/`.
+
 ## Milestones
 
 - S1 (done when: Pages URL shows a moving dot, CI green): scaffold, canvas,

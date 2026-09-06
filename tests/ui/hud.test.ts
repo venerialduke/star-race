@@ -78,6 +78,21 @@ describe('the HUD', () => {
     expect(document.querySelector('.hud-stage')?.textContent).toContain('Stage 3 / 3');
   });
 
+  it('shows where the player is in the field', () => {
+    hud.update(fresh(), 1, 3);
+    expect(document.querySelector('.hud-place')?.textContent).toBe('1st of 3');
+    expect(document.querySelector('.hud-place')?.classList.contains('is-leading')).toBe(true);
+
+    hud.update(fresh(), 3, 3);
+    expect(document.querySelector('.hud-place')?.textContent).toBe('3rd of 3');
+    expect(document.querySelector('.hud-place')?.classList.contains('is-leading')).toBe(false);
+  });
+
+  it('says nothing about position when there is no field to be in', () => {
+    hud.update(fresh());
+    expect(document.querySelector('.hud-place')?.textContent).toBe('');
+  });
+
   it('marks the hull bar when the ship is badly hurt', () => {
     const state = startRace(SLICE_TRACK, [], 1, { stage: 0, startHull: 10 });
     hud.update(state);

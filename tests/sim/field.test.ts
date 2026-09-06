@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   flyField,
+  livePositionOf,
+  livePositions,
   positionOf,
   standings,
   startField,
@@ -225,5 +227,52 @@ describe('the rivals', () => {
     const tough = resolveBuild(rivalBuild(bulwark!, 2));
     expect(quick.speed).toBeGreaterThan(tough.speed);
     expect(tough.hull).toBeGreaterThan(quick.hull);
+  });
+});
+
+describe('the order mid-race', () => {
+  it('puts the ship that is furthest along in front', () => {
+    const field = startField(SLICE_TRACK, grid(), 1, { stage: 0 });
+    for (let i = 0; i < 200; i++) stepField(field);
+    const order = livePositions(field);
+    const byId = new Map(field.racers.map((racer) => [racer.id, racer.state.distance]));
+    order.forEach((id, i) => {
+      const next = order[i + 1];
+      if (next === undefined) return;
+      expect(byId.get(id) ?? 0).toBeGreaterThanOrEqual(byId.get(next) ?? 0);
+    });
+  });
+
+  it('is the quick ship in front on open track', () => {
+    const field = startField(SLICE_TRACK, grid(), 1, { stage: 0 });
+    for (let i = 0; i < 200; i++) stepField(field);
+    expect(livePositions(field)[0]).toBe('redline');
+  });
+
+  it('drops a lost ship behind everything still flying', () => {
+    const brutal = makeTrack(
+      [seg('grinder', 900, [{ kind: 'asteroidField', startTick: 0, lengthTicks: 900 }])],
+      [],
+      line,
+    );
+    const field = flyField(
+      startField(
+        brutal,
+        [entry('player', 'You'), entry('bulwark', 'Bulwark', [PARTS.ablativePlating])],
+        2,
+      ),
+    );
+    const order = livePositions(field);
+    const lost = field.racers.filter((racer) => racer.state.destroyed).map((r) => r.id);
+    expect(lost.length).toBeGreaterThan(0);
+    lost.forEach((id) => expect(order.indexOf(id)).toBe(order.length - 1));
+  });
+
+  it('can say where the player is right now', () => {
+    const field = startField(SLICE_TRACK, grid(), 1, { stage: 0 });
+    stepField(field);
+    expect(livePositionOf(field, 'player')).toBeGreaterThanOrEqual(1);
+    expect(livePositionOf(field, 'player')).toBeLessThanOrEqual(3);
+    expect(() => livePositionOf(field, 'redline')).not.toThrow();
   });
 });

@@ -119,6 +119,26 @@ export function project(p: Vec2, fit: Fit): Vec2 {
   };
 }
 
+/** How far apart the lanes sit, as a fraction of the course's scale. */
+export const LANE_GAP = 0.03;
+
+/**
+ * Nudge a ship across the track into its own lane. Ships do not touch in the
+ * simulation — lanes exist only so three dots on one line do not cover each
+ * other up. Lane 0 is the middle of the track, which is where the player flies.
+ *
+ * `behind` is a point just back along the course, which gives the direction of
+ * travel; the lane offset is at right angles to it.
+ */
+export function laneShift(here: Vec2, behind: Vec2, lane: number, unit: number): Vec2 {
+  if (lane === 0) return here;
+  const dx = here.x - behind.x;
+  const dy = here.y - behind.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const gap = lane * unit * LANE_GAP;
+  return { x: here.x + (-dy / length) * gap, y: here.y + (dx / length) * gap };
+}
+
 /** The fit for a track on a viewport, in one call. */
 export function fitTrack(path: Spline, vp: Viewport): Fit {
   return fitToViewport(trackBounds(path), vp);

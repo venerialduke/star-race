@@ -140,6 +140,31 @@ export function standings(field: Field): Standing[] {
   return rows.map((row, index) => ({ ...row, position: index + 1 }));
 }
 
+/**
+ * The order the ships are in right now, best first: furthest along wins, and a
+ * ship that has been lost is behind every ship still flying. Used by the HUD
+ * mid-race, so the player can see whether they are winning without waiting for
+ * the line.
+ */
+export function livePositions(field: Field): ShipId[] {
+  return [...field.racers]
+    .sort((a, b) => {
+      const aLost = a.state.destroyed;
+      const bLost = b.state.destroyed;
+      if (aLost !== bLost) return aLost ? 1 : -1;
+      if (a.state.distance !== b.state.distance) return b.state.distance - a.state.distance;
+      return a.state.tick - b.state.tick;
+    })
+    .map((racer) => racer.id);
+}
+
+/** Where one ship is right now, 1 for the lead. */
+export function livePositionOf(field: Field, id: ShipId): number {
+  const index = livePositions(field).indexOf(id);
+  if (index === -1) throw new Error(`${id} is not in this field.`);
+  return index + 1;
+}
+
 /** Where one ship came. */
 export function positionOf(order: readonly Standing[], id: ShipId): number {
   const found = order.find((row) => row.id === id);

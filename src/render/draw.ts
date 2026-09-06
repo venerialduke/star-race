@@ -5,9 +5,10 @@
 // The stage being raced is drawn bright; the rest of the course is dimmed but
 // still legible, hazards and all.
 
+import type { Field, ShipId } from '../sim/field';
 import type { RaceState } from '../sim/race';
 import { sample, evaluate, type Vec2 } from '../sim/spline';
-import { fitTrack, project, type Fit, type Viewport } from './project';
+import { fitTrack, laneShift, project, type Fit, type Viewport } from './project';
 import {
   segmentStartTick,
   splineParamAtTick,
@@ -24,6 +25,7 @@ const COLORS = {
   ship: '#f2a93b',
   shipGlow: 'rgba(242, 169, 59, 0.35)',
   shields: '#63d2ff',
+  lost: '#5b6480',
   text: '#b9b7ae',
   asteroidField: '#b0785a',
   gammaBurst: '#e8e45c',
@@ -36,6 +38,13 @@ const HAZARD_COLOR: Readonly<Record<HazardKind, string>> = {
   gammaBurst: COLORS.gammaBurst,
   blackHole: COLORS.blackHole,
   ringedPlanet: COLORS.ringedPlanet,
+};
+
+/** A colour each, so three dots on one line are three ships. */
+const SHIP_COLOR: Readonly<Record<ShipId, string>> = {
+  player: '#f2a93b',
+  redline: '#e2685f',
+  bulwark: '#9aa8ff',
 };
 
 export type { Viewport } from './project';
@@ -139,12 +148,15 @@ function drawHazardMarker(
   }
 }
 
-export function draw(ctx: CanvasRenderingContext2D, state: RaceState, vp: Viewport): void {
+/** The course itself: the line, the hazards on it, and the gates. */
+function drawCourse(
+  ctx: CanvasRenderingContext2D,
+  state: RaceState,
+  vp: Viewport,
+  fit: Fit,
+  unit: number,
+): void {
   const { track } = state;
-  // The course is fitted to the strip between the readouts and the buttons, so
-  // markers and the ship scale with the course rather than with the screen.
-  const fit = fitTrack(track.path, vp);
-  const unit = fit.scale;
 
   ctx.save();
   ctx.setTransform(vp.dpr, 0, 0, vp.dpr, 0, 0);
@@ -210,26 +222,95 @@ export function draw(ctx: CanvasRenderingContext2D, state: RaceState, vp: Viewpo
     );
   });
 
-  // The ship.
-  const ship = pointAtDistance(track, state.distance, fit);
-  const radius = Math.max(6, unit * 0.018);
+  ctx.restore();
+}
+
+/**
+ * Where a ship sits when it is one of several on the same line. Ships do not
+ * touch in the simulation, so lanes are only here to stop three dots covering
+ * each other up: each one is nudged across the track, the player down the
+ * middle.
+ */
+function laneOffset(track: Track, distance: number, lane: number, fit: Fit, unit: number): Vec2 {
+  return laneShift(
+    pointAtDistance(track, distance, fit),
+    pointAtDistance(track, Math.max(distance - 4, 0), fit),
+    lane,
+    unit,
+  );
+}
+
+/** One ship: a dot, a glow if it is the player's, a ring if its shields are up. */
+function drawShip(
+  ctx: CanvasRenderingContext2D,
+  track: Track,
+  state: RaceState,
+  id: ShipId,
+  lane: number,
+  fit: Fit,
+  unit: number,
+): void {
+  const at = laneOffset(track, state.distance, lane, fit, unit);
+  const radius = Math.max(5, unit * (id === 'player' ? 0.018 : 0.014));
+  const lost = state.destroyed;
+
+  if (id === 'player' && !lost) {
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, radius * 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS.shipGlow;
+    ctx.fill();
+  }
+
   ctx.beginPath();
-  ctx.arc(ship.x, ship.y, radius * 2.2, 0, Math.PI * 2);
-  ctx.fillStyle = COLORS.shipGlow;
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(ship.x, ship.y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = COLORS.ship;
+  ctx.arc(at.x, at.y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = lost ? COLORS.lost : SHIP_COLOR[id];
   ctx.fill();
 
-  // Shields, while they hold, are a ring around it.
+  // A lost ship is drawn as a hollow wreck rather than removed, so the player
+  // can see where a rival went.
+  if (lost) {
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, radius * 1.6, 0, Math.PI * 2);
+    ctx.strokeStyle = COLORS.lost;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    return;
+  }
+
   if (state.shieldPool > 0) {
     ctx.beginPath();
-    ctx.arc(ship.x, ship.y, radius * 2.8, 0, Math.PI * 2);
+    ctx.arc(at.x, at.y, radius * 2.8, 0, Math.PI * 2);
     ctx.strokeStyle = COLORS.shields;
     ctx.lineWidth = 3;
     ctx.stroke();
   }
+}
 
+/**
+ * Draw a whole field: the course once, then every ship on it. The player is
+ * drawn last so they are never hidden under a rival.
+ */
+export function drawField(
+  ctx: CanvasRenderingContext2D,
+  field: Field,
+  vp: Viewport,
+): void {
+  const player = field.racers.find((racer) => racer.id === 'player') ?? field.racers[0];
+  if (player === undefined) return;
+
+  const fit = fitTrack(player.state.track.path, vp);
+  const unit = fit.scale;
+  drawCourse(ctx, player.state, vp, fit, unit);
+
+  ctx.save();
+  ctx.setTransform(vp.dpr, 0, 0, vp.dpr, 0, 0);
+  // Rivals take the outside lanes, the player the middle one.
+  let lane = 1;
+  field.racers.forEach((racer) => {
+    if (racer.id === 'player') return;
+    drawShip(ctx, player.state.track, racer.state, racer.id, lane, fit, unit);
+    lane = lane > 0 ? -lane : -lane + 1;
+  });
+  drawShip(ctx, player.state.track, player.state, 'player', 0, fit, unit);
   ctx.restore();
 }

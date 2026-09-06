@@ -16,7 +16,12 @@ import { absorb, hazardEffect, isOneShot } from './hazards';
 import { makeRng, type Rng } from './rng';
 import { resolveBuild, type Build, type DerivedStats } from './ship';
 import { segmentStartTick, totalLengthTicks, type HazardKind, type Track } from './track';
-import { LAUNCH_SPEED, MAX_RACE_TICKS } from './tuning';
+import {
+  HEAT_DISSIPATION_PER_TICK,
+  LAUNCH_SPEED,
+  MAX_RACE_TICKS,
+  OVERHEAT_DAMAGE_PER_TICK,
+} from './tuning';
 
 /** The two actives in the slice. They do nothing until S2.10. */
 export type ActiveId = 'shields' | 'powerReroute';
@@ -49,6 +54,10 @@ export interface RaceOutcome {
   readonly hullLeft: number;
   /** Damage shields swallowed, so the results screen can show what they were worth. */
   readonly damageAbsorbed: number;
+  /** Ticks spent above heat tolerance, cooking the hull. */
+  readonly overheatedTicks: number;
+  /** Heat carried over the finish line. */
+  readonly heatLeft: number;
   /** What happened, in order. Enough to narrate a race after the fact. */
   readonly log: readonly RaceEvent[];
   /** The seed this race was run with, so an interesting race can be replayed. */
@@ -106,6 +115,7 @@ export function simulate(
   let damageTaken = 0;
   let damageAbsorbed = 0;
   let shieldPool = 0;
+  let overheatedTicks = 0;
   let destroyed = false;
 
   log.push({ tick, kind: 'start', distance, stage });
@@ -151,7 +161,16 @@ export function simulate(
       hull -= toHull;
       damageTaken += toHull;
     }
-    heat += addedHeat;
+    // Heat builds while something is adding it and bleeds away when nothing is.
+    // Above tolerance the ship cooks: that damage is internal, so shields do
+    // not stop it.
+    heat = addedHeat > 0 ? heat + addedHeat : Math.max(heat - HEAT_DISSIPATION_PER_TICK, 0);
+    if (heat > stats.heatTolerance) {
+      hull -= OVERHEAT_DAMAGE_PER_TICK;
+      damageTaken += OVERHEAT_DAMAGE_PER_TICK;
+      overheatedTicks++;
+    }
+
     if (hull <= 0) destroyed = true;
 
     speed = Math.min(speed + stats.acceleration, stats.speed * speedMultiplier);
@@ -195,6 +214,8 @@ export function simulate(
     survived: finished,
     hullLeft: Math.max(hull, 0),
     damageAbsorbed,
+    overheatedTicks,
+    heatLeft: heat,
     log,
     seed,
     stats,

@@ -15,6 +15,8 @@ import {
   BLACK_HOLE_ESCAPE_HULL,
   BLACK_HOLE_SPEED_MULTIPLIER,
   GAMMA_BURST_DAMAGE,
+  RINGED_PLANET_HEAT_PER_TICK,
+  RINGED_PLANET_SPEED_MULTIPLIER,
 } from './tuning';
 
 /** What the ship looks like to a hazard on the tick it is being applied. */
@@ -95,6 +97,22 @@ export function blackHole(context: HazardContext): HazardEffect {
 }
 
 /**
+ * Ringed planet. A gravity assist: the ship is slung through faster than it
+ * could otherwise fly, and pays for it in heat, every tick of the way.
+ *
+ * The hazard itself never damages anything. Heat only bites when it goes past
+ * what the ship can hold, which is the race loop's business — so the same rule
+ * covers heat from an assist and heat from rerouting power.
+ */
+export function ringedPlanet(): HazardEffect {
+  return {
+    ...NO_EFFECT,
+    speedMultiplier: RINGED_PLANET_SPEED_MULTIPLIER,
+    heat: RINGED_PLANET_HEAT_PER_TICK,
+  };
+}
+
+/**
  * Shields eat damage before the hull does. Returns what reaches the hull and
  * what is left in the pool. This is the only place absorption happens, so every
  * hazard is shielded the same way.
@@ -129,8 +147,6 @@ export function hazardEffect(kind: HazardKind, context: HazardContext): HazardEf
     case 'blackHole':
       return blackHole(context);
     case 'ringedPlanet':
-      // Landing in S2.9. Placed on the track already so the course is visible
-      // from the start line.
-      return NO_EFFECT;
+      return ringedPlanet();
   }
 }

@@ -5,6 +5,7 @@ import {
   asteroidField,
   blackHole,
   gammaBurst,
+  ringedPlanet,
   hazardEffect,
   isOneShot,
   type HazardContext,
@@ -16,6 +17,10 @@ import { makeSpline } from '../../src/sim/spline';
 import { makeTrack, type Segment } from '../../src/sim/track';
 import {
   ASTEROID_DAMAGE_PER_TICK,
+  HEAT_DISSIPATION_PER_TICK,
+  OVERHEAT_DAMAGE_PER_TICK,
+  RINGED_PLANET_HEAT_PER_TICK,
+  RINGED_PLANET_SPEED_MULTIPLIER,
   BLACK_HOLE_ESCAPE_HULL,
   BLACK_HOLE_SPEED_MULTIPLIER,
   GAMMA_BURST_DAMAGE,
@@ -205,8 +210,17 @@ describe('hazard dispatch', () => {
     expect(hazardEffect('blackHole', context())).toEqual(blackHole(context()));
   });
 
-  it('leaves the hazards that have not landed yet inert', () => {
-    expect(hazardEffect('ringedPlanet', context())).toEqual(NO_EFFECT);
+  it('routes ringed planets to the ringed planet', () => {
+    expect(hazardEffect('ringedPlanet', context())).toEqual(ringedPlanet());
+  });
+
+  it('has a do-nothing effect for hazards to start from', () => {
+    expect(NO_EFFECT).toEqual({
+      hullDamage: 0,
+      heat: 0,
+      speedMultiplier: 1,
+      destroyed: false,
+    });
   });
 });
 
@@ -362,5 +376,104 @@ describe('black holes in a race', () => {
     const outcome = simulate(battered, [PARTS.ablativePlating, PARTS.ablativePlating], noInputs, 4);
     expect(outcome.survived).toBe(true);
     expect(outcome.hullLeft).toBeGreaterThanOrEqual(BLACK_HOLE_ESCAPE_HULL);
+  });
+});
+
+describe('ringed planet', () => {
+  it('slings the ship through faster, for heat', () => {
+    const effect = ringedPlanet();
+    expect(effect.speedMultiplier).toBe(RINGED_PLANET_SPEED_MULTIPLIER);
+    expect(effect.speedMultiplier).toBeGreaterThan(1);
+    expect(effect.heat).toBe(RINGED_PLANET_HEAT_PER_TICK);
+    expect(effect.heat).toBeGreaterThan(0);
+  });
+
+  it('never damages the hull itself: heat is the whole cost', () => {
+    expect(ringedPlanet().hullDamage).toBe(0);
+    expect(ringedPlanet().destroyed).toBe(false);
+  });
+
+  it('rolls no dice', () => {
+    expect(ringedPlanet()).toEqual(ringedPlanet());
+  });
+});
+
+describe('ringed planets in a race', () => {
+  const assist = makeTrack(
+    [
+      seg('approach', 60),
+      seg('planet', 150, [{ kind: 'ringedPlanet', startTick: 20, lengthTicks: 110 }]),
+      seg('run-out', 100),
+    ],
+    [],
+    line,
+  );
+  const clear = makeTrack([seg('approach', 60), seg('planet', 150), seg('run-out', 100)], [], line);
+
+  it('is faster than flying the same course without it', () => {
+    expect(simulate(assist, [], noInputs, 1).finishTicks).toBeLessThan(
+      simulate(clear, [], noInputs, 1).finishTicks,
+    );
+  });
+
+  it('builds heat while the assist lasts', () => {
+    // A course that ends the moment the assist does, so the heat is still on
+    // the ship at the finish line.
+    const endsOnTheAssist = makeTrack(
+      [
+        seg('approach', 60),
+        seg('planet', 110, [{ kind: 'ringedPlanet', startTick: 0, lengthTicks: 110 }]),
+      ],
+      [],
+      line,
+    );
+    expect(simulate(endsOnTheAssist, [], noInputs, 1).heatLeft).toBeGreaterThan(0);
+    expect(simulate(clear, [], noInputs, 1).heatLeft).toBe(0);
+  });
+
+  it('cooks a ship that cannot hold the heat', () => {
+    const outcome = simulate(assist, [], noInputs, 1);
+    expect(outcome.overheatedTicks).toBeGreaterThan(0);
+    expect(outcome.damageTaken).toBeCloseTo(outcome.overheatedTicks * OVERHEAT_DAMAGE_PER_TICK, 6);
+  });
+
+  it('Radiator Fins buy enough tolerance to take the assist for free', () => {
+    const finned = simulate(assist, [PARTS.radiatorFins], noInputs, 1);
+    expect(finned.overheatedTicks).toBe(0);
+    expect(finned.damageTaken).toBe(0);
+    // Still faster than the same build on a course without the assist.
+    expect(finned.finishTicks).toBeLessThan(
+      simulate(clear, [PARTS.radiatorFins], noInputs, 1).finishTicks,
+    );
+  });
+
+  it('an Overclocked Reactor cooks sooner: it runs hot before it arrives', () => {
+    const hot = simulate(assist, [PARTS.overclockedReactor], noInputs, 1);
+    const bare = simulate(assist, [], noInputs, 1);
+    expect(hot.overheatedTicks).toBeGreaterThan(bare.overheatedTicks);
+    expect(hot.damageTaken).toBeGreaterThan(bare.damageTaken);
+  });
+
+  it('sheds heat once the assist is behind it', () => {
+    const long = makeTrack(
+      [
+        seg('planet', 150, [{ kind: 'ringedPlanet', startTick: 0, lengthTicks: 110 }]),
+        seg('cool-down', 400),
+      ],
+      [],
+      line,
+    );
+    const outcome = simulate(long, [PARTS.radiatorFins], noInputs, 1);
+    // 400 ticks of run-out at the dissipation rate is more than enough.
+    expect(HEAT_DISSIPATION_PER_TICK).toBeGreaterThan(0);
+    expect(outcome.heatLeft).toBe(0);
+  });
+
+  it('overheat damage goes straight to the hull: shields do not stop cooking', () => {
+    // Shields are empty in S2.9 anyway, but the rule is that this damage is
+    // internal. Absorbed damage stays at zero while the ship cooks.
+    const outcome = simulate(assist, [], noInputs, 1);
+    expect(outcome.damageAbsorbed).toBe(0);
+    expect(outcome.damageTaken).toBeGreaterThan(0);
   });
 });

@@ -9,7 +9,11 @@
 import type { Rng } from './rng';
 import type { DerivedStats } from './ship';
 import type { HazardKind } from './track';
-import { ASTEROID_DAMAGE_PER_TICK, ASTEROID_DAMAGE_VARIANCE } from './tuning';
+import {
+  ASTEROID_DAMAGE_PER_TICK,
+  ASTEROID_DAMAGE_VARIANCE,
+  GAMMA_BURST_DAMAGE,
+} from './tuning';
 
 /** What the ship looks like to a hazard on the tick it is being applied. */
 export interface HazardContext {
@@ -59,16 +63,55 @@ export function asteroidField(context: HazardContext): HazardEffect {
   return { ...NO_EFFECT, hullDamage: Math.max(damage, 0) };
 }
 
+/**
+ * Gamma-ray burst. One tick, no dice, a large bite out of the hull. The whole
+ * hazard is a timing test: it is drawn on the course before the race starts, so
+ * an unshielded hit is a call the player got wrong rather than bad luck.
+ *
+ * Shields do not change what the burst throws; they catch it. The race loop
+ * runs every point of damage through the shield pool, and a full pool from
+ * Mirror Shielding swallows a burst whole.
+ */
+export function gammaBurst(): HazardEffect {
+  return { ...NO_EFFECT, hullDamage: GAMMA_BURST_DAMAGE };
+}
+
+/**
+ * Shields eat damage before the hull does. Returns what reaches the hull and
+ * what is left in the pool. This is the only place absorption happens, so every
+ * hazard is shielded the same way.
+ */
+export function absorb(
+  damage: number,
+  shieldPool: number,
+): {
+  readonly toHull: number;
+  readonly poolLeft: number;
+} {
+  const absorbed = Math.min(shieldPool, damage);
+  return { toHull: damage - absorbed, poolLeft: shieldPool - absorbed };
+}
+
+/**
+ * Hazards that happen once rather than for every tick the ship is inside them.
+ * A gamma burst is a single event: the ship's movement can overlap a one-tick
+ * window on two consecutive ticks, and it must still only be hit once.
+ */
+export function isOneShot(kind: HazardKind): boolean {
+  return kind === 'gammaBurst';
+}
+
 /** Dispatch: what this hazard kind does on this tick. */
 export function hazardEffect(kind: HazardKind, context: HazardContext): HazardEffect {
   switch (kind) {
     case 'asteroidField':
       return asteroidField(context);
     case 'gammaBurst':
+      return gammaBurst();
     case 'blackHole':
     case 'ringedPlanet':
-      // Landing in S2.7, S2.8 and S2.9. Placed on the track already so the
-      // course is visible from the start line.
+      // Landing in S2.8 and S2.9. Placed on the track already so the course is
+      // visible from the start line.
       return NO_EFFECT;
   }
 }

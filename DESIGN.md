@@ -266,6 +266,29 @@ what makes acceleration worth buying: a course with more stages rewards it more.
 A race also ends if it runs past a hard tick cap. That only happens if the loop
 is broken, and the outcome says the ship was abandoned rather than finished.
 
+### The run
+
+A run is three stages of one track, one ship. The garage opens **before every
+stage**, including the first, so a finished run is a three-part build the player
+assembled a piece at a time.
+
+Two rules make a run more than three separate races:
+
+1. **The build carries forward.** Every garage adds one part, chosen from three
+   the run's own dice put on offer. Parts already bolted on can be offered
+   again — taking a second Ion Thruster is a real choice.
+2. **The hull carries forward.** Damage is not repaired between stages. This is
+   what gives the black hole in stage 3 its teeth: it charges the player for
+   what they spent surviving stages 1 and 2. A part that raises maximum hull
+   adds that much to the ship as it stands; it does not repair what is already
+   gone.
+
+A run ends when the third stage is finished, or the moment the ship is lost —
+there is no garage after a loss.
+
+Within a stage, ticks are counted from the start of that stage, so the player's
+taps are timed against the piece of course in front of them.
+
 ### Outcome
 
 A race produces: finish time, damage taken, did you survive. A run produces

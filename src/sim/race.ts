@@ -22,7 +22,13 @@ import {
 import { absorb, hazardEffect, isOneShot } from './hazards';
 import { makeRng, type Rng } from './rng';
 import { resolveBuild, type Build, type DerivedStats } from './ship';
-import { segmentStartTick, totalLengthTicks, type HazardKind, type Track } from './track';
+import {
+  segmentStartTick,
+  stages,
+  totalLengthTicks,
+  type HazardKind,
+  type Track,
+} from './track';
 import {
   HEAT_DISSIPATION_PER_TICK,
   LAUNCH_SPEED,
@@ -81,6 +87,17 @@ export interface RaceOutcome {
   readonly stats: DerivedStats;
 }
 
+export interface RaceOptions {
+  /**
+   * Run only this stage, counting from 0, instead of the whole track. Ticks
+   * still start at 0, so the player's taps are timed against the stage they can
+   * see rather than the whole run.
+   */
+  readonly stage?: number;
+  /** Hull the ship starts with. Defaults to the hull its build resolves to. */
+  readonly startHull?: number;
+}
+
 /**
  * Run a race. `inputs` are the player's active taps: each is honoured on its
  * own tick if that active is off cooldown, and ignored otherwise. Taps do not
@@ -92,14 +109,27 @@ export function simulate(
   build: Build,
   inputs: readonly PlayerInput[],
   seed: number,
+  options: RaceOptions = {},
 ): RaceOutcome {
   const stats = resolveBuild(build);
-  const finishDistance = totalLengthTicks(track);
 
-  // Distance at which each stage ends: the end of every gated segment.
-  const stageEnds = track.gates.map(
-    (gate) => segmentStartTick(track, gate) + segmentLength(track, gate),
-  );
+  // A whole run starts at the start line and ends at the finish. One stage
+  // starts and ends at its own gates, and is the only thing simulated.
+  const wholeTrack = options.stage === undefined;
+  const stageList = stages(track);
+  const only = wholeTrack ? undefined : stageList[options.stage ?? 0];
+  if (!wholeTrack && only === undefined) {
+    throw new Error(`Stage ${options.stage} is not on this track.`);
+  }
+  const startDistance = only === undefined ? 0 : segmentStartTick(track, only.firstSegment);
+  const finishDistance =
+    only === undefined ? totalLengthTicks(track) : startDistance + only.lengthTicks;
+
+  // Distance at which each stage ends: the end of every gated segment. A
+  // single-stage race has no gates of its own — it ends at one.
+  const stageEnds = wholeTrack
+    ? track.gates.map((gate) => segmentStartTick(track, gate) + segmentLength(track, gate))
+    : [];
 
   // Each placement gets its own stream, forked once up front, so adding a roll
   // to one hazard cannot shift what another one does.
@@ -136,10 +166,11 @@ export function simulate(
 
   const log: RaceEvent[] = [];
   let tick = 0;
-  let distance = 0;
+  let distance = startDistance;
   let speed = LAUNCH_SPEED;
-  let stage = 0;
-  let hull = stats.hull;
+  let stage = options.stage ?? 0;
+  let hull = options.startHull ?? stats.hull;
+  if (hull <= 0) throw new Error(`A ship cannot start a race with ${hull} hull.`);
   let heat = 0;
   let damageTaken = 0;
   let damageAbsorbed = 0;

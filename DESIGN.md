@@ -126,7 +126,7 @@ about raw pace.
 | ------------------- | -------------------------------- | ------------------ | ----------------------------------------------- |
 | Ion Thruster        | +0.15 speed                      | −10 hull           | Raw pace on a light frame.                      |
 | Ablative Plating    | +40 hull                         | −0.08 speed        | Asteroid fields.                                |
-| Mirror Shielding    | +35 shield capacity              | −0.05 speed        | Gamma-ray bursts.                               |
+| Mirror Shielding    | +35 shield capacity, +12 hull    | −0.05 speed        | Gamma-ray bursts.                                   |
 | Radiator Fins       | +45 heat tolerance               | −15 hull           | The ringed planet's gravity assist.             |
 | Inertial Anchor     | +0.03 acceleration               | −0.02 speed        | Black holes: clawing speed back after the pull. |
 | Overclocked Reactor | +0.10 speed, +0.015 acceleration | −30 heat tolerance | Going fast and accepting the heat risk.         |
@@ -134,6 +134,27 @@ about raw pace.
 The intended tension: hull and shields are bought with speed, and speed is
 bought with fragility or heat. A player who takes every fast part arrives at
 the black hole quickly and badly equipped for it.
+
+What each part is worth, measured over 300 pilot-flown runs where the player
+reaches for that part whenever it is offered (`npm run balance`):
+
+| Part | Won | Survived |
+|------|-----|----------|
+| Ion Thruster | 40% | 79% |
+| Overclocked Reactor | 33% | 79% |
+| Inertial Anchor | 31% | 89% |
+| *(taking the first card offered)* | *31%* | *87%* |
+| Mirror Shielding | 29% | 95% |
+| Ablative Plating | 28% | 97% |
+| Radiator Fins | 28% | 78% |
+
+Speed is the strongest thing to reach for, and the defensive parts sit just
+under a blind pick while surviving nearly every run — a fair trade rather than a
+trap. Mirror Shielding carries hull as well as capacity for exactly this reason:
+with one burst on the course a base shield pool already covers it, so depth
+alone was worth nothing while the speed still cost, and taking it was a mistake
+in every run. That is the shape to watch when tuning — **no part should sit far
+below a blind pick**.
 
 ### Hazards (four in the slice)
 

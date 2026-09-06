@@ -211,6 +211,13 @@ export const ABLATIVE_PLATING_SPEED = -0.08;
 
 /** Mirror Shielding: shield capacity, the answer to gamma bursts. */
 export const MIRROR_SHIELDING_SHIELD_CAPACITY = 35;
+/**
+ * Mirror Shielding: the array is hull too. Capacity alone made this the weakest
+ * part in the game — the slice course carries one burst, and a base pool already
+ * covers it, so the depth was worth nothing while the speed still cost. The
+ * plating the mirrors are mounted on is worth taking on its own.
+ */
+export const MIRROR_SHIELDING_HULL = 12;
 /** Mirror Shielding: the array costs a little speed. */
 export const MIRROR_SHIELDING_SPEED = -0.05;
 

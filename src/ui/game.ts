@@ -26,6 +26,7 @@ import {
 import { createGarage } from './garage';
 import { createHud } from './hud';
 import { createResults } from './results';
+import { logRun } from './telemetry';
 
 /** What the player is looking at. */
 export type Screen = 'garage' | 'countdown' | 'racing' | 'held' | 'results';
@@ -130,6 +131,8 @@ export function createGame(options: GameOptions): Game {
   function showResults(): void {
     field = undefined;
     screen = 'results';
+    // One block on the console for whoever is tuning the game.
+    logRun(run);
     hud.setVisible(false);
     garage.hide();
     results.show(run, () => {

@@ -23,3 +23,72 @@ export const DEMO_SPEED_PER_SECOND = 0.6;
 
 /** Demo dot: spline parameter advanced per tick. */
 export const DEMO_SPEED = DEMO_SPEED_PER_SECOND / TICK_RATE;
+
+// --- Base ship -------------------------------------------------------------
+// A bare hull with no parts. Speed is in track-ticks per tick: at 1.0 the ship
+// covers a segment in exactly its stated length, which is what "ticks at base
+// speed" means in track.ts.
+
+/** Base speed, in track-ticks per tick. 1.0 is the definition of base speed. */
+export const BASE_SPEED = 1;
+
+/** Base acceleration: how much speed closes on its target each tick. */
+export const BASE_ACCELERATION = 0.02;
+
+/** Base shield capacity, in points of damage absorbed while shields are up. */
+export const BASE_SHIELD_CAPACITY = 20;
+
+/** Base heat tolerance: heat points the ship can hold before it cooks. */
+export const BASE_HEAT_TOLERANCE = 100;
+
+/** Base hull, in points of damage the ship survives. */
+export const BASE_HULL = 100;
+
+// --- Stat floors -----------------------------------------------------------
+// A build stacked with downsides still has to produce a ship that can race.
+
+/** No build can drop speed below this. */
+export const MIN_SPEED = 0.35;
+
+/** No build can drop acceleration below this. */
+export const MIN_ACCELERATION = 0.004;
+
+/** Shields, heat tolerance and hull floor here rather than at zero. */
+export const MIN_SHIELD_CAPACITY = 0;
+export const MIN_HEAT_TOLERANCE = 10;
+export const MIN_HULL = 10;
+
+// --- Parts -----------------------------------------------------------------
+// Six parts in the slice. Each is one upside and one cost; DESIGN.md says what
+// each is for and which hazard it answers.
+
+/** Ion Thruster: raw speed. */
+export const ION_THRUSTER_SPEED = 0.15;
+/** Ion Thruster: the light frame it needs costs hull. */
+export const ION_THRUSTER_HULL = -10;
+
+/** Ablative Plating: hull, the answer to asteroid fields. */
+export const ABLATIVE_PLATING_HULL = 40;
+/** Ablative Plating: the mass costs speed. */
+export const ABLATIVE_PLATING_SPEED = -0.08;
+
+/** Mirror Shielding: shield capacity, the answer to gamma bursts. */
+export const MIRROR_SHIELDING_SHIELD_CAPACITY = 35;
+/** Mirror Shielding: the array costs a little speed. */
+export const MIRROR_SHIELDING_SPEED = -0.05;
+
+/** Radiator Fins: heat tolerance, the answer to the ringed planet's assist. */
+export const RADIATOR_FINS_HEAT_TOLERANCE = 45;
+/** Radiator Fins: fins are fragile and cost hull. */
+export const RADIATOR_FINS_HULL = -15;
+
+/** Inertial Anchor: acceleration, to claw speed back out of a black hole. */
+export const INERTIAL_ANCHOR_ACCELERATION = 0.03;
+/** Inertial Anchor: the mass costs top speed. */
+export const INERTIAL_ANCHOR_SPEED = -0.04;
+
+/** Overclocked Reactor: speed and acceleration together. */
+export const OVERCLOCKED_REACTOR_SPEED = 0.1;
+export const OVERCLOCKED_REACTOR_ACCELERATION = 0.015;
+/** Overclocked Reactor: it runs hot, and that is the whole risk. */
+export const OVERCLOCKED_REACTOR_HEAT_TOLERANCE = -30;

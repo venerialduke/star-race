@@ -92,11 +92,41 @@ the black hole the player has been able to see all along.
 
 ### Ship
 
-- Stats: speed, acceleration, shield capacity, heat tolerance, hull.
-  (Exact list to be fixed in S2 and recorded here.)
-- A **build** is a set of parts. Parts modify base stats. A build resolves to
-  derived stats before the race starts.
-- Six parts in the slice. (To be named and described here as they are added.)
+Five stats, and nothing else. Every part, hazard and active moves one or more
+of these.
+
+| Stat            | Unit                 | Base | What it does                                                                                                            |
+| --------------- | -------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------- |
+| Speed           | track-ticks per tick | 1.0  | How fast the ship covers the course. Base speed is 1.0 by definition: that is what "a segment is 180 ticks long" means. |
+| Acceleration    | speed per tick       | 0.02 | How quickly speed closes on its target after something changes it.                                                      |
+| Shield capacity | damage points        | 20   | How much damage shields absorb while they are up.                                                                       |
+| Heat tolerance  | heat points          | 100  | How much heat the ship holds before it cooks.                                                                           |
+| Hull            | damage points        | 100  | How much damage the ship survives.                                                                                      |
+
+A **build** is the parts bolted on. A part is a set of **additive deltas** on
+the base stats; resolving a build sums every delta onto the base and clamps
+each stat to a floor, so a build stacked with downsides still produces a ship
+that can race. Resolution happens once, before the race starts — the race reads
+the derived stats and never looks at a part again. Parts stack, and order does
+not matter.
+
+#### The six slice parts
+
+Each part is one upside paid for with one cost. Four answer a hazard; two are
+about raw pace.
+
+| Part                | Gives                            | Costs              | For                                             |
+| ------------------- | -------------------------------- | ------------------ | ----------------------------------------------- |
+| Ion Thruster        | +0.15 speed                      | −10 hull           | Raw pace on a light frame.                      |
+| Ablative Plating    | +40 hull                         | −0.08 speed        | Asteroid fields.                                |
+| Mirror Shielding    | +35 shield capacity              | −0.05 speed        | Gamma-ray bursts.                               |
+| Radiator Fins       | +45 heat tolerance               | −15 hull           | The ringed planet's gravity assist.             |
+| Inertial Anchor     | +0.03 acceleration               | −0.04 speed        | Black holes: clawing speed back after the pull. |
+| Overclocked Reactor | +0.10 speed, +0.015 acceleration | −30 heat tolerance | Going fast and accepting the heat risk.         |
+
+The intended tension: hull and shields are bought with speed, and speed is
+bought with fragility or heat. A player who takes every fast part arrives at
+the black hole quickly and badly equipped for it.
 
 ### Hazards (four in the slice)
 

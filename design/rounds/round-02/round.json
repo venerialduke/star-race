@@ -1,0 +1,340 @@
+{
+  "round": 2,
+  "date": "2026-09-07",
+  "title": "Raise or Clear",
+  "headline": "Build from The Toll's spine — every ship makes one move on the course every heat — but swap its eight tag rules for four declared Drives, replace the unforecastable toll with a rising ante and a real purse spread, and let the ladder become a head start in a single final.",
+  "builtFrom": "interaction-first",
+  "proposals": [
+    {
+      "slug": "economy-first",
+      "title": "The Ante",
+      "oneLiner": "One currency — credits — is your money, your score, your run health and your power over the track: eight ships pay a rising entry fee each heat, buy parts from a shared board whose prices float with demand, buy the hazards that make the next course, and go out by bankruptcy rather than by a cut.",
+      "file": "proposals/economy-first.md"
+    },
+    {
+      "slug": "interaction-first",
+      "title": "The Toll",
+      "oneLiner": "Every course carries the same four hazards, every ship stakes one each heat so its size is the sum of the builds behind it, and the hazard pays its stakers for every point of hull it takes off the ships above them on the ladder.",
+      "file": "proposals/interaction-first.md"
+    },
+    {
+      "slug": "run-first",
+      "title": "The Rising Line",
+      "oneLiner": "Eight ships, seven races and a points line that rises until only a handful clear it — and every heat, all eight of them lay a card into the next course.",
+      "file": "proposals/run-first.md"
+    },
+    {
+      "slug": "build-first",
+      "title": "Ignition",
+      "oneLiner": "Every ship declares one of four Drives in the lobby, spends the season filling six slots with cells of its colour until the fourth cell ignites the Drive's rule, and the season ends in a single four-ship final where the ladder is converted into a head start.",
+      "file": "proposals/build-first.md"
+    }
+  ],
+  "reviews": [
+    {
+      "lens": "Fun — the auto-battler player",
+      "file": "reviews/fun.md",
+      "recommendedBase": "run-first",
+      "grafts": [
+        "Per-cell scaling, from build-first: every part of a tag improves that tag continuously (Brick −4% asteroid damage per grey part, Sling +0.04 black-hole pull per purple) on top of the rules at two and three, so no draft pick is ever dead and the build improves every heat rather than three times.",
+        "The head start final, from build-first, replacing double points: four ships, 40/25/12/0 ticks on 1,100, so six heats of ladder read off the starting grid with no arithmetic.",
+        "The rising ante, from economy-first (0, 1, 2, 3, 4, 6, 8 at the top of every garage), replacing the rising points line — escalating pressure that produces a decision every garage. Keep the fixed cut (bottom row after heats 3 to 6) as the only elimination and make a failed ante a forced scrap, not a death.",
+        "Floating prices, from economy-first: base +1 per copy bought to base+4, −1 per heat back toward base, printed beside copies left. The only mechanism in the round that makes another player's build change the cost of mine continuously.",
+        "Refit costs your draft pick, from economy-first, replacing the 5-credit refit — repairing should cost a part, not a number.",
+        "The purse spread from economy-first, 8/7/6/5/4/3/2/1: winning a heat has to pay, and three of the four proposals made it barely matter.",
+        "Mirror 3 as shield uptime (56% of a course) and Brick 3 as a continuous-damage-only cap reusing the existing isOneShot, both from interaction-first — the only counter to rock that is not more plating, and a Brick that a burst still kills.",
+        "A destroyed ship still gets credit for the card it laid, from interaction-first: your play outliving your ship, at no cost.",
+        "Declare a build direction at draft 2 rather than in the lobby, from build-first: keep the moment where you name what you are building, but after one course flown and one deal seen, so it is a read rather than a coin flip.",
+        "New, from none of them: one mid-season carousel heat where all eight ships choose simultaneously from eight cards, ties broken by ladder position from the bottom up. Every interaction in the round is a queue; the season needs one scene where the field reaches for the same thing at once."
+      ],
+      "scores": [
+        {
+          "slug": "run-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 5
+          },
+          "total": 32,
+          "bestIdea": "Frame — maximum hull that never fully comes back, one point lost per ten hull repaired, floored at 30 and halved by Brick 2. The F-Zero trade at season length in a single falling number, and the only run-health system here that makes a bad heat 2 still hurt in the final.",
+          "fatalFlaw": "Not fatal, but the weakest system is the one in the title. The rising line at 10/17/24/31 runs against means the author admits are a first guess; it takes two ships some heats and nobody others. \"Am I safe?\" becomes arithmetic against a moving target — anxiety without a decision — and a heat that cuts nobody is a heat with no stakes. The fixed cut it replaced was one sentence."
+        },
+        {
+          "slug": "interaction-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 2,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 5,
+            "buildable": 4,
+            "measurable": 5
+          },
+          "total": 32,
+          "bestIdea": "You may only stake a hazard you own at least one part of the tag for. A build's weapon and its armour are the same parts, so a rival's pips tell you what it is about to do to the course — one rule that makes builds legible, makes commitment pay twice, and stops anyone staking what they cannot survive.",
+          "fatalFlaw": "Its own risk section is right and it sinks the design as written: from heat 4 the field has the tag-count to max all four hazards, every course becomes the same course, and the interesting move becomes Hold — opting out for two credits — at exactly the heat the builds come online. And because socket order is level data, sequence is impossible: you can only turn an existing dial up, never put rock in front of a hole."
+        },
+        {
+          "slug": "build-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 3,
+            "interaction": 3,
+            "stakes": 4,
+            "legibility": 4,
+            "fit": 4,
+            "buildable": 4,
+            "measurable": 4
+          },
+          "total": 31,
+          "bestIdea": "The head start: the final is one race and the ladder becomes a starting stagger of 40, 25, 12 and 0 ticks on 1,150. Six heats of standings become a physical, beatable advantage readable off the grid with no arithmetic. Per-cell scaling — every cell of your colour improving the Drive continuously, so no pick is ever dead — is a very close second.",
+          "fatalFlaw": "The leader picks the next course, so one free tap can switch off another ship's entire build (a course with no black hole makes a Sling's four purple cells do nothing), and ships above the halfway line have no card to answer with. A build a rival can turn off and I cannot protect is the least fun thing proposed this round. It compounds with the Drive being declared in the lobby before any information exists — commitment without a decision."
+        },
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 3,
+            "tradeoffs": 5,
+            "interaction": 4,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 30,
+          "bestIdea": "Floating prices: every copy bought raises that part by 1 for everyone to a ceiling of base+4, and every heat every price drops 1 back toward base. Another player's build is what makes yours expensive, and \"Ion Thruster 5 (base 2), three left\" is counter-pick information delivered as a number on a row you already read.",
+          "fatalFlaw": "Two that compound. Credits are money, score, life and track power at once, so buying the part your build needs spends your score — and the triple final purse (24 down to 2) is a wider spread than the whole season's accumulated difference, so seven heats of economy are settled by one race. And the ante only bites ships that spent: by the proposal's own punchline a ship finishing eighth and buying nothing survives all seven antes, so elimination pressure lands exclusively on players who engaged."
+        }
+      ]
+    },
+    {
+      "lens": "engineering (fit and cost)",
+      "file": "reviews/engineering.md",
+      "recommendedBase": "interaction-first",
+      "grafts": [
+        "Frame, from run-first: max hull that floors at 30, 1 Frame per 10 hull repaired, 20 Frame for a crash. Replaces The Toll's repair-at-1-per-6 entirely. Settle the unspecified rule first - a hull-adding part raises Frame, and current hull never exceeds Frame.",
+        "Open Run as a sixth stake option, from run-first: it subtracts one from a socket's intensity, so the ship being targeted gets a defensive move. The stake enum goes five to six and the bot rule gains one branch - the cheapest large improvement available in the round.",
+        "The head start final, from build-first: replace double points with 40/25/12/0 ticks. Budget the same PR for fixing standings() and livePositions(), which both go silently wrong when ships start from different distances - a cost build-first does not admit.",
+        "The socket swap, promoted out of interaction-first's own risks section: the bottom two ships may each swap two adjacent sockets, buying back sequence (rock in front of a hole) for one bot rule and one index.",
+        "layCards(course, cards) -> Track as a signature, from build-first: keep season courses as immutable level data and make the track phase a pure function. Every proposal needs this shape; only build-first wrote it down.",
+        "economy-first's cost section as the template for next round's 'what it costs to build' - the only one that names functions, test files and a schedule in weeks without flattering itself.",
+        "Reject: the floating market (economy-first), the leader picking the course (build-first, confounds every per-tag win-rate assertion), and the collapsing corridor (build-first, a hazard the current renderer cannot draw).",
+        "Start the four floor PRs now, whatever wins - they are identical under all four proposals: Modifiers block read by race.ts; hazards.ts reading it with its four test files; ShipId widened to a string and field.ts taking N ships; per-placement damage on RaceState plus laidBy on HazardPlacement."
+      ],
+      "scores": [
+        {
+          "slug": "interaction-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 4,
+            "fit": 5,
+            "buildable": 4,
+            "measurable": 5
+          },
+          "total": 35,
+          "bestIdea": "Brick 3 capping continuous damage only, expressed through the existing isOneShot in hazards.ts - a rule that reads in one line, tests in one assertion, and is already half-written in the repo. Runner-up: a destroyed ship still collects the toll its hazard earned while it was flying.",
+          "fatalFlaw": ""
+        },
+        {
+          "slug": "run-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 5,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 5,
+            "buildable": 4,
+            "measurable": 5
+          },
+          "total": 35,
+          "bestIdea": "Open Run as a defuse: one card kind turns the track phase from a threat auction into a negotiation, gives the ship being targeted a defensive move, and costs one branch in slot resolution. Frame as run health is a close second.",
+          "fatalFlaw": ""
+        },
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 3,
+            "tradeoffs": 5,
+            "interaction": 4,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 5,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 31,
+          "bestIdea": "The ante schedule printed in the lobby. One rising number does the work of an economy, run health and elimination at once, and it is the only elimination rule in the round a player can see coming three heats out without a points calculation.",
+          "fatalFlaw": "Not fatal, but the floating market is the wrong first subsystem: the largest piece of new machinery in the round, invisible during a race, and the one thing whose balance cannot be measured by racing ships. Build it third, not first."
+        },
+        {
+          "slug": "build-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 4,
+            "interaction": 3,
+            "stakes": 5,
+            "legibility": 3,
+            "fit": 3,
+            "buildable": 2,
+            "measurable": 3
+          },
+          "total": 28,
+          "bestIdea": "The head start final: six heats of ladder converted into 40/25/12/0 ticks on an 1,150-tick course. One number in startRace, the ladder matters, the final is not a formality, and it reads instantly off the grid.",
+          "fatalFlaw": "Only the bottom half of the ladder touches the track. The brief calls the fourth gap the one that matters most; this answers it for four ships of eight and then writes a worked run in which the player, doing well, lays nothing. Combined with a first playable at eight PRs that explicitly excludes cards and course choice, it is the framework most likely to arrive at PR 8 and still not be a game."
+        }
+      ]
+    },
+    {
+      "lens": "Phone",
+      "file": "reviews/phone.md",
+      "recommendedBase": "economy-first",
+      "grafts": [
+        "From build-first: the Drive declared in the lobby. Turn the Ante's four tags into four Drives; cells are pure stat deltas with a colour, only the Drive changes a rule, ignition at four cells of your colour. Cuts eight threshold rules to four and makes the one you must know the one you chose on the first screen.",
+        "From build-first: the head-start final. One race, four ships, ladder converted to ticks up the course — but under the Ante the head start comes off the bank, 1 tick per 2 credits, capped. Replaces the triple final purse and needs no second scoring system.",
+        "From interaction-first: every solvent ship gets one move on the course screen every heat — buy your colour's hazard, or Hold for 2 credits. Fixes the Ante's hole where ships below two of a tag are scenery in heats 1 and 2.",
+        "From run-first: the counter ring in the lobby. Four colours in a circle, each arrow pointing at the colour that beats it. One picture that teaches the interaction game before heat 1.",
+        "From interaction-first: the toll's idea without its formula. If the hazard you bought did the most damage on the course this heat, take 3 credits, otherwise 1. Forecastable at the garage, checkable on results, same anti-snowball job.",
+        "Cut from the Ante: the fourteen-row board. Deal eight rows face up with one of every colour guaranteed (build-first's shape) and float prices only on those.",
+        "Cut from the Ante: one of the two opposite screen orders. Run board and course both in reverse ledger order — the tail buys its part first and its hazard last.",
+        "Cut from run-first: Frame itself. The Ante's hull — carries, never regenerates, and the only cure costs you a part — already delivers the F-Zero trade with one number.",
+        "Cut from build-first: the collapsing corridor. It is damage the current top-down view cannot explain; park it until a closer view exists."
+      ],
+      "scores": [
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 5,
+            "interaction": 4,
+            "stakes": 4,
+            "legibility": 4,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 5
+          },
+          "total": 33,
+          "bestIdea": "One currency for money, score, run health and track power. It collapses four systems into one number, and the number is one I already look at.",
+          "fatalFlaw": ""
+        },
+        {
+          "slug": "interaction-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 3,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 5,
+            "buildable": 4,
+            "measurable": 5
+          },
+          "total": 33,
+          "bestIdea": "Every ship stakes, every heat, with the same tap. One rule that puts the whole field on the track without adding a screen.",
+          "fatalFlaw": "The toll formula. It is the engine of the design and it is the one thing a phone player cannot hold, forecast or verify: one credit per fifteen hull, off ships above you, as the ladder stood when you staked, capped at five. Fix it with a flat rate and the design survives intact."
+        },
+        {
+          "slug": "run-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 5,
+            "stakes": 3,
+            "legibility": 2,
+            "fit": 3,
+            "buildable": 3,
+            "measurable": 5
+          },
+          "total": 29,
+          "bestIdea": "Frame. Maximum hull that decays and never fully returns is the cleanest answer to the brief's third gap that anyone wrote.",
+          "fatalFlaw": "Two health bars whose names mean the same thing in English, joined by a conversion rule, plus an eight-card tally across four slots between every heat, at twelve minutes a run. Frame's idea survives without Frame's second bar."
+        },
+        {
+          "slug": "build-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 4,
+            "interaction": 3,
+            "stakes": 4,
+            "legibility": 4,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 31,
+          "bestIdea": "Cells are pure stats; only the Drive changes a rule; you declare it in the lobby. Four rules a run instead of eight, and the one that matters is yours.",
+          "fatalFlaw": "The player with the best season gets the fewest decisions. Only the bottom half lays cards, so in its own worked run the player climbs above the line and lays nothing in heat 6. A game that gets quieter as I do better is a pace failure."
+        }
+      ]
+    }
+  ],
+  "synthesisFile": "synthesis.md",
+  "critiqueFile": "critique.md",
+  "questions": [
+    {
+      "question": "Are the seven rivals bots, recorded ghosts of earlier runs, or live players?",
+      "why": "Every decision in this framework is a recorded input, so all three work — but a ghost needs a store, a live player needs timers on two screens, and the lobby, the Draft and the harness all change with the answer. Every proposal asked this and the round-01 critique demanded it be put to you rather than settled in a rejection note."
+    },
+    {
+      "question": "Is the Drive declared at garage 2, after one heat flown and one deal seen, or in the lobby before anything is known?",
+      "why": "Garage 2 makes commitment a read; the lobby makes it a coin flip you then grind out. It also decides whether heat 1 has any colours on the ladder at all."
+    },
+    {
+      "question": "Does a raise cost 1 credit?",
+      "why": "The credit is what stops every socket sitting at intensity 4 from heat 4 onward — the saturation failure the fun review called The Toll's fatal flaw. It is also a tax falling hardest on the ships at the bottom, who most need to act."
+    },
+    {
+      "question": "Is Clear free, or does it cost 1 like a raise?",
+      "why": "Free means the leader gets a defuse every heat for nothing, which is the reward for leading. At 1 credit the ship being targeted has to pay to answer, which makes recovery dearer."
+    },
+    {
+      "question": "Should worst-placed move first on both screens — the Board and the Draft?",
+      "why": "One order is legible on a phone and means leading buys the last word on the course but costs the first pick of the cards. Leader-first at the Board is a snowball; two opposite orders is the thing the phone reviewer said they would get wrong once a run."
+    },
+    {
+      "question": "Is the head start of 40, 25, 12 and 0 ticks the whole final, or does the final also carry points?",
+      "why": "The stagger reads off the grid with no arithmetic, which is why all three reviewers wanted it — but it means six heats of accumulated points stop mattering the moment the final starts."
+    },
+    {
+      "question": "Six cell slots with ignition at four, or five with ignition at three?",
+      "why": "Three of five ignites a heat earlier and leaves one slot to pivot with; four of six pushes the payoff to garage 5 or 6 for most ships and leaves two slots for what you lack."
+    },
+    {
+      "question": "Eight ships or six?",
+      "why": "Eight is the field four cuts need and the arithmetic behind the purse; six is far easier to draw as lanes on a phone."
+    },
+    {
+      "question": "Is the solar flare in the first playable?",
+      "why": "It is one hazard function and one test, and it is Torch's socket — without it the counter ring has a hole. Against that, it is a fifth thing for a new player to learn."
+    },
+    {
+      "question": "Names: Torch, Keel, Ward and Sling for the Drives; the belt, the flare, the burst and the hole for the sockets; and Vane for the Sling rival.",
+      "why": "Naming is taste, and the one structural constraint is that a Drive and a ship must never share a name — which is why the Sling rival is Vane rather than Keel."
+    }
+  ],
+  "nextRound": "Take four things as fixed — seven races with a cut after heats 3 to 6, four Drives with pure-stat cells and ignition at four, one move on the course for every ship every heat, and the rising ante — then develop three and challenge two. Develop the Board as a screen and as a bot: the tap flow for eight ships, what intensity pips look like at 1 and at 4, the bot stake rule as pseudocode, and the anti-saturation test written as an assertion with a number in it, plus one worked heat where the leader's clear changes who wins. Develop the twelve cells and the four per-cell curves with real numbers, and say what an ignited Drive is worth in ticks on a course carrying its own socket at 4 against the same course at 1. Develop the seven courses as level data: socket order, segment lengths, and how a course is authored so the season escalates without anyone choosing it. Then challenge the ante — a rising tax on the wallet is one way to escalate, harder courses is another, and a proposal that puts the escalation on the track and leaves the economy flat should say what replaces the forced scrap. And challenge raise-or-clear itself: one credit and a cap at 4 is a first guess, so a proposal that thinks the phase needs a second verb (a swap, a wipe that empties a socket, or a raise aimed at one ship) should price it in taps, in bot rules, and in what a phone player has to hold.",
+  "gaps": [
+    "It never says whether intensity persists across heats, and the saturation answer fails either way.",
+    "Three of the four ignitions do not survive contact with tuning.ts (Ward is permanent, Torch is five boosts, Keel is inert).",
+    "The credit table cannot be produced by the stated income rules — garage 4 needs a purse of 11 against a maximum of 8.",
+    "Nine modifiers, not eight, and \"each Drive owns exactly two numbers\" is false for Sling.",
+    "Intensity as a placement count breaks DESIGN.md's rule that a placement lies entirely inside its segment.",
+    "Grey cells are a cheaper repair than the patch, which undoes hull as run health.",
+    "The counter ring is a ring of offence; being targeted still has no build answer that is not the attacker's own colour.",
+    "The worked run's final points are impossible — the ceiling is 41 and the standings say 44.",
+    "The Draft is still not specified, which is what round-01's critique asked for in full.",
+    "The cost section omits the lobby, the seven courses and actives.ts, and contradicts itself on pilot.ts.",
+    "Whether the rivals are bots decides whether the Board is interaction, and it is left as owner question 1.",
+    "The forced scrap can fail to pay, and the escape threshold is quoted as 25 when the constant is 15."
+  ]
+}

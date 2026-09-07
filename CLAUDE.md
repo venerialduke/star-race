@@ -87,6 +87,19 @@ and are append-only: never overwrite a round folder or edit an earlier ledger
 section. `npm run design-page -- --round N` renders a round into
 `public/design/`, which the Pages site serves at `/star-race/design/`.
 
+Running a round, and the two things that have gone wrong doing it:
+
+- **Pass the round as an object**: `Workflow({ name: 'framework-round', args:
+{ round: 2 } })`. A string like `"round 2"` is not parsed, the script falls
+  back to round 1, and the append-only guard stops it — harmless, but it wastes
+  a launch.
+- **The owner is rarely at the desk.** A round has to run start to finish
+  without a permission dialog, so everything it needs is allowed in
+  `.claude/settings.json` (committed, so it works on any machine — not
+  `settings.local.json`). Prefer Edit and Write over shelling out to an
+  interpreter to rewrite files: interpreter calls are the one thing that should
+  keep prompting, and using them for edits turns a quiet run into a stalled one.
+
 ## Milestones
 
 - S1 (done when: Pages URL shows a moving dot, CI green): scaffold, canvas,

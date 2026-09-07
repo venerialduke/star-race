@@ -1,0 +1,19 @@
+# Line endings.
+#
+# The repo is worked on from Windows, where git's autocrlf hands files to tools
+# with CRLF. That is fine for most things and not fine for the workflow scripts:
+# the permission dialog that approves a workflow refuses a script containing
+# carriage returns, so a round would not start at all until the file was
+# converted by hand. Pin the files that have to be LF, and normalise the rest so
+# the repo stays consistent whoever checks it out.
+
+* text=auto
+
+.claude/workflows/*.js text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.yml text eol=lf

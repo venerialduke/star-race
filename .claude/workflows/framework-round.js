@@ -20,12 +20,46 @@ export const meta = {
   ],
 };
 
-const round = Number(args?.round ?? 1);
+// Arguments arrive in whatever shape the caller managed: an object, a JSON
+// string, or prose like "round 2 resume". Every launch of this workflow that
+// has failed so far failed here rather than in the design work — silently
+// running as round 1 and then being stopped by the append-only guard — so read
+// all three shapes and say plainly what was understood.
+function readArgs(raw) {
+  if (raw && typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    const text = raw.trim();
+    if (text.startsWith('{')) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        // Fall through to reading it as prose.
+      }
+    }
+    const number = text.match(/(\d+)/);
+    return {
+      round: number ? Number(number[1]) : undefined,
+      resume: /\bresume\b/i.test(text),
+    };
+  }
+  return {};
+}
+const parsedArgs = readArgs(args);
+
+const round = Number(parsedArgs.round ?? 1);
+// Finish a round that was interrupted after its proposals were written, rather
+// than starting a new one. See the preflight below.
+const resume = parsedArgs.resume === true;
 if (!Number.isInteger(round) || round < 1)
-  throw new Error(`round must be a positive integer, got ${args?.round}`);
+  throw new Error(
+    `round must be a positive integer, got ${JSON.stringify(args)} (read as ${JSON.stringify(parsedArgs)})`,
+  );
 const pad = (n) => String(n).padStart(2, '0');
 const dir = `design/rounds/round-${pad(round)}`;
 const prev = round > 1 ? `design/rounds/round-${pad(round - 1)}` : null;
+log(
+  `Arguments ${JSON.stringify(args)} read as round ${round}${resume ? ', resuming' : ''}`,
+);
 
 const SECTIONS = [
   '## Premise',
@@ -89,31 +123,65 @@ const LENSES = [
 
 // Rounds are append-only. Never write into a folder that already holds a
 // round: the record of what was considered is the point of keeping them.
+//
+// The exception is resuming. A round is nine agents and can be interrupted
+// half way — the proposals written, nothing reviewed. Passing { resume: true }
+// keeps the proposals that exist and carries on from the reviews, which is not
+// overwriting anything: it is finishing what was started. A round that already
+// has a synthesis is done, and refuses either way.
 const PREFLIGHT_SCHEMA = {
   type: 'object',
   properties: {
     proposalsExist: { type: 'boolean' },
+    synthesisExists: { type: 'boolean' },
     found: { type: 'array', items: { type: 'string' } },
   },
-  required: ['proposalsExist', 'found'],
+  required: ['proposalsExist', 'synthesisExists', 'found'],
+};
+const RESUME_SCHEMA = {
+  type: 'object',
+  properties: {
+    proposals: { type: 'array', items: PROPOSAL_SCHEMA },
+  },
+  required: ['proposals'],
 };
 phase('Propose');
 const preflight = await agent(
-  `List the files under ${dir}/proposals and ${dir}/reviews, and check whether ${dir}/synthesis.md exists. Do not create or change anything. Return proposalsExist=true if ANY .md file exists in either folder or synthesis.md exists, and the list of what you found.`,
+  `List the files under ${dir}/proposals and ${dir}/reviews, and check whether ${dir}/synthesis.md exists. Do not create or change anything. Return proposalsExist=true if ANY .md file exists in either folder, synthesisExists=true if ${dir}/synthesis.md exists, and the list of what you found.`,
   { label: 'preflight', phase: 'Propose', schema: PREFLIGHT_SCHEMA, effort: 'low' },
 );
-if (preflight?.proposalsExist) {
+if (preflight?.synthesisExists) {
   throw new Error(
-    `${dir} already holds a round (${preflight.found.join(', ')}). Rounds are append-only: run round ${round + 1} instead.`,
+    `${dir} already has a synthesis. Rounds are append-only: run round ${round + 1} instead.`,
   );
 }
-log(`Round ${round}: four proposers`);
-const proposals = (
-  await parallel(
-    LENSES.map(
-      (l, i) => () =>
-        agent(
-          `${CONTEXT}
+if (preflight?.proposalsExist && !resume) {
+  throw new Error(
+    `${dir} already holds proposals (${preflight.found.join(', ')}). Rounds are append-only: run round ${round + 1} instead, or pass { round: ${round}, resume: true } to finish this one.`,
+  );
+}
+
+let proposals;
+if (resume && preflight?.proposalsExist) {
+  log(`Round ${round}: resuming from the proposals already on disk`);
+  const recovered = await agent(
+    `Read every .md file under ${dir}/proposals. For each one return its slug (the file name without .md), its title (the "# " line), a one-sentence pitch drawn from its Premise, and its path (${dir}/proposals/<slug>.md). Change nothing.`,
+    {
+      label: 'recover-proposals',
+      phase: 'Propose',
+      schema: RESUME_SCHEMA,
+      effort: 'low',
+    },
+  );
+  proposals = (recovered?.proposals ?? []).filter(Boolean);
+} else {
+  log(`Round ${round}: four proposers`);
+  proposals = (
+    await parallel(
+      LENSES.map(
+        (l, i) => () =>
+          agent(
+            `${CONTEXT}
 You are proposer ${i + 1} of 4. Your lens: ${l.lens}
 The lens is where you start, not where you stop: the brief lists everything a proposal has to deliver, and you deliver all of it. Be opinionated. Pick one design and commit to it — the reviewers will merge, that is their job, not yours. Make it the game you would actually want to play on a phone for twenty minutes.
 
@@ -123,12 +191,13 @@ ${SECTIONS.join('\n')}
 "A worked run" walks eight players (or your number) from the first decision to the final standings, calling out the decisions and one moment where one player's choice changed another player's race. "What it costs to build" says which of the current sim files survive, which change, what is new, and guesses the number of one-session PRs. "What it needs from the owner" lists the taste calls, as questions.
 
 When the file is written, return its slug (${l.slug}), title, one-line pitch and path.`,
-          { label: `propose:${l.slug}`, phase: 'Propose', schema: PROPOSAL_SCHEMA },
-        ),
-    ),
-  )
-).filter(Boolean);
-log(`${proposals.length} proposals written`);
+            { label: `propose:${l.slug}`, phase: 'Propose', schema: PROPOSAL_SCHEMA },
+          ),
+      ),
+    )
+  ).filter(Boolean);
+}
+log(`${proposals.length} proposals in hand`);
 if (proposals.length === 0) throw new Error('No proposals were written.');
 
 const REVIEW_SCHEMA = {

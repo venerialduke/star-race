@@ -1,0 +1,319 @@
+{
+  "round": 3,
+  "date": "2026-09-08",
+  "title": "The Ledger and the Card",
+  "headline": "Three ships, one course, and every credit outside the purse sitting in a shared pool: all three pilots declare a route blind, the declarations are revealed before anyone commits, and then one bar — charge — is at once your speed, your shields, your ammunition and your income.",
+  "builtFrom": "economy-first",
+  "proposals": [
+    {
+      "slug": "ship-first",
+      "title": "The Flight Card",
+      "oneLiner": "You do not fly the ship: you build hardware that sets ceilings and play a free flight card each heat that says how close to those ceilings the ship will run.",
+      "file": "proposals/ship-first.md"
+    },
+    {
+      "slug": "track-first",
+      "title": "The Line and the Wide",
+      "oneLiner": "The line is speed, the wide is money, and you cannot be in both places — one circuit that grows for five phases, where the course is the opponent and rivals are weather on it.",
+      "file": "proposals/track-first.md"
+    },
+    {
+      "slug": "economy-first",
+      "title": "The Ledger and the Line",
+      "oneLiner": "Three ships fly a loop, one wins, all three get paid — and everything except the purse sits in a shared pool that pays you less the more rivals chase it.",
+      "file": "proposals/economy-first.md"
+    },
+    {
+      "slug": "season-first",
+      "title": "Par and Purse",
+      "oneLiner": "Twelve pilots, nine heats, and you never score for placing: you score for how far behind the reference line you finish, the reference being the winner or a par ghost, whichever crosses first.",
+      "file": "proposals/season-first.md"
+    }
+  ],
+  "reviews": [
+    {
+      "lens": "Fun — the build-and-watch player",
+      "file": "reviews/fun.md",
+      "recommendedBase": "economy-first",
+      "grafts": [
+        "From ship-first: the flight card, and the overdrive notch drawn on the slider, so hardware sets a ceiling and a free per-heat dial says how close to run to it.",
+        "From season-first: the margin scoring, max(0, S − ticks back), which is the best scoring in the round and not close.",
+        "From season-first: the purse card revealed during the build minute — randomness that changes what you build rather than what happens to you.",
+        "From track-first: route declarations revealed before placement, so the shared pool becomes a thing you play against rather than find out about afterwards.",
+        "Cut the seat rotation: three courses in one minute makes the race unreadable."
+      ],
+      "scores": [
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 5,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 4,
+            "measurable": 5
+          },
+          "total": 34,
+          "bestIdea": "Banked charge is simultaneously your income, your top speed and your shields — one bar doing four jobs, so every tap is money you decided not to bank.",
+          "fatalFlaw": "None fatal. The nearest thing: the humanoid's free read — naming a rival's chosen line before you lock yours — is enormous in a game whose entire bet is which pool is empty, and it is bundled with the default crew."
+        },
+        {
+          "slug": "season-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 4,
+            "stakes": 5,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 5
+          },
+          "total": 32,
+          "bestIdea": "The purse card, revealed during the build minute: it gives each heat a question the player answers with the build rather than a thing that happens to them mid-race.",
+          "fatalFlaw": "Writs and par are on a collision course and the proposal has not noticed. The trailing pilot hosts, and a Debris Drift writ slows every ship off the golden path — including the host — so par on a modified course is not par."
+        },
+        {
+          "slug": "track-first",
+          "criteria": {
+            "buildFantasy": 3,
+            "tradeoffs": 5,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 31,
+          "bestIdea": "Reaction delay lands on the player's taps, not just on the ship: go faster and your own inputs arrive late, which is the seed's time-dilation idea made into something a thumb can feel.",
+          "fatalFlaw": "Two things bleed. The build is ratings rather than objects, so nothing on the ship has a face; and if the wide band pays even slightly too much, everybody farms wide and the race stops being a race."
+        },
+        {
+          "slug": "ship-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 5,
+            "interaction": 3,
+            "stakes": 3,
+            "legibility": 3,
+            "fit": 4,
+            "buildable": 3,
+            "measurable": 4
+          },
+          "total": 30,
+          "bestIdea": "The chain from mass to acceleration to G-load to what the crew can still do — the seed's gravity idea turned into a real cost that a player can plan around.",
+          "fatalFlaw": "The shared pool rule inverts the seed. Paying 100/60/30 by crossing order means the first ship through loses nothing, so the economy rewards pace twice and there is no public bet about where the money is."
+        }
+      ]
+    },
+    {
+      "lens": "Phone — legibility and pace",
+      "file": "reviews/phone.md",
+      "recommendedBase": "economy-first",
+      "grafts": [
+        "From track-first: route declarations revealed before placement — the cheapest interaction mechanic in the round, one tap.",
+        "From ship-first: the hardware/card split with ceilings drawn as notches on the sliders, so a plan three heats in the making fits in a ten-second decision.",
+        "From season-first: the purse card, because randomness that changes what you build is the right shape for a deterministic game.",
+        "Cut the seat rotation — lap 1 on A's course, lap 2 on B's, lap 3 on C's is three tracks in one minute.",
+        "Cut nav-as-planner: when I lose, 'the nav decided something' is not an explanation any screen can show me."
+      ],
+      "scores": [
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 5,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 3,
+            "fit": 5,
+            "buildable": 5,
+            "measurable": 5
+          },
+          "total": 36,
+          "bestIdea": "Banked charge is income and spent charge is speed and shields. One bar, four jobs — mid-race the player watches that bar and decides whether this heat buys a place or a payday.",
+          "fatalFlaw": "None fatal, but the seat rotation is closest. Three courses in one minute makes tolls resolve cleanly and makes the race unreadable. Cut it and race one course."
+        },
+        {
+          "slug": "track-first",
+          "criteria": {
+            "buildFantasy": 3,
+            "tradeoffs": 5,
+            "interaction": 5,
+            "stakes": 4,
+            "legibility": 4,
+            "fit": 5,
+            "buildable": 3,
+            "measurable": 5
+          },
+          "total": 34,
+          "bestIdea": "Route declarations revealed before placement. It turns the shared pool from something you discover afterwards into something you play against, and it costs one tap.",
+          "fatalFlaw": "Nav does too much — it sets the plan, smooths acceleration, dodges hazards and drives home crewless. When I lose, the honest explanation is 'the nav decided something', and no screen can show me that."
+        },
+        {
+          "slug": "season-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 5,
+            "interaction": 5,
+            "stakes": 5,
+            "legibility": 2,
+            "fit": 5,
+            "buildable": 2,
+            "measurable": 5
+          },
+          "total": 33,
+          "bestIdea": "The purse card shown during the build minute: randomness that changes what you build rather than what happens to you, which is the correct shape for a deterministic game.",
+          "fatalFlaw": "The par ghost. The whole scoring spine hangs on a published par time, while the same design has the trailing pilot host on a course they have permanently modified."
+        },
+        {
+          "slug": "ship-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 4,
+            "interaction": 4,
+            "stakes": 3,
+            "legibility": 4,
+            "fit": 5,
+            "buildable": 3,
+            "measurable": 5
+          },
+          "total": 33,
+          "bestIdea": "The hardware/card split, with hardware ceilings drawn as notches on the card's sliders — a plan three heats in the making, decided in ten seconds at a bus stop.",
+          "fatalFlaw": "Nothing happens between the lights and the flag. The card is set in the garage, there is no declaration step and no read on a rival's intent."
+        }
+      ]
+    },
+    {
+      "lens": "Systems — rules, numbers and scope",
+      "file": "reviews/systems.md",
+      "recommendedBase": "track-first",
+      "grafts": [
+        "Graft the flight card over nav-as-planner: a dial the player sets beats a planner that decides for them.",
+        "Graft season-first's season whole — nine heats, twelve into nine into six into three — because the margin rule needs heats to compound across.",
+        "Graft economy-first's one-line pool rule and use it everywhere: your cut is the pool times your share of what the field harvested from it.",
+        "Take season-first's reference line: the winner or a par ghost, whichever crosses first."
+      ],
+      "scores": [
+        {
+          "slug": "track-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 5,
+            "interaction": 5,
+            "stakes": 3,
+            "legibility": 5,
+            "fit": 4,
+            "buildable": 2,
+            "measurable": 5
+          },
+          "total": 33,
+          "bestIdea": "Reaction delay reaching the player's thumb: delay = round(12 × (speed/100)² ÷ handling_factor), and your taps land that many ticks late. Both worked examples check out.",
+          "fatalFlaw": "Not fatal, but the season is too thin to carry the scoring rule it is built on. Five heats with three cuts of three means the margin formula never gets to compound."
+        },
+        {
+          "slug": "economy-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 5,
+            "stakes": 3,
+            "legibility": 3,
+            "fit": 3,
+            "buildable": 4,
+            "measurable": 4
+          },
+          "total": 30,
+          "bestIdea": "The one-line pool rule: your cut is the pool times your share of what the field harvested from it. Alone you take all of it; three ships in evenly take a third each. It resolves any number of routes with any number of participants.",
+          "fatalFlaw": "The throttle dial does not do what the prose says. Lap time is 1200 − 105t, so throttle 5 saves 420 ticks a lap over throttle 1, while the grip penalty costs far less — the dial has one right setting."
+        },
+        {
+          "slug": "season-first",
+          "criteria": {
+            "buildFantasy": 4,
+            "tradeoffs": 4,
+            "interaction": 4,
+            "stakes": 5,
+            "legibility": 3,
+            "fit": 3,
+            "buildable": 2,
+            "measurable": 4
+          },
+          "total": 29,
+          "bestIdea": "The reference line is the winner or a par ghost, whichever crosses first. That one clause kills the obvious exploit in margin scoring — a slow heat where everyone stays close and everyone banks — with no extra system.",
+          "fatalFlaw": "None fatal, but two things need fixing before a line is written: the corner check must define v, and strain is binary rather than graded."
+        },
+        {
+          "slug": "ship-first",
+          "criteria": {
+            "buildFantasy": 5,
+            "tradeoffs": 2,
+            "interaction": 4,
+            "stakes": 3,
+            "legibility": 3,
+            "fit": 2,
+            "buildable": 3,
+            "measurable": 5
+          },
+          "total": 27,
+          "bestIdea": "The overdrive notch: a dial is overdriven when it exceeds a hardware number, the garage draws that number on the slider, and going past it is a seeded roll a humanoid can pass and a robot always fails.",
+          "fatalFlaw": "There is no speed model — no drag, no top speed, no map from thrust to velocity — and v appears in the grip inequality that every corner, every dial and the whole track section depends on."
+        }
+      ]
+    }
+  ],
+  "synthesisFile": "synthesis.md",
+  "critiqueFile": "critique.md",
+  "questions": [
+    {
+      "question": "Is cutting the bounty economy right, or does aggression need to be a route somebody builds for?",
+      "why": "If it does, the design regains a pool, a wanted counter and a cutter, and legibility pays for all three."
+    },
+    {
+      "question": "Should the purse card change S and the split, or only the split?",
+      "why": "Two numbers sharpen each week's question; one keeps the arithmetic identical."
+    },
+    {
+      "question": "Is a par ghost worth explaining?",
+      "why": "It stops slow heats being farmable and gives the harness an absolute yardstick, for one more number on the screen."
+    },
+    {
+      "question": "Three laps in Stage 1, or two everywhere?",
+      "why": "Three is where a mid-race read is possible; two everywhere makes every heat the same shape."
+    },
+    {
+      "question": "Should the flight card be visible to rivals?",
+      "why": "Hidden cards make the declaration a real bluff; visible cards may make the grid solvable."
+    },
+    {
+      "question": "Is the Sealed Hull a real archetype or a fourth thing to explain?",
+      "why": "It is the seed's crewless ship taken seriously, and a build most players will never pick."
+    },
+    {
+      "question": "Does the bottom third getting two mod slots feel like help or charity?",
+      "why": "It is the whole recovery lever besides the dropped heat."
+    },
+    {
+      "question": "Nine heats and twenty minutes, or six and thirteen?",
+      "why": "The margin rule needs heats to compound across; a phone session may not have them."
+    }
+  ],
+  "nextRound": "Two jobs. Develop the garage: this framework has a clean race and a clean season and the thinnest treatment of the thing you do between them — six mounts and four hulls is not a build space with directions in it, so the next round should propose the parts list, the price curve, and three or four archetypes a harness can play against each other, and say what a player buys in Stage 1 that only pays in Stage 3. And challenge the declaration: every reviewer loved declare-reveal-place, and it is the one mechanic here nobody has stress-tested. Is Clean a real third option or a trap? Is the heat solved at the reveal? The number to measure first is the dark pool at 150 against solar at 120 — if Wide pays better than winning, the race stops being a race.",
+  "gaps": [
+    "Nothing in the rules can kill a berth, so the whole crew layer has no cause",
+    "The overdrive roll has no number and no failure effect, which is where the crew fork was supposed to live",
+    "The one-line pool rule pays full price for one well, so the wide route rewards minimum effort",
+    "Entry 10 dominates on time, reproducing the exact flaw the synthesis says it fixed",
+    "Three of the four taps have no stated effect, and \"pre-set taps\" quietly deletes the gravity tax",
+    "Light is defined three different ways and the worked run uses the third",
+    "Clean pays 60 flat against a three-way solar split of 40, and no payoff matrix is written",
+    "Mods saturate the ring and the recovery lever bills the poorest player",
+    "\"Nine heats each, about twenty minutes\" is true only for the winner, and the document never says what happens when you are cut",
+    "The par ghost has no formula and never appears in the worked run",
+    "Shields have no source, Thrust does not exist, and there is no starting bankroll",
+    "No first playable, and the matching rule does not produce the property claimed for it"
+  ]
+}

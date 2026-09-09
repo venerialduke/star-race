@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1730">
+<title>Star Race Framework Round 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+:root {
+  --ground: #f4efe2;
+  --surface: #fbf8f0;
+  --ink: #17203a;
+  --ink-soft: #4d5a7a;
+  --rule: #d6cdb6;
+  --accent: #b46a0c;
+  --accent-ink: #7a4706;
+  --good: #2f7a3e;
+  --bad: #b2372e;
+  --chip: #e9dcc0;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1730;
+    --surface: #152140;
+    --ink: #e9e4d6;
+    --ink-soft: #9aabcb;
+    --rule: #2c3a5e;
+    --accent: #f2a93b;
+    --accent-ink: #f2a93b;
+    --good: #7fd48c;
+    --bad: #e2685f;
+    --chip: #253359;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0d1730;
+  --surface: #152140;
+  --ink: #e9e4d6;
+  --ink-soft: #9aabcb;
+  --rule: #2c3a5e;
+  --accent: #f2a93b;
+  --accent-ink: #f2a93b;
+  --good: #7fd48c;
+  --bad: #e2685f;
+  --chip: #253359;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 17px/1.55 "Source Serif 4", Georgia, "Times New Roman", serif;
+  -webkit-text-size-adjust: 100%;
+}
+.page { max-width: 44rem; margin: 0 auto; padding: 0 20px 96px; }
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.masthead { padding: 40px 0 24px; border-bottom: 2px solid var(--ink); }
+.eyebrow {
+  font: 600 12px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+h1 {
+  font: 700 clamp(30px, 7vw, 44px)/1.05 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.01em; margin: 14px 0 12px; text-wrap: balance;
+}
+.headline { font-size: 20px; line-height: 1.4; margin: 0; color: var(--ink); text-wrap: balance; }
+
+nav.toc {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--ground); border-bottom: 1px solid var(--rule);
+  margin: 0 -20px; padding: 10px 20px;
+  display: flex; gap: 6px 16px; overflow-x: auto; white-space: nowrap;
+  font: 500 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.04em;
+}
+nav.toc a { text-decoration: none; color: var(--ink-soft); padding: 4px 0; }
+nav.toc a:hover { color: var(--accent-ink); }
+
+section { padding-top: 40px; }
+h2 {
+  font: 700 24px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+}
+h3 { font: 700 20px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 32px 0 8px; }
+h4 { font: 600 17px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 24px 0 6px; }
+h5 { font: 600 15px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 18px 0 4px; color: var(--ink-soft); }
+p { margin: 0 0 1em; }
+ul, ol { padding-left: 1.4em; margin: 0 0 1em; }
+li { margin-bottom: 0.35em; }
+blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--accent); color: var(--ink-soft); }
+code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
+pre code { background: none; padding: 0; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 8px; margin: 20px 0; overflow-x: auto; text-align: center; font-family: inherit; line-height: normal; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+pre.mermaid:not([data-processed]) { font: 0.85em "JetBrains Mono", ui-monospace, monospace; text-align: left; white-space: pre; color: var(--ink-soft); }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+.scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { font: 600 12px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+table.scores td { text-align: right; font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 14px; }
+table.scores td.mean { font-weight: 700; }
+table.scores td.hi { color: var(--good); font-weight: 700; }
+table.scores td.lo { color: var(--bad); font-weight: 700; }
+table.scores th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.caption { font-size: 14px; color: var(--ink-soft); margin: 0 0 20px; }
+.chip {
+  display: inline-block; font: 600 11px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-ink);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 4px 8px; margin-left: 8px; vertical-align: middle;
+}
+
+.questions { counter-reset: q; list-style: none; padding: 0; }
+.questions li { counter-increment: q; display: grid; grid-template-columns: 2.2rem 1fr; gap: 0 8px; padding: 14px 0; border-bottom: 1px solid var(--rule); margin: 0; }
+.questions li::before { content: counter(q, decimal-leading-zero); font: 700 18px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--accent); }
+.questions .q { font-weight: 600; }
+.questions .why { grid-column: 2; color: var(--ink-soft); font-size: 15px; }
+
+details { border-top: 1px solid var(--rule); }
+details:last-of-type { border-bottom: 1px solid var(--rule); }
+summary {
+  cursor: pointer; padding: 16px 0; list-style: none;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline;
+}
+summary::-webkit-details-marker { display: none; }
+summary .t { font: 700 19px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+summary .s { grid-column: 1; color: var(--ink-soft); font-size: 15px; }
+summary .arrow { font: 600 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; color: var(--accent-ink); text-transform: uppercase; }
+details[open] summary .arrow::after { content: "Close"; }
+details:not([open]) summary .arrow::after { content: "Read"; }
+details .body { padding: 0 0 24px; }
+details .body > h2:first-child { margin-top: 0; }
+
+.synthesis { background: var(--surface); border: 1px solid var(--rule); padding: 20px; margin: 0 -20px; }
+@media (min-width: 720px) { .synthesis { margin: 0; padding: 32px; } }
+
+.gaps { padding-left: 1.4em; }
+.gaps li { margin-bottom: 0.6em; }
+.feedback-how { background: var(--surface); border: 1px dashed var(--rule); padding: 16px 20px; }
+.feedback-how code { white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-soft); }
+</style>
+
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <div class="eyebrow"><span>Star Race</span><span>Sharpen round 4</span><span>2026-09-09</span></div>
+  <h1>Fast Ships Answer Late</h1>
+  <p class="headline">The faster a ship goes the later your taps land, so every decision is about when to leave the golden path where the speed and the energy are.</p>
+</header>
+<nav class="toc">
+  <a href="#synthesis">The design</a>
+  <a href="#decisions">Your decisions</a>
+  <a href="#notes">Notes</a>
+  <a href="#feedback">Reply</a>
+  <a href="ledger.html">Ledger</a>
+</nav>
+
+<section id="synthesis">
+  <h2>The design</h2>
+  <div class="synthesis"><h2>Fast Ships Answer Late</h2>
+<h3>The idea, in one paragraph</h3>
+<p>A ship that is going fast has less time to react. That is the seed&#39;s first line
+and it is the whole game, so make the player feel it directly: <strong>an order you
+tap lands late, and how late depends on how fast you are going.</strong> Throttle up
+and your ship is quicker but your hands are further from it. Burn hard and the
+gravity presses your crew until they can barely act at all. The golden path
+running down the course is where speed and energy are, so everybody wants to be
+on it, and the interesting decisions are all about when to leave it — for a dark
+matter pocket, for a shot at a rival, for a line a better navigation system
+could hold and yours maybe cannot. Three ships to a heat, a season of stages, a
+track that grows and only half-tells you how. You build between races. During a
+race you tap about five times.</p>
+<h3>The loop</h3>
+<pre class="mermaid">flowchart TD
+  Shop[Shop: parts, crew, fixtures] --&gt;|credits spent| Fit[Fit ship for this stage]
+  Fit --&gt; Board[Pre-race board: place 2 fixtures, declare Long Line]
+  Board --&gt; Heat[Heat: 3 ships, ~2 minutes, ~5 taps]
+  Heat --&gt;|finish order + margin| Points[Stage points]
+  Heat --&gt;|bounties, collectors, purse| Credits[Credits]
+  Heat --&gt;|hits landed| Wanted[Wanted status]
+  Credits --&gt; Shop
+  Wanted --&gt;|carries into next heat| Board
+  Points --&gt; Cut{Stage cut?}
+  Cut --&gt;|survive| Grow[Track grows: junctions open]
+  Grow --&gt; Shop
+  Cut --&gt;|bottom three| Out[Eliminated]</pre><h3>The systems</h3>
+<p><strong>The ship.</strong> Six numbers, each 1–10, bought with credits. <em>Thrust</em> sets top
+speed. <em>Handling</em> and <em>Navigation</em> both buy back reaction lag, and Nav also
+plans the line. <em>Hull</em> is 100 points of structure. <em>Shields</em> are 60 points that
+regenerate 1 per 20 ticks and take damage first. <em>Crew</em> is 60 points of people.
+The sim runs at 30 ticks a second.</p>
+<p><strong>Reaction lag.</strong> The number that matters. When you tap an order, it executes
+after a delay:</p>
+<p><code>lag = 8 + 30·(v/vmax)² − 2·Handling − 1·Nav</code>, floor 6 ticks.</p>
+<p>At sixty percent throttle with average parts that is 6 ticks, a fifth of a
+second — the tap feels instant. Flat out it is 23 ticks, three quarters of a
+second, and you are aiming your taps ahead of where the ship is. Quadratic, as
+the notes say, and flavoured as dilation: the fast ship&#39;s clock is not yours.</p>
+<p><strong>Gravity.</strong> Acceleration, not speed, makes gravity. While the ship is burning
+above 60% of maximum acceleration, a humanoid crew&#39;s orders cost +50% lag and
+the crew loses 1 health per 30 ticks. Two minutes of hard burn is 60 points and
+a dead crew, so a full-burn build has to be a robot build or a short one.</p>
+<p><strong>Crew.</strong> Humanoid or robot. Robots ignore gravity entirely and have 90 health
+instead of 60. Humanoids have 60 health and <em>improvise</em>: any order that would
+land after a hazard has already hit has a 35% seeded chance to land in time
+anyway. That is the notes&#39; luck, made into one number a bot can measure.</p>
+<p><strong>When the crew dies</strong> the ship keeps racing and you stop tapping. Navigation
+flies it home: Nav 7+ holds the golden path and loses nothing but your actives;
+Nav 3 or less drifts wide and bleeds about 1.5 seconds a lap. A cheap nav system
+is fine until the moment it is the only thing left.</p>
+<p><strong>The golden path.</strong> A ribbon down the course. On it: +12% speed and 1 ability
+energy per 10 ticks. Off it: −12% speed, no energy, and every hazard in play.
+The ship holds the path on its own; Handling and Nav set how wide a band it can
+hold through a bend. Leaving is always a choice you make, never a mistake you
+suffer, and the reason to leave is that some things are only out there.</p>
+<p><strong>Actives.</strong> Two fitted, 60 energy each. A path lap banks about 120, so you tap
+roughly twice a lap and about five times a race. <em>Burn</em> dumps energy into 4
+seconds of overspeed, which also spikes the lag. <em>Wide Line</em> takes an off-path
+route through the next segment. <em>Rake</em> fires at the nearest rival within range:
+25 damage, and −8% speed on them for 3 seconds. <em>Brace</em> spends energy to hold
+the line through a hazard with no lag penalty.</p>
+<p><strong>Shields deflect.</strong> Above 50% shields, an off-path debris hit is deflected —
+the damage lands but the ship keeps its speed. Below 50%, the same hit costs you
+a second. That is why a wide-line build buys shields and a clean build does not.</p>
+<p><strong>The course.</strong> Stage 1 is one course, identical for everyone: eight segments, a
+40-second lap, three laps. Four junctions are visibly sealed — a nebula edge, a
+gravity well, a debris field, a station ring — and you can see what each would
+open into. At each stage two more open, drawn from the season seed. Everyone in
+the season gets the same evolution and nobody knows it in advance. Hints, no
+certainty.</p>
+<p><strong>Fixtures.</strong> The seed&#39;s track mods and its pre-race placement are one system;
+there is no reason for two. You buy fixtures in the shop and place two of them
+on the pre-race board. They travel with you: your fixtures are on the track in
+every heat you race, and in a three-way heat all six are on it and all six are
+shown before the start. <em>Beacon</em> widens the golden path 30% on its segment.
+<em>Slick</em> costs 15% speed to anything off-path there. <em>Mine</em> does 18 damage to the
+first ship through off-path. <em>Relay</em> gives its owner 40 energy on each pass.</p>
+<p><strong>Money.</strong> A heat pays a purse — 100, 60, 30 — and three shared pools of 150
+credits each, split by share, exactly as the notes want. The <strong>solar pool</strong>
+splits by time on the golden path. The <strong>dark matter pool</strong> splits by time off
+it. The <strong>bounty pool</strong> splits by damage dealt. Collectors are the equipment
+that lets you draw from a pool at all: a Solar Vane, a Dark Matter Scoop, a
+Grapple. Fit two of three. If all three ships fit Vanes and all three run clean,
+each takes 50 and nobody got rich.</p>
+<p><strong>Wanted and the cops.</strong> Every Rake hit is +1 wanted, decaying 1 per stage. At
+wanted 2 a cutter joins your heat, sits on your tail and costs you 6% speed
+until you land three hits on it. At wanted 4 there are two. Aggression pays, and
+then it charges rent.</p>
+<p><strong>The season.</strong> Nine players, three heats a stage, four stages. Points are 10 /
+6 / 3, plus a margin bonus for anyone who did not win: +3 within 1 second of the
+winner, +2 within 3, +1 within 6. A close third scores 6, a beaten third scores
+3, and over four stages that gap is a stage of survival. Bottom three out after
+stage 2 and again after stage 3; stage 4 is one heat of three.</p>
+<h3>How they connect</h3>
+<p>Because lag is quadratic in speed, the player must decide how much of the race
+to spend outside their own reach — the top of the throttle is where the ship is
+fastest and least yours.</p>
+<p>Because gravity kills humanoid crews and robots feel nothing, the player must
+pick a crew that matches a throttle plan they have not raced yet.</p>
+<p>Because energy only comes from the golden path and the dark matter pool only
+pays off it, the player must choose which income they are building for before
+the heat starts, not during it.</p>
+<p>Because a dead crew hands the ship to Navigation, the player must decide whether
+Nav is a luxury or the insurance on an aggressive build.</p>
+<p>Because pools are shared three ways, the player must guess what the other two
+ships fitted, and the answer changes as the field thins.</p>
+<p>Because every fixture on the board is visible before the start, the player must
+read six pieces of other people&#39;s strategy and route around them with two taps.</p>
+<pre class="mermaid">stateDiagram-v2
+  [*] --&gt; OnPath: race start
+  OnPath --&gt; OnPath: +12% speed, +1 energy/10t
+  OnPath --&gt; Wide: Wide Line order (lands after lag)
+  Wide --&gt; Wide: dark matter, mines, slicks, −12% speed
+  Wide --&gt; OnPath: rejoin
+  OnPath --&gt; Hunted: Rake fired, wanted &gt;= 2
+  Hunted --&gt; OnPath: cutter shaken (3 hits)
+  Wide --&gt; CrewDown: gravity or damage kills crew
+  OnPath --&gt; CrewDown: gravity or damage kills crew
+  CrewDown --&gt; [*]: Navigation finishes, no more taps
+  OnPath --&gt; [*]: finish line</pre><h3>A worked heat</h3>
+<p>Stage 2. The gravity well opened, so the lap is 60 seconds and you run it twice.
+You are second on points, 4 behind. You fit a robot crew, Thrust 8, Handling 4,
+Nav 3, a Dark Matter Scoop and a Grapple, and you place a Slick on the well exit
+and a Mine behind it. You do not declare a Long Line.</p>
+<p>The heat starts. The other two hold the path and you hold it with them for the
+first minute, banking energy at flat throttle where your lag is 20 ticks and you
+can feel it — your Brace on the debris field lands half a beat late and takes 12
+hull. At the well you tap Wide Line early, on purpose, and swing into the dark
+matter pocket. You lose 1.4 seconds and 8% of the solar pool, and you come out
+with the scoop full and a rival two lengths ahead. Second lap: Rake, twice, into
+the leader&#39;s shields. Wanted 2, a cutter arrives, you finish third by 0.9
+seconds.</p>
+<p>Third by under a second is 3 + 3 = 6 points, not 3. Plus 30 purse, 96 from a
+dark matter pool nobody else contested, and 55 in bounty. You are 1 point
+further back and 181 credits richer, and next stage you buy the Nav you skipped.</p>
+<h3>What does not work, and what I would do instead</h3>
+<p><strong>Three laps at every stage.</strong> Three laps of a track that grows every stage means
+a race that grows every stage, and a five-minute race is not a phone race. Keep
+three laps at stage 1, where the notes describe it, then hold total race time at
+about two minutes: 3 laps of 40 seconds, then 2 of 60, then 1 of 120, then 1 of 150. The lap count falling is itself the sign that the track has grown.</p>
+<p><strong>Passive collectors.</strong> Solar and dark matter generating credits between races is
+income without a decision, and it compounds for whoever is already winning. Keep
+the collectors and the names, move them onto the track: a Solar Vane charges on
+the golden path, a Dark Matter Scoop charges off it. Now the same fitting choice
+that pays you also tells you which line to run.</p>
+<p><strong>Randomness in elimination.</strong> The notes ask for randomness to stop cutoffs
+feeling flat, but a die roll at the cut punishes the player who built well and
+makes the balance question unanswerable by bots. The margin points already do
+the job the randomness was for — a close loss is worth twice a beaten one. For
+the swing on top of that, add the <strong>Long Line</strong>: declare it on the pre-race
+board and your ship runs the wide route all heat. Win with it declared and your
+margin points double and you take +50 credits; finish third with it declared and
+you lose 2 points. Chosen variance, fully deterministic, and a bot can tell you
+exactly when declaring it pays.</p>
+<p><strong>&quot;Mods only apply to your own races.&quot;</strong> As written this reads as a
+contradiction, because every race has three players in it. The rule that works
+is the one the parenthesis implies: fixtures are <em>carried</em>, not global. They are
+on the track in every heat their owner is in, and in nobody else&#39;s. Six fixtures
+per heat, all visible before the start.</p>
+<h3>What I added</h3>
+<p>A tap is an order that takes time to land — the seed&#39;s reaction time made into
+the thing the player&#39;s thumb actually feels, rather than a hidden stat.</p>
+<p>Ability energy as a currency with a price: 60 per active, about 120 banked per
+clean lap, so a race is five taps and each one costs a line.</p>
+<p>A rule that can kill a crew: gravity fatigue at 1 per 30 ticks above 60%
+acceleration, so &quot;the crew died&quot; is something a build causes, not flavour.</p>
+<p>The shared pools given numbers — 150 each, split by share — and the collectors
+turned into the equipment that opens each one.</p>
+<p>Fixture types with effects, and the pre-race board where all six are shown.</p>
+<p>The Long Line, as the replacement for randomness at the cut.</p>
+<h3>What needs your call</h3>
+<p><strong>Is the lag the game, or is it one stat among six?</strong> I have put the whole design
+on it. If you wanted reaction time to stay a background number and the taps to
+feel instant, say so and I will move the quadratic onto the ship&#39;s own line-holding
+instead of the player&#39;s orders — but the game gets quieter.</p>
+<p><strong>Nine players or twelve?</strong> Nine gives clean thirds and a final heat of three.
+Twelve gives four heats and a longer season, but the last cut leaves an awkward
+field.</p>
+<p><strong>Should Rake need line of sight?</strong> Right now it hits the nearest rival in range
+with no aiming. That keeps it to one tap. If you want aggression to be a skill
+rather than a purchase, it should only fire when you are on the same line as the
+target, which makes wide runners hard to hit and rewards staying close.</p>
+<p><strong>How visible is the track&#39;s evolution?</strong> I have two of four junctions opening
+per stage, drawn from the season seed. You could instead let the players&#39; own
+fixtures decide which open, which makes the track a thing the field builds
+together. Louder, and much harder to balance.</p>
+</div>
+</section>
+
+<section id="decisions">
+  <h2>Decisions only you can make</h2>
+  <ol class="questions"><li><span class="q">Is reaction lag the game, or one stat among six?</span><span class="why">The whole design rests on your taps landing late. If you wanted reaction time to stay a background number and taps to feel instant, the quadratic moves onto the ship's own line-holding instead — workable, but the game gets much quieter.</span></li>
+<li><span class="q">Nine players or twelve?</span><span class="why">Nine gives clean thirds and a final heat of three. Twelve gives four heats and a longer season but leaves an awkward field at the last cut.</span></li>
+<li><span class="q">Should Rake require line of sight?</span><span class="why">As written it hits the nearest rival in range with no aiming, which keeps aggression to one tap. Requiring the same line makes wide runners hard to hit and turns aggression from a purchase into a skill.</span></li>
+<li><span class="q">How visible is the track's evolution, and who drives it?</span><span class="why">Two of four junctions opening per stage from the season seed keeps it fair and testable. Letting the field's own fixtures decide which open makes the track something the players build together — louder, and much harder to balance.</span></li></ol>
+  <h4>What the next round should work on</h4>
+  <p>Both readers agree the seed survives, and both land on the same two defects, so the next pass is a fix rather than a new design. First, the economy currently points away from racing: an uncontested dark matter pool pays 150 against a 100 heat win, and in the worked heat the third-placed ship finishes 181 credits richer than the winner. Price the pools against the purse so that winning is never the worse business. Second, gravity is the system that decides whether the crew layer exists at all and its arithmetic is out by a factor of two — 1 crew health per 30 ticks at 30 ticks per second kills a 60-health humanoid in sixty seconds, not the two minutes claimed — and it is missing the number it depends on, the fraction of a lap a ship actually spends above 60% acceleration. Also settle vmax as a course-global constant rather than the ship's own top speed, or flat throttle always reads as v/vmax = 1 and a Thrust 1 ship answers as late as a Thrust 10 ship, which inverts the premise. Then add the two things the player asked for: a ghost marker showing where a tapped order will land, and a three-line loss ledger in seconds on the results screen.</p>
+</section>
+
+<section id="notes">
+  <h2>Notes on the design</h2>
+  <details id="note-the-player">
+<summary><span class="t">The player</span><span class="arrow"></span></summary>
+<div class="body"><h2>Notes: The player</h2>
+<h3>Does the seed survive</h3>
+<p>Yes, and it is sharper. The seed&#39;s first line is that a fast ship has less time
+to react, and <code>lag = 8 + 30·(v/vmax)² − 2·Handling − 1·Nav</code> is that line turned
+into something my thumb can feel. Nothing else in the notes had a chance of
+being the spine; this did, and the design bet everything on it. Right bet.</p>
+<p>One thing did get replaced while keeping its name. The seed&#39;s randomness at the
+cut — &quot;you lost, but not by much&quot; plus a die — became margin points plus the
+Long Line. Margin points are the seed. The Long Line is not; it is a new
+declared gamble bolted where the randomness was. I am fine with that trade,
+because a die at elimination would make me quit, but call it what it is: an
+addition, not a sharpening.</p>
+<p>The other quiet substitution is Handling. In the seed it is a real stat about
+swinging wide and holding the path. Here it is mostly a −2 coefficient inside
+the lag formula, with one vague sentence about band width through a bend. That
+one is a loss.</p>
+<h3>What works</h3>
+<p>The throttle is a genuine dilemma and it is one number. At 60% throttle lag is
+6 ticks and the ship is mine; flat out it is 23 ticks and I am aiming ahead of
+it. I know what I am giving up and I can change my mind mid-race. That is the
+whole design working.</p>
+<p>Gravity is the best system on the page because it kills. A humanoid crew losing
+1 health per 30 ticks above 60% acceleration means the build and the throttle
+plan are the same decision, made a stage before I find out.</p>
+<p>Three shared pools of 150, split by share, is the seed&#39;s shared-economy note
+made playable. It is also the only rule that makes the other two ships matter
+before the start, and it does that better than combat does.</p>
+<p>The lap schedule fix — 3×40s, 2×60s, 1×120s, 1×150s — is the most phone-aware
+line in the document. Four races of two minutes is a season I finish on a train.</p>
+<h3>What does not</h3>
+<p><strong>The gravity number contradicts its own sentence.</strong> 1 health per 30 ticks at
+30 ticks a second is 1 per second. 60 crew health is 60 seconds of hard burn,
+not &quot;two minutes.&quot; A humanoid dies halfway through a two-minute race on full
+burn. Either the drain is 1 per 60 ticks or the sentence is wrong. As written,
+humanoid is unbuildable at high thrust and the crew choice collapses.</p>
+<p><strong>The Long Line&#39;s headline reward does not exist.</strong> Margin points go only to
+&quot;anyone who did not win.&quot; Winning with the Long Line declared doubles a bonus
+of zero. The declared gamble pays +50 credits on a win and −2 points on a
+third. Nobody declares that.</p>
+<p><strong>Money points away from racing.</strong> Winning a heat pays 100. An uncontested dark
+matter pool pays 150. The worked heat has me finishing third and leaving 181
+credits richer, one point off the lead, pleased with myself. Two stages of that
+and the correct strategy is to stop racing.</p>
+<p><strong>Margin points flatten the podium.</strong> 10/6/3 with +3/+2/+1 means a close third
+scores 6 — exactly a clean second — and a close second scores 9 against a win&#39;s 10. The gap between winning and nearly winning is 1 point; the gap between
+close third and beaten third is 3. The season rewards not-being-lapped more
+than it rewards winning.</p>
+<p><strong>I cannot learn the lag from five taps.</strong> Five orders a race, four races a
+season: twenty samples of a curve I am supposed to internalise. And lag is
+invisible — I tap, nothing happens, then something happens. The one rule the
+whole design rests on is the one rule the screen does not show me.</p>
+<h3>What I would add</h3>
+<p>A ghost marker. On tap, drop a translucent pip on the track where the order
+will land. It moves down the ribbon as I throttle up. That turns the quadratic
+from a stat into a picture and costs no taps.</p>
+<p>A loss ledger on the results screen: three lines, seconds each. &quot;Wide line
+−1.4s. Two late orders −0.9s. Cutter −0.6s.&quot; Two minutes is not long enough to
+diagnose myself; give me the diagnosis and I will buy the fix.</p>
+<p>Give Handling its stat back: make the golden path&#39;s holdable band visibly wider
+at Handling 8 than at Handling 3, and let a wide bend at speed throw a
+low-Handling ship off it without a tap from me. Then Handling is something I
+watch, not something I read.</p>
+<p>Rake fires only from on the path. It answers the open question without adding
+aiming, and it makes running wide mean giving up aggression.</p>
+<h3>What I would cut first</h3>
+<p>Wanted status and the cops. It is a whole NPC subsystem — a cutter that joins
+the heat, tails me at −6% speed, takes three hits to shake, doubling at wanted
+4 — carrying one active and one pool. On a phone it puts a fourth ship on the
+track that I did not choose and cannot plan around, and it is the one thing in
+the race I would not be able to explain to myself afterward.</p>
+<p>What I lose: the brake on aggression. Replace it with a cheaper rule — the
+bounty pool halves for a ship that landed hits in the previous heat. Same &quot;pays,
+then charges rent,&quot; no fourth ship, no new art, and a bot can price it.</p>
+</div>
+</details>
+<details id="note-the-rules-reader">
+<summary><span class="t">The rules reader</span><span class="arrow"></span></summary>
+<div class="body"><h2>Notes: The rules reader</h2>
+<h3>Does the seed survive</h3>
+<p>Yes, and it is sharper. Every system in the notes is here with a number on it,
+and every departure is declared out loud rather than smuggled in. One thing has
+genuinely changed, though, and it should be named: in the notes, reaction time
+is the <em>ship&#39;s</em> — &quot;swinging wide puts your ship in danger&quot; — and handling is what
+keeps the hull on the golden path. In this design reaction time is the <em>player&#39;s
+thumb</em>. That is a substitution, not a sharpening. It is a good substitution and
+&quot;What needs your call&quot; admits it, but the owner should answer that question
+knowing it is the one place the words stayed and the referent moved.</p>
+<h3>What works</h3>
+<p>The lag formula is the best thing here because it is one line and it is
+checkable: <code>lag = 8 + 30·(v/vmax)² − 2·Handling − 1·Nav</code>, floor 6. With average
+parts (H5/N5) it sits on the floor until 66% throttle and reaches 23 ticks flat
+out. That is a rule a bot can sweep in an afternoon, and the floor of 6 doing
+the work at low speed is correct — you want the tradeoff to be invisible until
+the player buys into it.</p>
+<p>Holding total race time near 120 seconds while laps drop 3→2→1→1 quietly fixes
+something the notes did not see. At 1 energy per 10 ticks, a clean 120-second
+race banks 360 energy no matter which stage it is, so two 60-cost actives always
+give about six taps. The tap budget is stage-invariant by construction. That is
+a real piece of design, not a patch.</p>
+<p>The shield deflect threshold — above 30 of 60 you keep your speed, below it you
+lose a second — is exactly the right shape: one number, one comparison, no state.</p>
+<p>Margin points do replace the randomness the notes asked for, and 3+3=6 for a
+close third against 3 for a beaten one is the arithmetic the notes described.</p>
+<h3>What does not</h3>
+<p><strong>The gravity arithmetic is wrong by 2×.</strong> 1 crew health per 30 ticks at 30
+ticks a second is 2 health a second. Two minutes of hard burn is 3600 ticks and
+<strong>120 damage</strong>, not the 60 the text claims. One minute kills a humanoid crew.</p>
+<p>Worse, the number that decides whether this system exists is missing. Gravity
+keys off <em>acceleration above 60% of max</em>, not speed. A ship at top speed is not
+accelerating. Nobody says what fraction of a lap a ship spends burning. If it is
+25%, a humanoid loses 60 over a race and dies exactly at the line; if it is 10%,
+crew death never happens; if it is 50%, humanoids are unplayable. Measure that
+fraction first and set the rate from it.</p>
+<p><strong><code>vmax</code> is never defined and the answer changes the game.</strong> If it is the ship&#39;s
+own top speed, then flat throttle is always <code>v/vmax = 1</code> and a Thrust 1 ship
+answers exactly as late as a Thrust 10 ship — the seed&#39;s first line dies. It has
+to be a course-global constant. Say so.</p>
+<p><strong>The worked heat does not reproduce from the rules.</strong> Thrust 8 / Handling 4 /
+Nav 3 gives 16 ticks at flat throttle under a global <code>vmax</code> and 27 under a
+ship-local one. The text says 20. And &quot;96 from a dark matter pool nobody else
+contested&quot; — an uncontested share of a 150 pool is 150.</p>
+<p><strong>Long Line&#39;s upside is zero.</strong> Margin points go to &quot;anyone who did not win&quot;, so
+&quot;win with it declared and your margin points double&quot; doubles nothing. As written
+you risk −2 points for +50 credits.</p>
+<p><strong>The junctions run out.</strong> Four are sealed, two open per stage, and stages 2, 3
+and 4 need six.</p>
+<p><strong>Shaking a cutter costs more wanted than earned it.</strong> Three hits at wanted 2
+takes you to 5, past the wanted-4 second cutter. There is no exit.</p>
+<p><strong>Handling is squeezed out.</strong> Nav buys 1 tick, plus route planning, plus band
+width, plus crew-death insurance. Handling buys 2 ticks and band width. Unless a
+Handling point is worth more than a Nav point&#39;s three extra jobs, nobody buys it.</p>
+<p><strong>&quot;Nav plans a better route, optimizing gravity assists&quot; is five rules in one
+clause</strong> and the only system here with no number. It is a pathfinder.</p>
+<h3>What I would add</h3>
+<p>Collapse Nav&#39;s planning into one tickable line: corner-entry speed cap =
+<code>(0.55 + 0.035·Nav)·vmax</code>. That is the whole of &quot;plans a better line&quot;, it is one
+comparison per bend, and a bot can price it against Thrust.</p>
+<p>Score margin against a fixed par time for the course, not the heat winner.
+Right now a slow heat pays everyone in it, and with 6 players in 2 heats at
+stage 3 the points are not comparable across heats.</p>
+<p>Write the tick order down — orders resolve, hazards apply, damage, then pool
+accrual — and give &quot;nearest rival&quot; a tiebreak (lowest ship index). Determinism
+dies in ties, not in dice.</p>
+<p>State the build budget. Six stats 1–10, but Hull is also &quot;100 points&quot; and a
+robot crew is &quot;90 instead of 60&quot;, so the dials and the pools are two different
+things wearing one name.</p>
+<h3>What I would cut first</h3>
+<p>The solar pool. Every ship is already on the golden path for +12% speed and all
+the energy in the game; paying them for it is a rebate, not a decision. Two
+pools that pull opposite ways — dark matter off-path, bounty into contact — is
+the whole tension. Give the third collector slot to something with a cost.</p>
+<p>Second cut: wanted decaying &quot;1 per stage&quot; across a four-stage season. It is a
+ratchet, not a cost. Decay 1 per heat or drop the decay and cap wanted at 4.</p>
+</div>
+</details>
+</section>
+
+
+
+
+
+<section id="feedback">
+  <h2>How to reply</h2>
+  <div class="feedback-how">
+    <p>Answer the decisions above, or push back on anything here, in any shape. Put it in <code>design\rounds\round-04/feedback.md</code>, or send it as a message and ask for it to be filed there. The next round's proposers read it before the brief. Anything that should hold for every future round goes into <code>design/BRIEF.md</code> too.</p>
+    <p>To start the next round: <em>run the sharpen-round workflow for round 5</em>.</p>
+  </div>
+</section>
+
+<footer>Rendered from <code>design\rounds\round-04/</code> by <code>npm run design-page</code>. The markdown is the record; this page is the reading copy.</footer>
+</div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+const css = getComputedStyle(document.documentElement);
+const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+mermaid.initialize({
+  startOnLoad: true,
+  securityLevel: 'strict',
+  fontFamily: '"Source Serif 4", Georgia, serif',
+  themeVariables: {
+    background: v('--surface', '#fbf8f0'),
+    primaryColor: v('--chip', '#e9dcc0'),
+    primaryBorderColor: v('--rule', '#d6cdb6'),
+    primaryTextColor: v('--ink', '#17203a'),
+    lineColor: v('--ink-soft', '#4d5a7a'),
+    secondaryColor: v('--surface', '#fbf8f0'),
+    tertiaryColor: v('--ground', '#f4efe2'),
+  },
+});
+</script>
+</body>
+</html>

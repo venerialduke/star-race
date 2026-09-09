@@ -37,7 +37,31 @@ The markdown is the record. The HTML is rendered from it by
 `npm run design-page -- --round 1` and is served from the Pages site at
 `https://venerialduke.github.io/star-race/design/`.
 
-## Running a round
+## Two kinds of round
+
+**Divergent** — `framework-round.js`, and its unanchored twin `seed-round.js`.
+Four proposers each pick a design and commit to it, three reviewers score them,
+a synthesiser merges. Ten agents, roughly half an hour when nothing stalls. Use
+it when nobody knows what the game is yet.
+
+**Sharpen** — `sharpen-round.js`. One designer develops an existing idea in
+place, two readers mark it up. Three agents, minutes. Use it when the owner has
+an idea and wants it made feasible and legible rather than replaced.
+
+The distinction exists because round 3 got it wrong: a page of the owner's notes
+went into a divergent round and came back as four new frameworks and 34,575
+words, with two named systems silently dropped. Divergence is a generator, not a
+sharpener. Feeding an idea you like into four agents told to "commit to your own
+design" will reliably give you four other ideas.
+
+Both kinds obey the same budgets: around 1,500 words for a proposal or a
+sharpened design, 800 for a review, 1,800 for a synthesis, 700 for a set of
+notes — always stated as a target, never a range, and always with "do not count
+your words". A range invites an agent to count and trim, which cost round 3
+about an hour. Every document carries at least one `mermaid` diagram; the page
+renders them as pictures.
+
+## Running a divergent round
 
 The round is a saved workflow, `.claude/workflows/framework-round.js`. Ask
 Claude Code to run it:
@@ -64,6 +88,28 @@ It does, in order:
 
 Then the page is rendered, the round is committed on a branch, and a PR is
 opened so the page lands on the Pages site when merged.
+
+## Running a sharpen round
+
+> run the sharpen-round workflow for round 4
+
+Put the idea in `design/rounds/round-NN/seed.md` first (or pass `seed` pointing
+at an earlier round's). It does:
+
+1. **Sharpen.** One designer reads the seed and writes `sharpened.md`: the same
+   idea, made feasible, with the numbers filled in and two diagrams. It may say
+   what does not work and propose additions. It may not replace the core
+   principle, rename the seed's vocabulary, or drop a named system without
+   flagging it — every system in the seed appears in the output, kept, altered
+   or argued away.
+2. **Read.** Two readers in parallel — one plays it, one checks the rules and
+   the arithmetic — write `notes/plays.md` and `notes/rules.md`. They do not
+   score: a score out of 40 compares things, and there is only one design here.
+   Each answers first whether the owner's idea survived.
+
+Then `round.json` is written with `"kind": "sharpen"` and the page is rendered.
+A sharpen round's page drops the scoreboard, the proposals and the critique
+section, and shows the design followed by the notes.
 
 ## Giving feedback
 

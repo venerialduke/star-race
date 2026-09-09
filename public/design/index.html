@@ -95,6 +95,9 @@ blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--
 code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
 pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
 pre code { background: none; padding: 0; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 8px; margin: 20px 0; overflow-x: auto; text-align: center; font-family: inherit; line-height: normal; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+pre.mermaid:not([data-processed]) { font: 0.85em "JetBrains Mono", ui-monospace, monospace; text-align: left; white-space: pre; color: var(--ink-soft); }
 hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
 
 .scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
@@ -159,11 +162,31 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule);
   <p class="headline">Each round, four frameworks are proposed, three reviewers score them, and one recommendation is written for the owner to answer. Newest first.</p>
 </header>
 <section>
-<ul class="rounds"><li><a href="round-03.html"><span class="t">Round 3 · The Ledger and the Card</span></a><span class="s">Three ships, one course, and every credit outside the purse sitting in a shared pool: all three pilots declare a route blind, the declarations are revealed before anyone commits, and then one bar — charge — is at once your speed, your shields, your ammunition and your income.</span><span class="d">2026-09-08</span></li>
+<ul class="rounds"><li><a href="round-04.html"><span class="t">Round 4 · Fast Ships Answer Late</span></a><span class="s">The faster a ship goes the later your taps land, so every decision is about when to leave the golden path where the speed and the energy are.</span><span class="d">2026-09-09</span></li>
+<li><a href="round-03.html"><span class="t">Round 3 · The Ledger and the Card</span></a><span class="s">Three ships, one course, and every credit outside the purse sitting in a shared pool: all three pilots declare a route blind, the declarations are revealed before anyone commits, and then one bar — charge — is at once your speed, your shields, your ammunition and your income.</span><span class="d">2026-09-08</span></li>
 <li><a href="round-02.html"><span class="t">Round 2 · Raise or Clear</span></a><span class="s">Build from The Toll's spine — every ship makes one move on the course every heat — but swap its eight tag rules for four declared Drives, replace the unforecastable toll with a rising ante and a real purse spread, and let the ladder become a head start in a single final.</span><span class="d">2026-09-07</span></li>
 <li><a href="round-01.html"><span class="t">Round 1 · The Cut, Two Cards</span></a><span class="s">Build from The Cut: an eight-ship, seven-heat season on one points ladder with a cut after every heat from the third, plus two named hazard cards per course (leader lays first, tail lays second with the leader's visible), tags with pips and a capped modifier block, tier-gated face-up drafting in reverse ladder order, and hull that carries and costs credits to repair.</span><span class="d">2026-09-06</span></li></ul>
 <p class="caption"><a href="ledger.html">The ideas ledger</a> lists everything any round has considered. The brief every round answers is <code>design/BRIEF.md</code> in the repo. <a href="/star-race/">Play the current slice.</a></p>
 </section>
 </div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+const css = getComputedStyle(document.documentElement);
+const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+mermaid.initialize({
+  startOnLoad: true,
+  securityLevel: 'strict',
+  fontFamily: '"Source Serif 4", Georgia, serif',
+  themeVariables: {
+    background: v('--surface', '#fbf8f0'),
+    primaryColor: v('--chip', '#e9dcc0'),
+    primaryBorderColor: v('--rule', '#d6cdb6'),
+    primaryTextColor: v('--ink', '#17203a'),
+    lineColor: v('--ink-soft', '#4d5a7a'),
+    secondaryColor: v('--surface', '#fbf8f0'),
+    tertiaryColor: v('--ground', '#f4efe2'),
+  },
+});
+</script>
 </body>
 </html>

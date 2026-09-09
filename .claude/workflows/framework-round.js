@@ -74,6 +74,23 @@ const SECTIONS = [
   '## Risks',
 ];
 
+// Budgets are targets, never ranges. A range invites an agent to count and
+// trim: in round 3 three of four proposers and the synthesiser ground for
+// tens of minutes sanding prose towards a cap, which cost more than the whole
+// rest of the round. Say the number once, then say not to count.
+//
+// Lengths are deliberately short. What the owner reads for is the FEEL of a
+// system and how it meshes with the others, not a rulebook — a mechanic
+// sketched in a paragraph with two numbers in it is more useful than the same
+// mechanic fully specified over a page.
+const budget = (words) => `
+LENGTH. Aim for around ${words} words. That is a target, not a limit: do NOT count your words, do NOT re-read the file to trim it towards a number, and do NOT pad to reach one. Write it once and stop. A piece a few hundred words over is fine; a round stalled on word counting is not.
+
+DEPTH. No mechanic needs to be fully specified. What is wanted is the feel of each system and how it meshes with the others — enough concrete numbers to make it arguable, not a rulebook. If pinning a detail down would take three paragraphs, state the intent in one sentence and move on. Spend your length on how the systems connect, not on how each one resolves.
+
+DIAGRAM. Include at least one diagram as a \`\`\`mermaid fenced block — the page renders these as pictures. Use \`flowchart TD\` or \`flowchart LR\` for a loop or a sequence of phases, \`stateDiagram-v2\` for something with modes. Keep it under about twelve nodes so it reads on a phone, label the edges, and put it where it explains the most — usually the loop, or the way the systems feed each other. One clear diagram beats three cluttered ones.
+`;
+
 const CONTEXT = `
 You are working in the Star Race repo (auto-chess meets racing, see CLAUDE.md).
 Read these before doing anything else:
@@ -185,7 +202,8 @@ if (resume && preflight?.proposalsExist) {
 You are proposer ${i + 1} of 4. Your lens: ${l.lens}
 The lens is where you start, not where you stop: the brief lists everything a proposal has to deliver, and you deliver all of it. Be opinionated. Pick one design and commit to it — the reviewers will merge, that is their job, not yours. Make it the game you would actually want to play on a phone for twenty minutes.
 
-Write your framework to ${dir}/proposals/${l.slug}.md, 1,800 to 3,000 words, with EXACTLY these headings in this order, starting with a top-level "# <title>" line:
+${budget('1,500')}
+Write your framework to ${dir}/proposals/${l.slug}.md with EXACTLY these headings in this order, starting with a top-level "# <title>" line:
 ${SECTIONS.join('\n')}
 
 "A worked run" walks eight players (or your number) from the first decision to the final standings, calling out the decisions and one moment where one player's choice changed another player's race. "What it costs to build" says which of the current sim files survive, which change, what is new, and guesses the number of one-session PRs. "What it needs from the owner" lists the taste calls, as questions.
@@ -287,6 +305,7 @@ Score each on every criterion in design/RUBRIC.md, 1 to 5, with one line of just
 
 Write it to ${dir}/reviews/${r.slug}.md: a top-level "# Review: <lens name>" line, a scoreboard table (proposals as rows, criteria as columns, total), then "## <proposal title>" per proposal with the justifications, best idea and fatal flaw, then "## Recommended merge".
 
+${budget('800')}
 Return your lens name, the file path, and the scores exactly as written in the file.`,
           { label: `review:${r.slug}`, phase: 'Review', schema: REVIEW_SCHEMA },
         ),
@@ -353,7 +372,8 @@ Structure, with EXACTLY these headings:
 ## Decisions for the owner
 ## Next round
 
-"Where it came from" credits each proposal by name for what was taken. "Decisions for the owner" is a numbered list of the calls that are taste rather than measurement, each with one line on what hangs on it. "Next round" says what the next round of proposals should be asked to develop or challenge. 2,500 to 4,000 words.
+"Where it came from" credits each proposal by name for what was taken. "Decisions for the owner" is a numbered list of the calls that are taste rather than measurement, each with one line on what hangs on it. "Next round" says what the next round of proposals should be asked to develop or challenge.
+${budget('1,800')}
 
 Then APPEND a section to design/LEDGER.md (read it first; never edit anything above your section): "## Round ${round}" followed by a markdown table with columns Idea | From | Status | Why. One row per distinct idea any proposal put forward, including the ones you rejected — the ledger is the record of everything considered, not only what won. "From" is the proposal slug. Status is adopted, rejected, parked or open, as the ledger's header defines them. Keep "Why" to one line. Expect 20 to 40 rows.
 
@@ -376,7 +396,11 @@ const critique = await agent(
   `${CONTEXT}
 You are the critic. Read ${synthesis.file}, then check it against design/BRIEF.md line by line${prev ? ` and against ${prev}/feedback.md if it exists` : ''}. Your job is to find what the synthesis dodged, hand-waved, or contradicted: a gap in the brief it does not answer, a system that is asserted to be fun without a mechanism, a number that cannot be right, a rule from "What survives from the slice" it bends without saying so, an interaction claim that is really PvE with extra steps, a cost estimate that hides scope. Be specific and be fair: say what is missing, not that it is bad.
 
-Write ${dir}/critique.md: "# Critique" then a numbered list of gaps, each with a one-line heading and two or three sentences, most important first. Then "## What the next round should be asked". Return the file path and the gap headings.`,
+Write ${dir}/critique.md: "# Critique" then a numbered list of gaps, each with a one-line heading and two or three sentences, most important first. Then "## What the next round should be asked".
+
+Aim for around 800 words. Do NOT count your words or trim towards a number — write it once and stop. A critique needs no diagram.
+
+Return the file path and the gap headings.`,
   { label: 'critique', phase: 'Critique', schema: CRITIQUE_SCHEMA },
 );
 

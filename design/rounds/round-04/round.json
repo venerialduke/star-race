@@ -1,0 +1,41 @@
+{
+  "round": 4,
+  "date": "2026-09-09",
+  "kind": "sharpen",
+  "title": "Fast Ships Answer Late",
+  "headline": "The faster a ship goes the later your taps land, so every decision is about when to leave the golden path where the speed and the energy are.",
+  "builtFrom": "seed",
+  "proposals": [],
+  "reviews": [],
+  "notes": [
+    { "lens": "The player", "file": "notes/plays.md" },
+    { "lens": "The rules reader", "file": "notes/rules.md" }
+  ],
+  "synthesisFile": "sharpened.md",
+  "critiqueFile": "",
+  "questions": [
+    {
+      "question": "Is reaction lag the game, or one stat among six?",
+      "why": "The whole design rests on your taps landing late. If you wanted reaction time to stay a background number and taps to feel instant, the quadratic moves onto the ship's own line-holding instead — workable, but the game gets much quieter."
+    },
+    {
+      "question": "Nine players or twelve?",
+      "why": "Nine gives clean thirds and a final heat of three. Twelve gives four heats and a longer season but leaves an awkward field at the last cut."
+    },
+    {
+      "question": "Should Rake require line of sight?",
+      "why": "As written it hits the nearest rival in range with no aiming, which keeps aggression to one tap. Requiring the same line makes wide runners hard to hit and turns aggression from a purchase into a skill."
+    },
+    {
+      "question": "How visible is the track's evolution, and who drives it?",
+      "why": "Two of four junctions opening per stage from the season seed keeps it fair and testable. Letting the field's own fixtures decide which open makes the track something the players build together — louder, and much harder to balance."
+    }
+  ],
+  "nextRound": "Both readers agree the seed survives, and both land on the same two defects, so the next pass is a fix rather than a new design. First, the economy currently points away from racing: an uncontested dark matter pool pays 150 against a 100 heat win, and in the worked heat the third-placed ship finishes 181 credits richer than the winner. Price the pools against the purse so that winning is never the worse business. Second, gravity is the system that decides whether the crew layer exists at all and its arithmetic is out by a factor of two — 1 crew health per 30 ticks at 30 ticks per second kills a 60-health humanoid in sixty seconds, not the two minutes claimed — and it is missing the number it depends on, the fraction of a lap a ship actually spends above 60% acceleration. Also settle vmax as a course-global constant rather than the ship's own top speed, or flat throttle always reads as v/vmax = 1 and a Thrust 1 ship answers as late as a Thrust 10 ship, which inverts the premise. Then add the two things the player asked for: a ghost marker showing where a tapped order will land, and a three-line loss ledger in seconds on the results screen.",
+  "gaps": [
+    "The economy points away from racing: an uncontested dark matter pool pays 150 against a 100 heat win, and the worked heat's third place finishes 181 credits richer",
+    "Gravity's arithmetic is out by 2× and is missing the burn-fraction number it depends on, so the rule that justifies the crew layer does not yet hold",
+    "vmax is undefined as either course-global or per-ship; read the second way, the quadratic lag stops discriminating between builds entirely",
+    "The Long Line gamble pays margin points only to non-winners, so \"win and your margin points double\" doubles zero"
+  ]
+}

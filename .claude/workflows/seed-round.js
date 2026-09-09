@@ -79,6 +79,19 @@ const SECTIONS = [
   '## Risks',
 ];
 
+// Budgets are targets, never ranges. A range invites an agent to count and
+// trim: in round 3 three of four proposers and the synthesiser ground for tens
+// of minutes sanding prose towards a cap. Say the number once, then say not to
+// count. Lengths are short on purpose — what is wanted is the feel of a system
+// and how it meshes with the others, not a rulebook.
+const budget = (words) => `
+LENGTH. Aim for around ${words} words. That is a target, not a limit: do NOT count your words, do NOT re-read the file to trim it towards a number, and do NOT pad to reach one. Write it once and stop. A piece a few hundred words over is fine; a round stalled on word counting is not.
+
+DEPTH. No mechanic needs to be fully specified. What is wanted is the feel of each system and how it meshes with the others — enough concrete numbers to make it arguable, not a rulebook. If pinning a detail down would take three paragraphs, state the intent in one sentence and move on. Spend your length on how the systems connect, not on how each one resolves.
+
+DIAGRAM. Include at least one diagram as a \`\`\`mermaid fenced block — the page renders these as pictures. Use \`flowchart TD\` or \`flowchart LR\` for a loop or a sequence of phases, \`stateDiagram-v2\` for something with modes. Keep it under about twelve nodes so it reads on a phone, label the edges, and put it where it explains the most — usually the loop, or the way the systems feed each other. One clear diagram beats three cluttered ones.
+`;
+
 // The whole point of this workflow is the negative space in this block. Every
 // agent gets the seed and the round's own brief and rubric, and an explicit
 // list of what not to read. Do not add DESIGN.md, src/ or earlier rounds here.
@@ -196,7 +209,8 @@ The lens is where you start, not where you stop. The brief lists everything a pr
 
 Your real task is not to restate the seed in tidier language. It is to make the seed into a system. That means three things: deciding the numbers the notes leave blank, cutting the ideas that do not survive contact with the rest, and above all CONNECTING what is currently four separate lists — a ship, a track, an economy, a season — so that a choice in one is felt in the others. Answer as many of the twelve open questions in the brief as you can, with numbers, and be explicit about any you decide to leave open.
 
-Write your framework to ${dir}/proposals/${l.slug}.md, aiming for roughly 3,000 words — a guide, not a limit. Write it once and stop: do NOT count the words, and do not re-read the file to trim it towards a target. A proposal a few hundred words over is fine and a round stalled on word counting is not. Use EXACTLY these headings in this order, starting with a top-level "# <title>" line:
+${budget('1,500')}
+Write your framework to ${dir}/proposals/${l.slug}.md with EXACTLY these headings in this order, starting with a top-level "# <title>" line:
 ${SECTIONS.join('\n')}
 
 "How the systems connect" is the section this round exists for: name the specific couplings, at least four, each as a sentence of the form "because X, the player must Y". "A worked run" walks a named field from the first decision to the final standings, calling out the decisions and at least one moment where one player's choice changed another player's race. "What it keeps from the seed, and what it drops" is an honest accounting against seed.md — what you developed, what you altered, what you cut and why. "What it needs from the owner" lists the taste calls, as questions.
@@ -306,6 +320,7 @@ Disagree with the proposals where they are wrong; a review that likes everything
 
 Write it to ${dir}/reviews/${r.slug}.md: a top-level "# Review: <lens name>" line, a scoreboard table (proposals as rows, criteria as columns, total), then "## <proposal title>" per proposal with the justifications, best idea, fatal flaw and the two seed questions, then "## Recommended merge".
 
+${budget('800')}
 Return your lens name, the file path, and the scores exactly as written in the file.`,
           { label: `review:${r.slug}`, phase: 'Review', schema: REVIEW_SCHEMA },
         ),
@@ -374,7 +389,8 @@ Structure, with EXACTLY these headings:
 ## Decisions for the owner
 ## Next round
 
-"What the seed gave us, and what we changed" goes through seed.md and says, for each idea in it, whether the recommendation keeps it, alters it or drops it, and why — this is the owner's main check that the round did its job. "Where it came from" credits each proposal by name for what was taken. "Decisions for the owner" is a numbered list of the calls that are taste rather than measurement, each with one line on what hangs on it. "Next round" says what the next round should develop or challenge. Aim for roughly 3,500 words — a guide, not a limit. Write it once and stop: do NOT count the words, and do not re-read the file to trim it towards a target.
+"What the seed gave us, and what we changed" goes through seed.md and says, for each idea in it, whether the recommendation keeps it, alters it or drops it, and why — this is the owner's main check that the round did its job. "Where it came from" credits each proposal by name for what was taken. "Decisions for the owner" is a numbered list of the calls that are taste rather than measurement, each with one line on what hangs on it. "Next round" says what the next round should develop or challenge.
+${budget('1,800')}
 
 Then write a SEPARATE file, ${dir}/ledger-section.md: a "## Round ${round}" heading followed by a markdown table with columns Idea | From | Status | Why. One row per distinct idea any proposal put forward, including the ones you rejected — this is the record of everything considered, not only what won. "From" is the proposal slug, or "seed" for an idea that came from the owner's notes. Status is one of adopted, adopted in part, adopted in altered form, rejected, parked or open. Keep "Why" to one line. Expect 25 to 45 rows. Do NOT open or modify design/LEDGER.md — it belongs to earlier rounds and is out of scope.
 
@@ -399,7 +415,11 @@ You are the critic. Read ${synthesis.file}, then check it line by line against $
 
 Your job is to find what the synthesis dodged, hand-waved, or contradicted: an open question it does not answer, a system asserted to be fun without a mechanism, a number that cannot be right or that contradicts another number in the same document, an idea from the seed that was silently dropped rather than argued away, a coupling claimed in "How the systems connect" that does not survive reading the rules it connects, an interaction claim that is really one player racing alone with extra steps, a scope estimate that hides how many rules a mechanic really needs. Check the worked run's arithmetic. Be specific and be fair: say what is missing, not that it is bad.
 
-Write ${dir}/critique.md: "# Critique" then a numbered list of gaps, each with a one-line bold heading and two or three sentences, most important first. Then "## What the next round should be asked". Return the file path and the gap headings.`,
+Write ${dir}/critique.md: "# Critique" then a numbered list of gaps, each with a one-line bold heading and two or three sentences, most important first. Then "## What the next round should be asked".
+
+Aim for around 800 words. Do NOT count your words or trim towards a number — write it once and stop. A critique needs no diagram.
+
+Return the file path and the gap headings.`,
   { label: 'critique', phase: 'Critique', schema: CRITIQUE_SCHEMA },
 );
 

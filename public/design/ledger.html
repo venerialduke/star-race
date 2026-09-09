@@ -95,6 +95,9 @@ blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--
 code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
 pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
 pre code { background: none; padding: 0; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 8px; margin: 20px 0; overflow-x: auto; text-align: center; font-family: inherit; line-height: normal; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+pre.mermaid:not([data-processed]) { font: 0.85em "JetBrains Mono", ui-monospace, monospace; text-align: left; white-space: pre; color: var(--ink-soft); }
 hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
 
 .scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
@@ -991,5 +994,24 @@ overturning.</p>
 <p class="caption"><a href="index.html">Back to the rounds.</a></p>
 </section>
 </div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+const css = getComputedStyle(document.documentElement);
+const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+mermaid.initialize({
+  startOnLoad: true,
+  securityLevel: 'strict',
+  fontFamily: '"Source Serif 4", Georgia, serif',
+  themeVariables: {
+    background: v('--surface', '#fbf8f0'),
+    primaryColor: v('--chip', '#e9dcc0'),
+    primaryBorderColor: v('--rule', '#d6cdb6'),
+    primaryTextColor: v('--ink', '#17203a'),
+    lineColor: v('--ink-soft', '#4d5a7a'),
+    secondaryColor: v('--surface', '#fbf8f0'),
+    tertiaryColor: v('--ground', '#f4efe2'),
+  },
+});
+</script>
 </body>
 </html>

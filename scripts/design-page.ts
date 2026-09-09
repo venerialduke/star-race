@@ -12,7 +12,14 @@
 //
 // A script, not part of the game: it may use the filesystem and console.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { marked } from 'marked';
 
@@ -64,6 +71,16 @@ export interface RoundData {
   readonly questions: readonly { readonly question: string; readonly why: string }[];
   readonly nextRound: string;
   readonly gaps: readonly string[];
+  /**
+   * "divergent" (the default) is the four-proposal round: proposals compete,
+   * reviewers score them, a synthesis picks a base. "sharpen" is the fast
+   * round: one seeded design developed in place, plus notes on it. A sharpen
+   * round has no proposals to compare and no scoreboard, so those sections are
+   * dropped rather than rendered empty.
+   */
+  readonly kind?: 'divergent' | 'sharpen';
+  /** Sharpen rounds only: one entry per reader who marked up the design. */
+  readonly notes?: readonly { readonly lens: string; readonly file: string }[];
 }
 
 const CRITERIA: readonly { readonly key: keyof Criteria; readonly label: string }[] = [
@@ -92,6 +109,22 @@ const escape = (text: string): string =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+/**
+ * A ```mermaid fence becomes a <pre class="mermaid"> that the mermaid script
+ * in the page turns into a diagram. Every other fence renders as code. Agents
+ * are asked for a diagram per document, so this is the difference between a
+ * picture and a wall of pipe characters.
+ */
+marked.use({
+  gfm: true,
+  renderer: {
+    code({ text, lang }): string | false {
+      if ((lang ?? '').trim().split(/\s+/)[0] !== 'mermaid') return false;
+      return `<pre class="mermaid">${escape(text)}</pre>`;
+    },
+  },
+});
+
 /** Markdown to HTML, with every heading pushed one level down so it nests under the page's own. */
 function renderMarkdown(source: string, demote = 1): string {
   const shifted = source.replace(
@@ -101,8 +134,14 @@ function renderMarkdown(source: string, demote = 1): string {
   return marked.parse(shifted, { async: false, gfm: true });
 }
 
+/**
+ * A sharpen round has no critique, so `critiqueFile` is "" and join() then
+ * names the round directory itself. Treat anything that is not a readable file
+ * as absent rather than throwing.
+ */
 function readIfExists(path: string): string | undefined {
-  return existsSync(path) ? readFileSync(path, 'utf8') : undefined;
+  if (!existsSync(path) || !statSync(path).isFile()) return undefined;
+  return readFileSync(path, 'utf8');
 }
 
 const mean = (values: readonly number[]): number =>
@@ -258,6 +297,9 @@ blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--
 code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
 pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
 pre code { background: none; padding: 0; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 8px; margin: 20px 0; overflow-x: auto; text-align: center; font-family: inherit; line-height: normal; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+pre.mermaid:not([data-processed]) { font: 0.85em "JetBrains Mono", ui-monospace, monospace; text-align: left; white-space: pre; color: var(--ink-soft); }
 hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
 
 .scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
@@ -310,6 +352,31 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule);
 const FONTS =
   '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;700&display=swap">';
 
+/**
+ * Mermaid, pinned, reading the page's own palette so a diagram sits in the
+ * page rather than on top of it. Diagrams are laid out once on load; the
+ * theme is read from the <html data-theme> the page already sets.
+ */
+const MERMAID_SCRIPT = `<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+const css = getComputedStyle(document.documentElement);
+const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+mermaid.initialize({
+  startOnLoad: true,
+  securityLevel: 'strict',
+  fontFamily: '"Source Serif 4", Georgia, serif',
+  themeVariables: {
+    background: v('--surface', '#fbf8f0'),
+    primaryColor: v('--chip', '#e9dcc0'),
+    primaryBorderColor: v('--rule', '#d6cdb6'),
+    primaryTextColor: v('--ink', '#17203a'),
+    lineColor: v('--ink-soft', '#4d5a7a'),
+    secondaryColor: v('--surface', '#fbf8f0'),
+    tertiaryColor: v('--ground', '#f4efe2'),
+  },
+});
+</script>`;
+
 function proposalBlock(proposal: Proposal, data: RoundData, source: string): string {
   const base = proposal.slug === data.builtFrom ? '<span class="chip">base</span>' : '';
   const verdicts = data.reviews
@@ -359,28 +426,44 @@ export function renderFragment(data: RoundData, files: Record<string, string>): 
     )
     .join('\n');
 
+  const sharpen = data.kind === 'sharpen';
+  const notes = (data.notes ?? [])
+    .map(
+      (n) => `<details id="note-${escape(n.lens)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')}">
+<summary><span class="t">${escape(n.lens)}</span><span class="arrow"></span></summary>
+<div class="body">${renderMarkdown(files[n.file] ?? '')}</div>
+</details>`,
+    )
+    .join('\n');
+
   return `<title>Star Race Framework Round ${data.round}</title>
 ${FONTS}
 <style>${STYLE}</style>
 <div class="page">
 <header class="masthead">
-  <div class="eyebrow"><span>Star Race</span><span>Framework round ${data.round}</span><span>${escape(data.date)}</span></div>
+  <div class="eyebrow"><span>Star Race</span><span>${sharpen ? 'Sharpen' : 'Framework'} round ${data.round}</span><span>${escape(data.date)}</span></div>
   <h1>${escape(data.title)}</h1>
   <p class="headline">${escape(data.headline)}</p>
 </header>
 <nav class="toc">
-  <a href="#synthesis">Recommendation</a>
+  <a href="#synthesis">${sharpen ? 'The design' : 'Recommendation'}</a>
   <a href="#decisions">Your decisions</a>
-  <a href="#scores">Scores</a>
+${
+  sharpen
+    ? `  <a href="#notes">Notes</a>`
+    : `  <a href="#scores">Scores</a>
   <a href="#proposals">Proposals</a>
   <a href="#reviews">Reviews</a>
-  <a href="#critique">Critique</a>
+  <a href="#critique">Critique</a>`
+}
   <a href="#feedback">Reply</a>
   <a href="ledger.html">Ledger</a>
 </nav>
 
 <section id="synthesis">
-  <h2>The recommendation</h2>
+  <h2>${sharpen ? 'The design' : 'The recommendation'}</h2>
   <div class="synthesis">${renderMarkdown(synthesis)}</div>
 </section>
 
@@ -391,7 +474,13 @@ ${FONTS}
   <p>${escape(data.nextRound)}</p>
 </section>
 
-<section id="scores">
+${
+  sharpen
+    ? `<section id="notes">
+  <h2>Notes on the design</h2>
+  ${notes}
+</section>`
+    : `<section id="scores">
   <h2>How the proposals scored</h2>
   ${scoreboard(data)}
 </section>
@@ -399,9 +488,13 @@ ${FONTS}
 <section id="proposals">
   <h2>The ${data.proposals.length} proposals</h2>
   ${data.proposals.map((p) => proposalBlock(p, data, files[p.file] ?? '')).join('\n')}
-</section>
+</section>`
+}
 
-<section id="reviews">
+${
+  sharpen
+    ? ''
+    : `<section id="reviews">
   <h2>The reviews</h2>
   ${data.reviews.map((r) => reviewBlock(r, data, files[r.file] ?? '')).join('\n')}
 </section>
@@ -409,7 +502,8 @@ ${FONTS}
 <section id="critique">
   <h2>What the recommendation dodged</h2>
   ${renderMarkdown(critique)}
-</section>
+</section>`
+}
 
 ${feedback === undefined ? '' : `<section id="owner-feedback"><h2>Your feedback on this round</h2>${renderMarkdown(feedback)}</section>`}
 
@@ -417,7 +511,7 @@ ${feedback === undefined ? '' : `<section id="owner-feedback"><h2>Your feedback 
   <h2>How to reply</h2>
   <div class="feedback-how">
     <p>Answer the decisions above, or push back on anything here, in any shape. Put it in <code>${dir}/feedback.md</code>, or send it as a message and ask for it to be filed there. The next round's proposers read it before the brief. Anything that should hold for every future round goes into <code>design/BRIEF.md</code> too.</p>
-    <p>To start the next round: <em>run the framework-round workflow for round ${data.round + 1}</em>.</p>
+    <p>To start the next round: <em>run the ${sharpen ? 'sharpen-round' : 'framework-round'} workflow for round ${data.round + 1}</em>.</p>
   </div>
 </section>
 
@@ -436,6 +530,7 @@ ${fragment.replace(/<div class="page">[\s\S]*$/, '')}
 </head>
 <body>
 ${fragment.replace(/^[\s\S]*?(?=<div class="page">)/, '')}
+${MERMAID_SCRIPT}
 </body>
 </html>
 `;
@@ -513,6 +608,7 @@ export function loadRound(round: number): {
     'feedback.md',
     ...data.proposals.map((p) => p.file),
     ...data.reviews.map((r) => r.file),
+    ...(data.notes ?? []).map((n) => n.file),
   ];
   wanted.forEach((file) => {
     const text = readIfExists(join(dir, file));

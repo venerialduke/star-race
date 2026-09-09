@@ -547,6 +547,10 @@ const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
 mermaid.initialize({
   startOnLoad: true,
   securityLevel: 'strict',
+  // themeVariables are only consulted under the 'base' theme; without this
+  // line mermaid keeps its own palette and the diagram sits on the page
+  // rather than in it.
+  theme: 'base',
   fontFamily: '"Source Serif 4", Georgia, serif',
   themeVariables: {
     background: v('--surface', '#fbf8f0'),

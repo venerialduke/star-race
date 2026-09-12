@@ -131,6 +131,15 @@ Then `round.json` is written with `"kind": "sharpen"` and the page is rendered.
 A sharpen round's page drops the scoreboard, the proposals and the critique
 section, and shows the design followed by the notes.
 
+## After the framework: the catalogue
+
+Once a framework is settled enough to populate, the work moves to
+`design/catalogue/`: one table per element — ship parts, crews, fixtures,
+abilities and so on — dictated by the owner and transcribed, never invented.
+`design/catalogue/README.md` is the tracker and says how to dictate. Reviews
+and the build plan come after every element is seeded, and the build is clean
+slate: nothing in the catalogue is costed against `src/`.
+
 ## Giving feedback
 
 Write `design/rounds/round-NN/feedback.md`, in whatever shape is convenient:

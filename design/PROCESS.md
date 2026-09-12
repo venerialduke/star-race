@@ -94,7 +94,27 @@ opened so the page lands on the Pages site when merged.
 > run the sharpen-round workflow for round 4
 
 Put the idea in `design/rounds/round-NN/seed.md` first (or pass `seed` pointing
-at an earlier round's). It does:
+at an earlier round's).
+
+To iterate on a sharpen round you have read, write your notes to that round's
+`feedback.md` and pass both it and its design as inputs:
+
+> run sharpen-round for round 5 with base round-04/sharpened.md and notes
+> round-04/feedback.md
+
+The three inputs have a strict order. The **base** is the spine: the output
+should read as that document with the notes worked in. The **notes** lead:
+where a note and the base disagree the note wins, and if a note moves
+something the base is built on, the designer says so rather than picking a
+side quietly. The **seed** is the guard: every named system in the original
+brainstorm is accounted for in every pass, kept, altered or flagged.
+
+Sharpen rounds write in a particular register, asked for after round 4:
+mechanics, not values. "Shields regenerate slowly" is the right sentence; a
+point value is only worth writing when the mechanic cannot be understood
+without it. Every term is defined where it first appears.
+
+It does:
 
 1. **Sharpen.** One designer reads the seed and writes `sharpened.md`: the same
    idea, made feasible, with the numbers filled in and two diagrams. It may say

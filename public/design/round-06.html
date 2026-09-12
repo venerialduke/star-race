@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1730">
+<title>Star Race Framework Round 6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+:root {
+  --ground: #f4efe2;
+  --surface: #fbf8f0;
+  --ink: #17203a;
+  --ink-soft: #4d5a7a;
+  --rule: #d6cdb6;
+  --accent: #b46a0c;
+  --accent-ink: #7a4706;
+  --good: #2f7a3e;
+  --bad: #b2372e;
+  --chip: #e9dcc0;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1730;
+    --surface: #152140;
+    --ink: #e9e4d6;
+    --ink-soft: #9aabcb;
+    --rule: #2c3a5e;
+    --accent: #f2a93b;
+    --accent-ink: #f2a93b;
+    --good: #7fd48c;
+    --bad: #e2685f;
+    --chip: #253359;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0d1730;
+  --surface: #152140;
+  --ink: #e9e4d6;
+  --ink-soft: #9aabcb;
+  --rule: #2c3a5e;
+  --accent: #f2a93b;
+  --accent-ink: #f2a93b;
+  --good: #7fd48c;
+  --bad: #e2685f;
+  --chip: #253359;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 17px/1.55 "Source Serif 4", Georgia, "Times New Roman", serif;
+  -webkit-text-size-adjust: 100%;
+}
+.page { max-width: 44rem; margin: 0 auto; padding: 0 20px 96px; }
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.masthead { padding: 40px 0 24px; border-bottom: 2px solid var(--ink); }
+.eyebrow {
+  font: 600 12px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+h1 {
+  font: 700 clamp(30px, 7vw, 44px)/1.05 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.01em; margin: 14px 0 12px; text-wrap: balance;
+}
+.headline { font-size: 20px; line-height: 1.4; margin: 0; color: var(--ink); text-wrap: balance; }
+
+nav.toc {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--ground); border-bottom: 1px solid var(--rule);
+  margin: 0 -20px; padding: 10px 20px;
+  display: flex; gap: 6px 16px; overflow-x: auto; white-space: nowrap;
+  font: 500 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.04em;
+}
+nav.toc a { text-decoration: none; color: var(--ink-soft); padding: 4px 0; }
+nav.toc a:hover { color: var(--accent-ink); }
+
+section { padding-top: 40px; }
+h2 {
+  font: 700 24px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+}
+h3 { font: 700 20px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 32px 0 8px; }
+h4 { font: 600 17px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 24px 0 6px; }
+h5 { font: 600 15px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 18px 0 4px; color: var(--ink-soft); }
+p { margin: 0 0 1em; }
+ul, ol { padding-left: 1.4em; margin: 0 0 1em; }
+li { margin-bottom: 0.35em; }
+blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--accent); color: var(--ink-soft); }
+code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
+pre code { background: none; padding: 0; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 8px; margin: 20px 0; overflow-x: auto; text-align: center; font-family: inherit; line-height: normal; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+pre.mermaid:not([data-processed]) { font: 0.85em "JetBrains Mono", ui-monospace, monospace; text-align: left; white-space: pre; color: var(--ink-soft); }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+.scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { font: 600 12px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+table.scores td { text-align: right; font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 14px; }
+table.scores td.mean { font-weight: 700; }
+table.scores td.hi { color: var(--good); font-weight: 700; }
+table.scores td.lo { color: var(--bad); font-weight: 700; }
+table.scores th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.caption { font-size: 14px; color: var(--ink-soft); margin: 0 0 20px; }
+.chip {
+  display: inline-block; font: 600 11px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-ink);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 4px 8px; margin-left: 8px; vertical-align: middle;
+}
+
+.questions { counter-reset: q; list-style: none; padding: 0; }
+.questions li { counter-increment: q; display: grid; grid-template-columns: 2.2rem 1fr; gap: 0 8px; padding: 14px 0; border-bottom: 1px solid var(--rule); margin: 0; }
+.questions li::before { content: counter(q, decimal-leading-zero); font: 700 18px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--accent); }
+.questions .q { font-weight: 600; }
+.questions .why { grid-column: 2; color: var(--ink-soft); font-size: 15px; }
+
+details { border-top: 1px solid var(--rule); }
+details:last-of-type { border-bottom: 1px solid var(--rule); }
+summary {
+  cursor: pointer; padding: 16px 0; list-style: none;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline;
+}
+summary::-webkit-details-marker { display: none; }
+summary .t { font: 700 19px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+summary .s { grid-column: 1; color: var(--ink-soft); font-size: 15px; }
+summary .arrow { font: 600 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; color: var(--accent-ink); text-transform: uppercase; }
+details[open] summary .arrow::after { content: "Close"; }
+details:not([open]) summary .arrow::after { content: "Read"; }
+details .body { padding: 0 0 24px; }
+details .body > h2:first-child { margin-top: 0; }
+
+.synthesis { background: var(--surface); border: 1px solid var(--rule); padding: 20px; margin: 0 -20px; }
+@media (min-width: 720px) { .synthesis { margin: 0; padding: 32px; } }
+
+.gaps { padding-left: 1.4em; }
+.gaps li { margin-bottom: 0.6em; }
+.feedback-how { background: var(--surface); border: 1px dashed var(--rule); padding: 16px 20px; }
+.feedback-how code { white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-soft); }
+</style>
+
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <div class="eyebrow"><span>Star Race</span><span>Sharpen round 6</span><span>2026-09-12</span></div>
+  <h1>Fast Ships Swing Wide</h1>
+  <p class="headline">Ships fly themselves through three growing laps against reshuffled rivals; the player's decisions are on the pre-race board and at one pit stop per lap — how the ship treats bends, what the navigation system aims for, what shapes the course, and what to spend or hold.</p>
+</header>
+<nav class="toc">
+  <a href="#synthesis">The design</a>
+  <a href="#decisions">Your decisions</a>
+  <a href="#notes">Notes</a>
+  <a href="#feedback">Reply</a>
+  <a href="ledger.html">Ledger</a>
+</nav>
+
+<section id="synthesis">
+  <h2>The design</h2>
+  <div class="synthesis"><h2>Fast Ships Swing Wide</h2>
+<h3>The game in brief</h3>
+<p>A season is nine players and four stages. A stage is one heat: three laps of a course, every ship on the course at once, three ships to a group, and the groups reshuffled between laps so you face different rivals each lap. Each lap is scored on its own, by finish order in your group and by how close you finished to the ship ahead. Points are the season standing and are never spent. After stages two and three, anyone below a set points line is out, however many that is.</p>
+<p>A ship is six parts: Thrust, Handling, Navigation, Hull, Shields and Crew, bought with credits, which are the money. Thrust sets how hard the ship accelerates and how fast it goes on a straight. Handling sets how fast it can take a bend without swinging wide. Navigation sees the course ahead and picks lines. Hull, Shields and Crew are three layers of damage, and the crew is also the thing that judges when to use the ship&#39;s abilities. A build comes together on the pre-race board: fit the parts, set a corner plan, which is how the ship treats bends, pick a goal for the nav system, plan the route, place your fixtures, and declare a line if you dare. Then the ship flies itself.</p>
+<p>The course is a loop with a golden path down its middle, a bright ribbon where every ship is faster and charges its abilities. The course grows a section every lap, and the base loop grows between stages. Players grow it too: fixtures are objects you own that sit on the course, and splits are forks you own that add a branch to it. Both travel with you into every lap you race.</p>
+<h3>The loop</h3>
+<p>Between heats: spend credits in the shop on parts, crew, fixtures and splits, or hold them for interest, then build on the board. During a lap: the ship flies, abilities fire on their own, and once per lap there is a pit stop, a short pause where you may change the corner plan, swap an ability or patch the crew, at the cost of a beat on the course. Between laps: the lap pays out, the groups reshuffle, the course grows, and the shop is open again briefly. After three laps: points to the standing, the cut if this stage has one, and back to the shop.</p>
+<h3>The systems</h3>
+<p><strong>The ship and speed.</strong> The player does not drive. On a straight the ship accelerates at the rate Thrust gives, toward the top speed Thrust gives. Every bend has a holding speed, set by Handling: the fastest the ship can take it and stay on the path. What the ship does about the difference is the corner plan, chosen on the board. Lift brakes to the holding speed before the bend: no swing, some time lost. Carry enters at whatever speed it has and takes the swing that comes. Charge keeps accelerating through the bend: the most speed out, the widest swing, and gravity on the crew. Lap time is what falls out of Thrust, Handling, the plan and the course.</p>
+<p><strong>The swing.</strong> On every bend the ship overshoots the path by a seeded draw. The spread grows steeply with the speed carried over the holding speed, flavoured as time dilation: the fast ship&#39;s clock runs slow and the bend arrives early. A small swing keeps the ship on the path. A big one throws it wide for the rest of the segment, slower and among the hazards. At a fork bend a big enough swing carries the ship into the other branch, whichever it planned. A wild Thrust build on Charge can do this on purpose.</p>
+<p><strong>Navigation.</strong> Nav lights the course at planning time: a fork can be clear, dim, so you pick blind, or dark, so the crew picks at the moment. Better Nav turns dark forks dim and dim forks clear. Nav also takes a goal from the board, lap time, collection or safety, and the better it is the more it bends the corner plan bend by bend toward that goal, lifting for a mine field or charging into a pocket. Cheap Nav applies the plan flat. When the crew is dead or spent, Nav alone flies the ship, and a cheap one drifts wide at every bend.</p>
+<p><strong>Reaction time.</strong> Not bought. It starts where the crew sets it, falls with speed and falls further under hard acceleration. It is how well the crew judges the moment: when to fire an ability, how far to shift shields toward a shot, how full a pocket fills, which way to go at a dark fork.</p>
+<p><strong>Abilities.</strong> Golden path time charges the ship. The abilities fitted from the build fire on their own when the crew judges the moment right, and a high reaction crew judges it better. Examples, not a fixed set: Brace narrows the next swing, Rake fires a raking shot down the side of the nearest rival, damaging and slowing them, Burn is a short overspeed on a straight that wears the crew, Scoop fills the collector in a pocket. Rake needs no aim: nearest rival in range. Mines are fixtures, placed before the race, so nothing in the race needs a target chosen by the player.</p>
+<p><strong>Gravity and crew.</strong> Hard acceleration is gravity, and a lap of it leaves a humanoid crew acting at half; a second leaves them not acting. Coasting recovers them. A humanoid crew has higher reaction and luck, a seeded chance that a bad draw is redrawn. A robot crew has more health, ignores gravity, has lower reaction and no luck. Crew hurt or killed in a heat costs credits to heal, replace or repair before the next. A humanoid crew that finishes a heat unhurt gains a little reaction, so a crew kept alive is worth more each stage.</p>
+<p><strong>Shields and hull.</strong> Shields take a hit first and regenerate slowly, faster when coasting. Above half they deflect: a hit costs damage but not speed. Below half it also costs a beat. Hull is underneath; gone, the ship is out.</p>
+<p><strong>The course.</strong> Segments with bends, some forking: one branch on the path, one wide through a pocket or hazard. Lap one is the base loop. Each lap a sealed junction opens and a section is spliced in, drawn from the season seed and the same for everyone. The added sections hold the darkest forks. Between stages the base loop grows, and the sealed junctions you can see hint at what it will become.</p>
+<p><strong>Fixtures and splits.</strong> Fixtures are bought and placed before the race, and are on the course in every lap group you race in, shown to all before the start. Beacon widens the path on its segment, Slick slows anything wide there, Mine hits the first ship through wide, Relay charges its owner on each pass. Splits are the other way to shape the course: a fork you own, spliced into a segment of your choice, a pocket split that goes wide through a pocket or a cut split that leaves the path and rejoins early. A temporary split is cheap and lasts one heat. A permanent split is bought once and stays all season.</p>
+<p><strong>Money.</strong> Each lap pays a purse by finish order in your group, the biggest sum in the lap. Under it sit three shared pools, split among the ships that drew from them by how much they did the thing: solar by time on the path, dark matter by time off it, bounty by damage dealt. No pool pays one ship more than the gap between first and second purse. Collectors open a pool: Solar Vane, Dark Matter Scoop, Grapple. Credits held through a between-lap break earn interest, up to a cap, so saving is a choice made three times a heat.</p>
+<p><strong>Points and declarations.</strong> A lap scores by finish order in its group plus a margin bonus for a ship that finished close behind, so a close third is worth about twice a beaten one. Declarations are made on the board. The Long Line takes the wide branch at every fork: win your group with it and the bonus doubles with extra credits; finish last and you lose points. Hold the Line is its opposite: you declare you will never leave the path. Complete the heat without a wide swing or a wide branch and you take a bonus; swing wide once and it is void and costs you.</p>
+<h3>How they connect</h3>
+<p>Because a bend sheds only what the corner plan gives up, the player must decide before the race how much swing they will trade for speed.</p>
+<p>Because the swing spread grows steeply with excess speed, the player must match Thrust to Handling or plan for where a wide swing lands.</p>
+<p>Because reaction falls with speed and the crew times abilities alone, the player must choose a ship that fires well or a ship that is fast.</p>
+<p>Because a hurt crew costs money and a whole crew gains reaction, the player must weigh a Charge plan against the bill after.</p>
+<p>Because Nav follows a goal, the player must decide what the ship is for before it races.</p>
+<p>Because groups reshuffle each lap, the player must build for the field, not for two rivals.</p>
+<p>Because pools are shared and capped under the purse, the player must still race for the win.</p>
+<p>Because fixtures and splits are on every course you race, the player must read the other two ships&#39; course as much as their own.</p>
+<h3>A worked heat</h3>
+<p>Stage two. You fit a robot crew, high Thrust, middling Handling, cheap Nav, a Dark Matter Scoop and a Grapple. The corner plan is Carry, the nav goal is collection. You place a Slick and a Mine and a temporary pocket split on the back straight, and you declare nothing. Lap one: on the second bend the draw is bad, you swing wide, rejoin two lengths down, and finish third, close. The purse for third is small but the dark matter pool is yours alone. At the break you take interest rather than spend. Lap two, new group, the well opens. Your pocket split pays: Scoop fires in the pocket at a fair moment and you come out full. At the pit stop you switch the plan to Charge for the last lap. Lap three, the crew fires Rake at the leader and hits, then swings wide on the exit into someone&#39;s Mine. Shields hold above half; no beat lost. Second, close. Three laps of close finishes add up to a fair standing, above the line. Next stage you buy the nav system, because a dark fork picked by a robot is a coin.</p>
+<h3>What changed, and why</h3>
+<p><strong>The opening.</strong> The one-tension paragraph is gone. &quot;The game in brief&quot; is now three short summaries: stage and season, ship and build, course and its growth. The swing is still the central handling mechanic and the title stays, but the document no longer claims the whole game is that one thing.</p>
+<p><strong>Speed and thrust.</strong> The base had a throttle the player set and nothing under it. Now Thrust gives acceleration and top speed, Handling gives each bend a holding speed, and the corner plan says what the ship does with the difference: Lift, Carry or Charge. This is where a bend&#39;s speed cost lives, which answers the readers&#39; coasting point. All three threads in the note are in: the corner plan is the &quot;how to approach corners&quot; choice; a big enough swing at a fork carries the ship into the other branch; and Nav takes a goal and bends the plan toward it, more the better it is.</p>
+<p><strong>Taps.</strong> Applied. Abilities charge on the path and fire on their own when the crew judges the moment, with reaction time setting how well they judge. The tap window is gone with the tap. The named downside is handled the way the note suggests: Rake needs no target, it takes the nearest rival, and Mines are fixtures placed before the race. The abilities are examples, not a fixed set, and &quot;two of four&quot; is dropped. The base&#39;s speed-versus-reaction trade survives: a fast ship&#39;s crew fires worse, it just no longer shows in the thumb. Whether any manual override remains is in your calls.</p>
+<p><strong>Crew maintenance.</strong> Added. Hurt or dead crew cost credits before the next heat. Paired with the veteran rule below so keeping a crew alive is a long-term hold, not only a saved bill.</p>
+<p><strong>Influencing the track.</strong> Fixtures are no longer the only way. Splits are forks you own, temporary or permanent, spliced into the course you carry.</p>
+<p><strong>Wanted and cops.</strong> Removed at your request. See below.</p>
+<p><strong>Eliminations.</strong> The cut is a set points line, so the number cut varies. Points are defined as the season standing, awarded per lap by order and margin, never spent; credits are money, spent in the shop, never counted for standing. Hold the Line is the second declaration beside the Long Line.</p>
+<p><strong>Between-race economy.</strong> Interest on held credits up to a cap, paid at between-lap breaks. Pit stops: one per lap, a pause where you change the plan, swap an ability or patch the crew, at the cost of a beat. Between-lap breaks: payout, reshuffle, growth, shop. A heat is one build plus three pit stops plus three purchase moments, as the note asks. Permanent splits and veteran crews are the other ways to play long.</p>
+<p><strong>The reshuffle is a tension.</strong> The seed&#39;s heat is three fixed ships over three laps, and the base scored the heat as one race. The note&#39;s rotating opponents make each lap its own race against a different two. Applied: a lap is scored and paid on its own, a heat is the sum of its three laps, and fixtures travel into every group you land in. What is lost is a three-lap duel with the same rivals. If that duel matters to you, keep the groups fixed and the rest of the economy still works.</p>
+<p><strong>Open questions.</strong> Cut to systems and their relations. The base&#39;s four calls, spread visibility, tap rate, dark fork default and Rake line of sight, are all tuning or detail and are dropped.</p>
+<h3>What does not work, and what I would do instead</h3>
+<p><strong>Wanted status and the cops.</strong> A named seed system, removed at your request. With it goes the rent on aggression. What restrains Rake now is the bounty pool cap, the damage a hit rival deals back, and the crew bill. If aggression turns out free, bring back a cost before bringing back the cops.</p>
+<p><strong>Taps as a mechanic.</strong> The base&#39;s in-race thumb is gone, replaced by abilities that fire themselves. The one-thumb constraint still holds: the thumb now works on the board and at pit stops.</p>
+<p><strong>Randomness at the cut.</strong> Still flagged. The margin bonus, the two declarations, the swing and the reshuffle are seeded variation enough; a die at the cut makes balance unmeasurable.</p>
+<p><strong>&quot;Mods only apply to your own races.&quot;</strong> Still read as the parenthesis implies: fixtures and splits are carried, present in every group their owner runs in.</p>
+<p><strong>Passive collectors.</strong> Still flagged. Collectors stay on the track as the equipment that opens a pool; interest is the only income earned by waiting, and it is capped.</p>
+<p><strong>The swing is invisible.</strong> Raised by the readers, not yet spoken to by you. A player who loses cannot tell whether it was the plan, Handling or the draw. Not solved here and not dropped. A cheap fix would show the spread band at each bend on the board for the plan you set; it waits on your word.</p>
+<h3>What I added</h3>
+<p>The corner plan, Lift, Carry, Charge, as the thing under speed and the place a bend costs time.</p>
+<p>The holding speed of a bend, set by Handling.</p>
+<p>Overshoot into the other branch at a fork bend.</p>
+<p>Nav goals: lap time, collection, safety.</p>
+<p>Splits, temporary and permanent.</p>
+<p>Crew maintenance and the veteran crew.</p>
+<p>Hold the Line.</p>
+<p>Per-lap scoring and payout, with groups reshuffled between laps.</p>
+<p>Interest, capped, at between-lap breaks.</p>
+<p>The pit stop as a pause that costs a beat.</p>
+<h3>What needs your call</h3>
+<p><strong>Does any in-race tap survive?</strong> As written the race asks for nothing but the pit stop. A single override, firing a charged ability now, could stay for players who want a thumb in it. Auto-only or override.</p>
+<p><strong>Fixed groups or reshuffled?</strong> The note asks for the reshuffle and it is applied. It changes what a heat is. Confirm it, or keep three rivals for three laps.</p>
+<p><strong>How does a group fill when survivors do not divide by three?</strong> A set cutoff can leave eight or seven. A short group, a pace ship run by the game, or a cutoff that always leaves a multiple of three.</p>
+<p><strong>Do splits carry into rivals&#39; courses the way fixtures do?</strong> As written yes, both travel. If a rival&#39;s permanent split can reshape your whole heat, that is a lot of course in one purchase; it could instead show only in your own laps and rivals see it only when grouped with you, which is the same thing under rotation but not under fixed groups.</p>
+</div>
+</section>
+
+<section id="decisions">
+  <h2>Decisions only you can make</h2>
+  <ol class="questions"><li><span class="q">Does any in-race tap survive, or is the race auto-only with the thumb at the board and pit stops?</span><span class="why">Decides whether abilities are purely automatic or a single override tap remains, which sets what the race asks of the player.</span></li>
+<li><span class="q">Fixed groups for three laps, or reshuffled each lap as the note asks?</span><span class="why">Changes what a heat is: one three-lap duel scored as a race, or three lap-races summed. Both readers say the reshuffle version leaves unstated what a ship keeps between laps and whether nine ships share one loop or three.</span></li>
+<li><span class="q">How does a group fill when the set cutoff leaves a survivor count not divisible by three?</span><span class="why">A short group, a game-run pace ship, or a cutoff that always leaves a multiple of three are different systems with different fairness.</span></li>
+<li><span class="q">Do splits carry into rivals' courses the way fixtures do?</span><span class="why">A rival's permanent split can reshape your whole heat; whether course works are shared like fixtures or private-until-grouped decides how much course one purchase controls.</span></li></ol>
+  <h4>What the next round should work on</h4>
+  <p>The notes all landed and the idea survives, and both readers land on one gap the notes opened: reshuffling rivals every lap turns a heat into three separate races, and the document never says what a ship keeps across a lap boundary, whether nine ships run one shared loop or three, or how long a heat is. Answer that first — a paragraph of what carries and what resets — because everything downstream depends on it. Then the smaller asks: a one-line verdict after each lap naming the plan, the stat and the draw that cost you; a precedence rule between declaration, nav goal and corner plan; one trigger line per ability; and whether a fork overshoot lands wide or on the path, and whether an involuntary branch breaks the Long Line. The swing is still invisible — the owner has not spoken to it yet, and both readers keep raising it.</p>
+</section>
+
+<section id="notes">
+  <h2>Notes on the design</h2>
+  <details id="note-the-player">
+<summary><span class="t">The player</span><span class="arrow"></span></summary>
+<div class="body"><h2>Notes: The player</h2>
+<h3>Did the notes land</h3>
+<p>Yes, every one. The opening is three summaries, not one tension. Speed is now Thrust plus a holding speed plus a corner plan, and all three of the owner&#39;s threads are in: Lift/Carry/Charge, overshoot into the other branch, Nav goals. Taps are gone and abilities fire themselves, with Rake untargeted and Mines pre-placed exactly as the note suggested. Crew maintenance, splits, the set points line, points versus credits, Hold the Line, interest, pit stops, between-lap shops, rotating rivals: all present and each named in &quot;What changed.&quot; Wanted and cops are removed and listed, not lost. The two reader items from last round are handled the way the brief asked. The open calls are about systems, except &quot;how does a group fill when survivors do not divide by three,&quot; which is in the weeds again.</p>
+<h3>Does the idea survive</h3>
+<p>It is the same design with the notes worked in. Same ship, same path, same pools, same swing, same crews. Two things changed shape, and the document says so: the race asks for nothing from the thumb now, and a heat is three separate lap-races instead of one three-lap duel. The seed&#39;s core, fast means less reaction and swinging wide is the danger, is intact. Every seed system is accounted for. Two small things slipped: the seed&#39;s nav &quot;gravity assists&quot; and &quot;improves handling&quot; are gone without a word, and the seed wanted &quot;some randomness&quot; in the cut, which is flagged as refused rather than altered. That is honest, but say it once in the seed&#39;s own terms.</p>
+<h3>What works</h3>
+<p>The corner plan. &quot;Lift brakes to the holding speed before the bend: no swing, some time lost&quot; is a choice I can make in a five-minute gap and watch pay off or not. Paired with crew type, it produces the whole bill: Charge on a humanoid crew is a story and an invoice.</p>
+<p>Overshoot into the other branch. &quot;A wild Thrust build on Charge can do this on purpose&quot; is the sentence I would build a ship around.</p>
+<p>Points and credits are finally two words for two things. Hold the Line against the Long Line is readable in one glance.</p>
+<h3>What does not</h3>
+<p>The screen. With taps gone, a lap is a replay. That is fine for build-and-watch, but auto-chess fights last thirty seconds; this is three laps, three pit stops, three shops, and the document never says how long a heat takes. The base said a couple of minutes. Say it again.</p>
+<p>Two invisible stats now decide races. Reaction time governs &quot;when to fire, how far to shift shields, how full a pocket fills, which way to go at a dark fork,&quot; and none of it shows. Add the swing and I lose to two numbers I cannot see and one die I cannot see.</p>
+<p>&quot;Every ship on the course at once, three ships to a group&quot; is ambiguous. Nine dots on one loop with my three highlighted, or three loops? The fixture rule implies three loops. On a phone this decides whether I can follow my race at all.</p>
+<p>The pit stop &quot;at the cost of a beat&quot; makes the only in-race act a penalty. Skipping it is the default play, so the one thumb has nothing to do.</p>
+<p>Jargon I guessed at: &quot;beat&quot; (a unit of time lost, never defined), &quot;pocket&quot; (never defined here), &quot;the well opens&quot; (in the worked heat, undefined), &quot;sealed junction,&quot; &quot;pace ship.&quot; And Scoop is both an ability and half of &quot;Dark Matter Scoop,&quot; a collector. Two things, one word.</p>
+<h3>What I would add</h3>
+<p>A one-line verdict after every lap: &quot;swung wide at bend four: Charge, bad draw.&quot; That is the whole legibility fix and it costs nothing.</p>
+<p>A reaction gauge on the ship that visibly falls as it speeds up, so the seed&#39;s trade is seen, not only simulated.</p>
+<p>Make the pit stop free to open and charge the beat only if you change something.</p>
+<p>Fold splits into fixtures as a fifth fixture type, &quot;Fork,&quot; so the shop has one tab for shaping the course.</p>
+<h3>What I would cut first</h3>
+<p>Splits. Two kinds, two durations, and an unresolved question about whether they reshape a rival&#39;s heat. What you lose is the permanent long hold and the note&#39;s &quot;add a track section.&quot; A Fork fixture keeps most of that. Second on the list is the nav goal, which overlaps the corner plan and the route; what you would lose is Nav being &quot;what the ship is for,&quot; which the corner plan already half says.</p>
+</div>
+</details>
+<details id="note-the-rules-reader">
+<summary><span class="t">The rules reader</span><span class="arrow"></span></summary>
+<div class="body"><h2>Notes: The rules reader</h2>
+<h3>Did the notes land</h3>
+<p>Yes, all of them, and visibly. The opening is three summaries. Speed is now Thrust, a holding speed per bend from Handling, and a corner plan with all three of the owner&#39;s threads in it: Lift, Carry, Charge; overshoot into the other branch; Nav goals. Taps are gone and abilities fire themselves, with the owner&#39;s own downside handled the way the note suggested. Crew maintenance, splits, capped interest, pit stops, per-lap breaks, the set points line, points defined against credits, and Hold the Line are all present. Wanted and cops are removed and named as removed. The open questions are now about systems. The two reader items from round 5 are handled as the brief asked: coasting lives under the corner plan, and the invisible swing is flagged, not solved.</p>
+<h3>Does the idea survive</h3>
+<p>It is the same design. The swing is still the central handling mechanic, the six parts, the golden path, the growing course, fixtures, pools under a capped purse and the Long Line are all the round 5 document. The speed-versus-reaction trade survives in a different seat: the crew fires worse when fast instead of the thumb missing a window. The reshuffle is the one change that alters what a heat is, and the document says so.</p>
+<p>Every named seed system is accounted for. Wanted status is the only one removed, and it is flagged. Passive collectors and randomness at the cut are altered and flagged. The one small seed detail with no home is &quot;gravity assists&quot; under Navigation; it is a phrase, not a system, but it went quietly.</p>
+<h3>What works</h3>
+<p>The corner plan is the best rule in the document. Three plans, one derived number per bend, one draw whose spread is a function of one difference: &quot;The spread grows steeply with the speed carried over the holding speed.&quot; That is a rule with a number missing, nothing more. The pool cap, the purse, interest with a cap, and the points-versus-credits split are all the same shape. Hold the Line is fully checkable: a flag that a wide swing or a wide branch clears.</p>
+<h3>What does not</h3>
+<p>&quot;Every ship on the course at once, three ships to a group&quot; hides the biggest rule. If groups reshuffle, the course grows and the shop opens between laps, a lap is a separate three-ship race, not a lap. The document never says what carries across the boundary: speed, shield level, crew fatigue, ability charge, position on the line. Nine ships on one course with per-group fixtures is a contradiction until that is written.</p>
+<p>&quot;Abilities fire on their own when the crew judges the moment right&quot; is one sentence and at least eight rules: a trigger condition per ability, and a definition of how reaction degrades it, as a delay in ticks, a miss chance, or reduced effect. Pick one form and it becomes tractable.</p>
+<p>&quot;The better it is the more it bends the corner plan bend by bend toward that goal&quot; needs an evaluator inside the sim that knows which plan best serves lap time or collection at each bend. And it collides with the declarations: a collection goal at a fork can take the wide branch and void Hold the Line. Nothing says which wins.</p>
+<p>&quot;A big enough swing carries the ship into the other branch, whichever it planned&quot; is a second threshold on the same draw, which is fine, but it needs to say whether the ship arrives wide or on the path, and whether an involuntary branch breaks the Long Line.</p>
+<p>Gravity has no coasting condition. &quot;Hard acceleration&quot; and &quot;coasting&quot; both need a threshold, and &quot;acting at half&quot; must name what is halved. Burn &quot;wears the crew&quot; without saying which of the crew&#39;s two meters, health or fatigue.</p>
+<p>The pit stop needs a fixed point in the lap and a rule for whether the beat is paid only when used. Two rivals&#39; splits spliced into the same segment need an order.</p>
+<h3>What I would add</h3>
+<p>A one-paragraph list of what a ship keeps between laps and what resets.</p>
+<p>One trigger line per ability, with reaction as a delay in ticks from that trigger.</p>
+<p>A precedence rule: declaration beats Nav goal beats corner plan.</p>
+<p>Fatigue as an accumulator with a named coasting threshold and a named effect.</p>
+<p>The margin bonus measured against one ship only, the winner or the ship ahead, not both as now.</p>
+<h3>What I would cut first</h3>
+<p>&quot;Every ship on the course at once.&quot; Make each lap a plain three-ship race from a standing start and the reshuffle, the growth and the shop all become easy. Second, rival-carried splits, which already sit in the owner&#39;s calls; per-group course composition is the most rule-hungry thing here for the least play.</p>
+</div>
+</details>
+</section>
+
+
+
+
+
+<section id="feedback">
+  <h2>How to reply</h2>
+  <div class="feedback-how">
+    <p>Answer the decisions above, or push back on anything here, in any shape. Put it in <code>design\rounds\round-06/feedback.md</code>, or send it as a message and ask for it to be filed there. The next round's proposers read it before the brief. Anything that should hold for every future round goes into <code>design/BRIEF.md</code> too.</p>
+    <p>To start the next round: <em>run the sharpen-round workflow for round 7</em>.</p>
+  </div>
+</section>
+
+<footer>Rendered from <code>design\rounds\round-06/</code> by <code>npm run design-page</code>. The markdown is the record; this page is the reading copy.</footer>
+</div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+const css = getComputedStyle(document.documentElement);
+const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+mermaid.initialize({
+  startOnLoad: true,
+  securityLevel: 'strict',
+  // themeVariables are only consulted under the 'base' theme; without this
+  // line mermaid keeps its own palette and the diagram sits on the page
+  // rather than in it.
+  theme: 'base',
+  fontFamily: '"Source Serif 4", Georgia, serif',
+  themeVariables: {
+    background: v('--surface', '#fbf8f0'),
+    primaryColor: v('--chip', '#e9dcc0'),
+    primaryBorderColor: v('--rule', '#d6cdb6'),
+    primaryTextColor: v('--ink', '#17203a'),
+    lineColor: v('--ink-soft', '#4d5a7a'),
+    secondaryColor: v('--surface', '#fbf8f0'),
+    tertiaryColor: v('--ground', '#f4efe2'),
+  },
+});
+</script>
+</body>
+</html>

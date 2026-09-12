@@ -77,8 +77,15 @@ const seed = parsedArgs.seed ?? `${dir}/seed.md`;
 const base = parsedArgs.base ?? null;
 const notes = parsedArgs.notes ?? null;
 if (notes && !base) throw new Error('notes were given without a base to apply them to.');
+// Diagrams and budgets are arguments so a pass can be tuned without editing
+// the prompt. Round 4 landed at 2,337 words and round 5 at 3,575 against a
+// 1,500 target, so the default target is lower than the length wanted: agents
+// write to about one and a half to two times the number they are given.
+const diagrams = parsedArgs.diagrams !== false;
+const designWords = parsedArgs.designWords ?? '1,000';
+const noteWords = parsedArgs.noteWords ?? '500';
 log(
-  `Sharpen round ${round}: seed ${seed}${base ? `, base ${base}` : ''}${notes ? `, notes ${notes}` : ''}`,
+  `Sharpen round ${round}: seed ${seed}${base ? `, base ${base}` : ''}${notes ? `, notes ${notes}` : ''}; diagrams ${diagrams ? 'on' : 'off'}, targets ${designWords}/${noteWords}`,
 );
 
 const budget = (words) => `
@@ -217,11 +224,19 @@ What you MUST NOT do:
   - SILENTLY DROP A NAMED SYSTEM. This is the specific failure to avoid. If a system in the seed${base ? ' or the base' : ''} does not survive, it goes in "What does not work" with a reason and a suggested replacement — never just absent. Every named system in the seed must appear somewhere in your document, kept, altered or flagged.
 ${base ? '  - SILENTLY IGNORE A NOTE. Every note the owner wrote must be visibly answered — applied, or argued with in "What does not work". Never just unaddressed.' : ''}
 
-${budget('1,500')}
-DIAGRAMS. Include TWO \`\`\`mermaid fenced blocks — the page renders these as pictures, and they are the fastest way for the owner to get the feel of the design. One should show the loop: what a player does, in order, and what feeds back into what. The other should show how the systems connect, or a state the ship moves through. Use \`flowchart TD\`/\`flowchart LR\` or \`stateDiagram-v2\`. Keep each under about twelve nodes so it reads on a phone, label the edges, and use plain words in the labels.
-
+${budget(designWords)}
+WHERE TO SPEND LENGTH. ${base ? '"What changed, and why" may be as long as it needs to be — it is the owner\'s check that every note landed. ' : ''}The mechanics prose is where to be brief: a system in three or four sentences, a coupling in one, the worked heat in a short paragraph. If a section is running long, it is describing values or edge cases the owner has not asked for.
+${
+  diagrams
+    ? `
+DIAGRAMS. Include TWO \`\`\`mermaid fenced blocks — the page renders these as pictures. One should show the loop: what a player does, in order, and what feeds back into what. The other should show how the systems connect, or a state the ship moves through. Use \`flowchart TD\`/\`flowchart LR\` or \`stateDiagram-v2\`. Keep each under about twelve nodes so it reads on a phone, label the edges, and use plain words in the labels.
+`
+    : `
+NO DIAGRAMS this pass. Do not include mermaid blocks, ASCII art, or tables standing in for a picture. Prose only.
+`
+}
 Write ${dir}/sharpened.md with EXACTLY these headings, starting with a top-level "# <title>" line:
-## The idea, in one paragraph
+## The game in brief
 ## The loop
 ## The systems
 ## How they connect
@@ -230,7 +245,7 @@ ${base ? '## What changed, and why\n' : ''}## What does not work, and what I wou
 ## What I added
 ## What needs your call
 
-"The idea, in one paragraph" must be readable by someone who has never seen any earlier document: no undefined terms. "The systems" covers each thing the seed names — the ship, the course, the money, the season — in a short section each, described as mechanics. "How they connect" names the couplings as sentences of the form "because X, the player must Y". "A worked heat" walks one race and one decision between races, briefly, so the feel lands. ${base ? '"What changed, and why" goes note by note through the owner\'s notes and says what was done about each — this is the owner\'s main check that their feedback landed. ' : ''}"What does not work" is where every flagged system goes, with a reason and a suggested fix.
+"The game in brief" is a short summary of the mechanics, not a single tension: in a few sentences each, what a stage is and how a season runs; what a ship is, what its stats do, and how a build comes together; and how the track evolves. It must be readable by someone who has never seen an earlier document, with no undefined terms. "The systems" covers each thing the seed names — the ship, the course, the money, the season — in a short section each, described as mechanics. "How they connect" names the couplings as sentences of the form "because X, the player must Y". "A worked heat" walks one race and one decision between races in a paragraph, so the feel lands. ${base ? '"What changed, and why" goes note by note through the owner\'s notes and says what was done about each — this is the owner\'s main check that their feedback landed. ' : ''}"What does not work" is where every flagged system goes, with a reason and a suggested fix. "What needs your call" lists only calls about which systems exist and how they relate — never balance numbers, tuning, or anything that can wait for a playable version.
 
 Return the title, the one-sentence headline, the file path, and the lists: what you kept from the seed, what you flagged, what changed from the base, any tensions between the notes and the base, what you added, and the calls that need the owner.`,
   { label: 'sharpen', phase: 'Sharpen', schema: SHARPEN_SCHEMA },
@@ -317,7 +332,7 @@ ${base ? '## Did the notes land\n' : ''}## Does the idea survive
 ## What I would add
 ## What I would cut first
 
-${budget('700')}
+${budget(noteWords)}
 Return your lens name, the file path, the single strongest thing, the single weakest thing, your concrete suggestions, whether the owner's idea survives, and whether the notes all landed.`,
           { label: `read:${r.slug}`, phase: 'Read', schema: NOTE_SCHEMA },
         ),

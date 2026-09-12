@@ -1,0 +1,41 @@
+{
+  "round": 6,
+  "date": "2026-09-12",
+  "kind": "sharpen",
+  "title": "Fast Ships Swing Wide",
+  "headline": "Ships fly themselves through three growing laps against reshuffled rivals; the player's decisions are on the pre-race board and at one pit stop per lap — how the ship treats bends, what the navigation system aims for, what shapes the course, and what to spend or hold.",
+  "builtFrom": "round-05",
+  "proposals": [],
+  "reviews": [],
+  "notes": [
+    { "lens": "The player", "file": "notes/plays.md" },
+    { "lens": "The rules reader", "file": "notes/rules.md" }
+  ],
+  "synthesisFile": "sharpened.md",
+  "critiqueFile": "",
+  "questions": [
+    {
+      "question": "Does any in-race tap survive, or is the race auto-only with the thumb at the board and pit stops?",
+      "why": "Decides whether abilities are purely automatic or a single override tap remains, which sets what the race asks of the player."
+    },
+    {
+      "question": "Fixed groups for three laps, or reshuffled each lap as the note asks?",
+      "why": "Changes what a heat is: one three-lap duel scored as a race, or three lap-races summed. Both readers say the reshuffle version leaves unstated what a ship keeps between laps and whether nine ships share one loop or three."
+    },
+    {
+      "question": "How does a group fill when the set cutoff leaves a survivor count not divisible by three?",
+      "why": "A short group, a game-run pace ship, or a cutoff that always leaves a multiple of three are different systems with different fairness."
+    },
+    {
+      "question": "Do splits carry into rivals' courses the way fixtures do?",
+      "why": "A rival's permanent split can reshape your whole heat; whether course works are shared like fixtures or private-until-grouped decides how much course one purchase controls."
+    }
+  ],
+  "nextRound": "The notes all landed and the idea survives, and both readers land on one gap the notes opened: reshuffling rivals every lap turns a heat into three separate races, and the document never says what a ship keeps across a lap boundary, whether nine ships run one shared loop or three, or how long a heat is. Answer that first — a paragraph of what carries and what resets — because everything downstream depends on it. Then the smaller asks: a one-line verdict after each lap naming the plan, the stat and the draw that cost you; a precedence rule between declaration, nav goal and corner plan; one trigger line per ability; and whether a fork overshoot lands wide or on the path, and whether an involuntary branch breaks the Long Line. The swing is still invisible — the owner has not spoken to it yet, and both readers keep raising it.",
+  "gaps": [
+    "Per-lap reshuffle makes each lap a separate race and nothing says what a ship keeps across the boundary or whether nine ships share one loop",
+    "The swing is invisible — carried over from round 5, still not addressed by the owner",
+    "Abilities have no stated triggers, so reaction time has nothing to be measured from",
+    "No precedence between a declaration, the nav goal and the corner plan when they disagree at a bend"
+  ]
+}

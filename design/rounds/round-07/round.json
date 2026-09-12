@@ -1,0 +1,41 @@
+{
+  "round": 7,
+  "date": "2026-09-12",
+  "kind": "sharpen",
+  "title": "Fast Ships Swing Wide",
+  "headline": "Ships fly a checkpointed track on their own, the swing at every bend is what speed costs, and a heat is two laps against the same three rivals with a pit stop that resets the start line but never the clock.",
+  "builtFrom": "round-06",
+  "proposals": [],
+  "reviews": [],
+  "notes": [
+    { "lens": "The player", "file": "notes/plays.md" },
+    { "lens": "The rules reader", "file": "notes/rules.md" }
+  ],
+  "synthesisFile": "sharpened.md",
+  "critiqueFile": "",
+  "questions": [
+    {
+      "question": "Does the cut happen at phase boundaries or between heats?",
+      "why": "At the phase, a bad heat can be recovered and margins compound over a chapter; at the heat, recovery vanishes and the margin bonus becomes the whole game near the line. A middle path is a hard line per phase and a softer one per heat."
+    },
+    {
+      "question": "How does a group fill when survivors do not divide by three?",
+      "why": "A set points line can leave eight or seven; the options are a short group, a game-run pace ship, or a line that always leaves a multiple of three."
+    },
+    {
+      "question": "Can a player buy a whole section, adding a checkpoint to the loop?",
+      "why": "The note says track extensions or modifiers; splits and fixtures live inside a section. A bought checkpoint interacts with the thirty-second rule and with growth between phases."
+    },
+    {
+      "question": "Do a rival's permanent splits stay on the track for you after the heat?",
+      "why": "With fixed groups per heat this matters; as written a split is on the track only in heats its owner races."
+    }
+  ],
+  "nextRound": "The vocabulary landed: track, checkpoint, section, split, route, pit stop, heat, lap, phase are used consistently and the per-lap reshuffle is gone. The rules reader found the one thing the new structure drifts on: the design adds pit stops mid-lap to keep every run under thirty seconds as the loop grows, so pit stops now outnumber laps, and every quantity keyed 'per lap' — pool payout, interest, fixture lifetime, halt recovery, gravity — silently means something different from what it says. Name the run (pit stop to pit stop) as the unit, state per quantity whether it is per run or per lap, and give a run a tick cap with a rule for a ship that has not crossed. The player reader has raised the invisible swing for the third round running and now asks for it without waiting: a spread band per bend on the board, and a per-section line on the tracking bar for where time was lost — the sim is deterministic so this is free. One seed phrase still vanishes unremarked: navigation using gravity assists.",
+  "gaps": [
+    "Pit stops now outnumber laps on a grown loop, so every 'per lap' quantity silently drifts and a thirty-second run has no end rule for a ship that has not crossed",
+    "The swing is invisible — third round unresolved; both readers now ask for a spread band on the board and per-section time on the tracking bar",
+    "Navigation using gravity assists is in the seed and vanishes unremarked",
+    "'Line' now means four things: points line, Long Line, Hold the Line, start line"
+  ]
+}

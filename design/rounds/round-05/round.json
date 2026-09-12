@@ -1,0 +1,41 @@
+{
+  "round": 5,
+  "date": "2026-09-11",
+  "kind": "sharpen",
+  "title": "Fast Ships Swing Wide",
+  "headline": "The faster a ship goes into a bend, the wider and less predictably it swings off the golden path; the player builds the ship, plans the route and crew before the race, and taps at most three times, inside timing windows the crew's reaction sets.",
+  "builtFrom": "round-04",
+  "proposals": [],
+  "reviews": [],
+  "notes": [
+    { "lens": "The player", "file": "notes/plays.md" },
+    { "lens": "The rules reader", "file": "notes/rules.md" }
+  ],
+  "synthesisFile": "sharpened.md",
+  "critiqueFile": "",
+  "questions": [
+    {
+      "question": "How much of the swing does the player see before racing — a visible spread band per bend for the chosen throttle, or felt only?",
+      "why": "Legible risk is easier to balance and learn; felt risk is more of a story. It decides what the pre-race board shows and how much the throttle choice is a calculation. Both readers want it shown."
+    },
+    {
+      "question": "Is one tap per clean lap the right rate, or should the tap count be a bought part?",
+      "why": "Sets whether zero-to-three taps is a fixed shape of the race or a build axis, and whether wide-running builds are meant to tap less."
+    },
+    {
+      "question": "At a fork the navigation system cannot show at all, should the crew pick, or should the player always get a blind pick?",
+      "why": "Crew pick makes a cheap navigation system a real gamble and gives crew type a job; blind pick keeps the player in charge but weakens what Navigation is worth."
+    },
+    {
+      "question": "Should Rake need line of sight?",
+      "why": "No aiming keeps it one tap and a purchase; requiring the same line makes aggression a skill and makes wide runners hard to hit, which changes how the Long Line and the bounty pool play."
+    }
+  ],
+  "nextRound": "Both readers say the notes all landed and the idea survives. Both also point at the same hole: the swing is the game now and the player cannot see it. Show a spread band at each bend for the chosen throttle, and give the results screen a one-line ledger per lost length — draw, throttle, fixture, fork — so a loss can be diagnosed. The rules reader's deeper point is that coasting has no rule under it: nothing says a bend sheds speed, so a clean fast build never has to burn and gravity never bites the build it was meant to punish. Make bends shed speed so the throttle is the rate of the burn out of them, and let that one definition of coasting serve gravity and shield regeneration both. Then the smaller fixes: one tap button that names the window it belongs to; the pool cap on a ship's total take rather than per pool; separate crew fatigue from crew health; and state which actives the crew performs unpaid so wanted status cannot rise without the player choosing it. One seed phrase went missing and both readers caught it — the navigation system optimising acceleration and using gravity assists — name it and either keep it or argue it away.",
+  "gaps": [
+    "The swing's spread is invisible: a player cannot tell throttle from Handling from the dice when they lose",
+    "Coasting has no rule under it, so a clean fast build never burns and gravity never bites the build it was meant to punish",
+    "One seed phrase vanished without a flag: the navigation system optimising acceleration and gravity assists",
+    "The pool cap is per pool rather than on a ship's total take, so three pools can still out-pay the purse together"
+  ]
+}

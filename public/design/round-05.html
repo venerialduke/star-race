@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1730">
+<title>Star Race Framework Round 5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+:root {
+  --ground: #f4efe2;
+  --surface: #fbf8f0;
+  --ink: #17203a;
+  --ink-soft: #4d5a7a;
+  --rule: #d6cdb6;
+  --accent: #b46a0c;
+  --accent-ink: #7a4706;
+  --good: #2f7a3e;
+  --bad: #b2372e;
+  --chip: #e9dcc0;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1730;
+    --surface: #152140;
+    --ink: #e9e4d6;
+    --ink-soft: #9aabcb;
+    --rule: #2c3a5e;
+    --accent: #f2a93b;
+    --accent-ink: #f2a93b;
+    --good: #7fd48c;
+    --bad: #e2685f;
+    --chip: #253359;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0d1730;
+  --surface: #152140;
+  --ink: #e9e4d6;
+  --ink-soft: #9aabcb;
+  --rule: #2c3a5e;
+  --accent: #f2a93b;
+  --accent-ink: #f2a93b;
+  --good: #7fd48c;
+  --bad: #e2685f;
+  --chip: #253359;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 17px/1.55 "Source Serif 4", Georgia, "Times New Roman", serif;
+  -webkit-text-size-adjust: 100%;
+}
+.page { max-width: 44rem; margin: 0 auto; padding: 0 20px 96px; }
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.masthead { padding: 40px 0 24px; border-bottom: 2px solid var(--ink); }
+.eyebrow {
+  font: 600 12px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+h1 {
+  font: 700 clamp(30px, 7vw, 44px)/1.05 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.01em; margin: 14px 0 12px; text-wrap: balance;
+}
+.headline { font-size: 20px; line-height: 1.4; margin: 0; color: var(--ink); text-wrap: balance; }
+
+nav.toc {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--ground); border-bottom: 1px solid var(--rule);
+  margin: 0 -20px; padding: 10px 20px;
+  display: flex; gap: 6px 16px; overflow-x: auto; white-space: nowrap;
+  font: 500 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.04em;
+}
+nav.toc a { text-decoration: none; color: var(--ink-soft); padding: 4px 0; }
+nav.toc a:hover { color: var(--accent-ink); }
+
+section { padding-top: 40px; }
+h2 {
+  font: 700 24px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+}
+h3 { font: 700 20px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 32px 0 8px; }
+h4 { font: 600 17px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 24px 0 6px; }
+h5 { font: 600 15px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 18px 0 4px; color: var(--ink-soft); }
+p { margin: 0 0 1em; }
+ul, ol { padding-left: 1.4em; margin: 0 0 1em; }
+li { margin-bottom: 0.35em; }
+blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--accent); color: var(--ink-soft); }
+code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
+pre code { background: none; padding: 0; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 8px; margin: 20px 0; overflow-x: auto; text-align: center; font-family: inherit; line-height: normal; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+pre.mermaid:not([data-processed]) { font: 0.85em "JetBrains Mono", ui-monospace, monospace; text-align: left; white-space: pre; color: var(--ink-soft); }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+.scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { font: 600 12px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+table.scores td { text-align: right; font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 14px; }
+table.scores td.mean { font-weight: 700; }
+table.scores td.hi { color: var(--good); font-weight: 700; }
+table.scores td.lo { color: var(--bad); font-weight: 700; }
+table.scores th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.caption { font-size: 14px; color: var(--ink-soft); margin: 0 0 20px; }
+.chip {
+  display: inline-block; font: 600 11px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-ink);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 4px 8px; margin-left: 8px; vertical-align: middle;
+}
+
+.questions { counter-reset: q; list-style: none; padding: 0; }
+.questions li { counter-increment: q; display: grid; grid-template-columns: 2.2rem 1fr; gap: 0 8px; padding: 14px 0; border-bottom: 1px solid var(--rule); margin: 0; }
+.questions li::before { content: counter(q, decimal-leading-zero); font: 700 18px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--accent); }
+.questions .q { font-weight: 600; }
+.questions .why { grid-column: 2; color: var(--ink-soft); font-size: 15px; }
+
+details { border-top: 1px solid var(--rule); }
+details:last-of-type { border-bottom: 1px solid var(--rule); }
+summary {
+  cursor: pointer; padding: 16px 0; list-style: none;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline;
+}
+summary::-webkit-details-marker { display: none; }
+summary .t { font: 700 19px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+summary .s { grid-column: 1; color: var(--ink-soft); font-size: 15px; }
+summary .arrow { font: 600 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; color: var(--accent-ink); text-transform: uppercase; }
+details[open] summary .arrow::after { content: "Close"; }
+details:not([open]) summary .arrow::after { content: "Read"; }
+details .body { padding: 0 0 24px; }
+details .body > h2:first-child { margin-top: 0; }
+
+.synthesis { background: var(--surface); border: 1px solid var(--rule); padding: 20px; margin: 0 -20px; }
+@media (min-width: 720px) { .synthesis { margin: 0; padding: 32px; } }
+
+.gaps { padding-left: 1.4em; }
+.gaps li { margin-bottom: 0.6em; }
+.feedback-how { background: var(--surface); border: 1px dashed var(--rule); padding: 16px 20px; }
+.feedback-how code { white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-soft); }
+</style>
+
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <div class="eyebrow"><span>Star Race</span><span>Sharpen round 5</span><span>2026-09-11</span></div>
+  <h1>Fast Ships Swing Wide</h1>
+  <p class="headline">The faster a ship goes into a bend, the wider and less predictably it swings off the golden path; the player builds the ship, plans the route and crew before the race, and taps at most three times, inside timing windows the crew's reaction sets.</p>
+</header>
+<nav class="toc">
+  <a href="#synthesis">The design</a>
+  <a href="#decisions">Your decisions</a>
+  <a href="#notes">Notes</a>
+  <a href="#feedback">Reply</a>
+  <a href="ledger.html">Ledger</a>
+</nav>
+
+<section id="synthesis">
+  <h2>The design</h2>
+  <div class="synthesis"><h2>Fast Ships Swing Wide</h2>
+<h3>The idea, in one paragraph</h3>
+<p>Ships race three laps of a course that grows a little every lap. Down the
+middle of the course runs the golden path, a bright ribbon where every ship is
+faster and where a ship collects the energy that pays for anything it does on
+purpose. The whole game is one tension: <strong>the faster a ship goes into a bend,
+the wider it swings out of it, and how wide is partly luck.</strong> Swing far enough
+and you are off the path: slower, exposed, and among the things that are only
+out there, such as pockets of dark matter, other players&#39; mines, and a rival
+close enough to shoot. Before a race you build the ship, choose a crew, plan a
+route through the forks you can see, and place a couple of fixtures, which are
+objects you own that sit on the course in every race you are in. During the race
+the ship flies itself. You tap at most three times. Each tap is a call the crew
+would have made anyway, made perfectly, if you tap inside a window that is wider
+when your crew has more time to think. Three ships to a race, nine players to a
+season, and after certain stages the lowest scorers are out.</p>
+<h3>The loop</h3>
+<pre class="mermaid">flowchart TD
+  Shop[Shop: parts, crew, fixtures] --&gt;|credits spent| Fit[Fit the ship, set the throttle]
+  Fit --&gt; Board[Pre-race board: plan the route, place 2 fixtures, declare Long Line or not]
+  Board --&gt; Heat[Heat: 3 ships, 3 laps, course grows each lap, 0 to 3 taps]
+  Heat --&gt;|finish order + margin| Points[Stage points]
+  Heat --&gt;|purse first, pools second| Credits[Credits]
+  Heat --&gt;|Rake hits| Wanted[Wanted status]
+  Credits --&gt; Shop
+  Wanted --&gt;|a cutter joins your next heat| Board
+  Points --&gt; Cut{Stage cut?}
+  Cut --&gt;|survive| Grow[Course grows for the next stage]
+  Grow --&gt; Shop
+  Cut --&gt;|lowest scorers| Out[Eliminated]</pre><h3>The systems</h3>
+<p><strong>The ship.</strong> Six parts, bought with credits: Thrust, Handling, Navigation,
+Hull, Shields and Crew. Thrust sets how hard the ship can accelerate and how
+fast it can go; on the pre-race board you set a throttle, from cruising to flat
+out, and the ship holds it. Handling narrows the swing on bends. Navigation
+reveals the course at planning time and chooses the line into each bend. Hull,
+Shields and Crew are the three defensive layers. Shields take a hit first and
+regenerate slowly, faster when the ship is coasting. Hull is the structure
+underneath; when it is gone the ship is out. Crew is the people, worn down by
+gravity and by hits that get through.</p>
+<p><strong>Speed and the swing.</strong> Every bend has a swing: a seeded draw of how far the
+ship overshoots the golden path on the way out. The spread of that draw grows
+with entry speed, and grows steeply, so a little more throttle is a lot more
+swing. The flavour is time dilation: the fast ship&#39;s clock runs slow and the
+bend arrives before the crew is ready. Handling shrinks the spread. A small
+swing keeps the ship on the path. A big one throws it wide for the rest of the
+segment. No two bends come out the same, but the odds are the player&#39;s to
+shape: build for a narrow spread, or plan for where a wide one lands.
+Navigation picks the side. A good nav system sets up each bend so that if the
+ship does swing wide it swings toward the safest or most useful side, a
+pocket rather than a mine field. There is nothing to tap early for; the swing
+is not a delay, it is weather you dress for.</p>
+<p><strong>Reaction time.</strong> Not a part you buy. It is a number the ship carries moment
+to moment: it starts where the crew sets it, falls as speed rises, and falls
+further while the ship is accelerating hard. It governs how well the crew
+handles events without being told. When a rival fires, the shields shift
+toward the shot on their own; higher reaction catches more of it. Passing
+through a pocket, reaction sets how full the collector gets. At a fork the
+player did not plan for, reaction weights which way the crew goes. And it sets
+the width of the tap window, below.</p>
+<p><strong>Taps.</strong> The ship collects energy on the golden path, roughly one tap&#39;s worth
+per clean lap, so a three-lap heat is at most three taps, and a ship that ran
+wide a lot may have fewer. You fit two of four actives, which are the things a
+tap can do. <em>Brace</em> cuts the swing on the next bend. <em>Rake</em> fires a raking shot
+down the side of the nearest rival; a Rake hit damages them, slows them for a
+moment, and counts toward bounty and wanted status. <em>Burn</em> is a short hard
+overspeed on a straight; it wears the crew. <em>Scoop</em> fills the collector fully
+in the next pocket whatever your reaction is. Each active has a window: a
+moment marked on screen as it approaches, wider when reaction time is higher.
+Tap inside it and the crew does the thing at full effect. Tap outside it and
+the energy is gone for nothing. Not tapping is always fine: the crew does the
+same things on its own, as well as its reaction allows. A tap is the crew at
+their best, bought with energy and timing. A fast ship needs the tap most and
+has the narrowest window to make it in. That is the seed&#39;s speed-versus-
+reaction trade, felt in the thumb.</p>
+<p><strong>Gravity.</strong> Acceleration makes gravity, and gravity wears a humanoid crew
+down. Sustained means a lap of it: a ship that burns hard out of every bend for
+a whole lap has a crew acting at about half, and a second lap like it leaves
+them not acting at all. Coasting lets them recover, slowly. A robot crew
+ignores gravity entirely. A crew worn to nothing does the same as a dead one,
+below, until it recovers.</p>
+<p><strong>Crew.</strong> Humanoid or robot. A humanoid crew starts with higher reaction and
+has luck: a seeded chance, once in a while, that a bad draw is redrawn, whether
+it is a swing, a blind fork, or a shot. A robot crew has more health, ignores
+gravity, starts with lower reaction and has no luck at all. <strong>When the crew
+dies</strong> or is worn to nothing, the ship keeps racing and the player stops
+tapping; no shields shift, no collecting, no calls at forks. Navigation flies
+it home. A good nav system holds the golden path and loses only your taps; a
+poor one drifts wide at every bend. A cheap nav system is fine until it is the
+only thing left.</p>
+<p><strong>The golden path.</strong> A ribbon down the course. On it a ship is faster and
+banks energy. Off it a ship is slower, banks nothing, and meets every hazard
+and fixture in play. The ship holds the path on its own; Handling and Nav set
+how tight a bend it can hold. Leaving is a choice, either planned at a fork or
+suffered on a swing, and the reason to leave is that some things are only out
+there.</p>
+<p><strong>The course, its forks and the route.</strong> The course is a loop of segments
+with bends. Some segments fork: one branch stays on the path, the other goes
+wide through a pocket or a hazard and rejoins later. On the pre-race board the
+player plans the route, picking a branch at every fork they can see. Some
+forks are not fully known. At a dim fork the player picks blind, choosing a
+side without seeing what it holds. At a dark fork there is no pick at all: the
+crew chooses at the moment, weighted by reaction time and crew type, and a
+humanoid crew is the more random. A better nav system lights more of the
+course at planning time, turning dark forks dim and dim forks clear. <strong>The
+course grows each lap.</strong> Lap one is the base loop. On lap two a sealed
+junction opens, a nebula edge or a gravity well, and a new section is spliced
+in. On lap three another opens. Which ones open is drawn from the season seed
+and is the same for every ship in the stage, so the variation in a heat is who
+you are facing and what you chose. The added sections are where the darkest
+forks are. Between stages the base loop itself grows, and the sealed junctions
+you can see hint at what it will become without promising it.</p>
+<p><strong>Fixtures.</strong> The seed&#39;s track mods and its pre-race placement are one system.
+You buy fixtures in the shop and place two on the pre-race board. They travel
+with you: your fixtures are on the course in every heat you race and in no
+heat you are not in, so a three-way heat has six fixtures on it, all shown
+before the start. <em>Beacon</em> widens the golden path on its segment. <em>Slick</em>
+slows anything off the path there. <em>Mine</em> damages the first ship through
+wide. <em>Relay</em> gives its owner a burst of energy on each pass.</p>
+<p><strong>Shields deflect.</strong> With shields above half, a hit from debris or a mine off
+the path costs damage but not speed. Below half, the same hit also costs the
+ship a beat. A build that plans to run wide buys shields; a clean build does
+not need them.</p>
+<p><strong>Money.</strong> Winning the heat is the best business there is. A heat pays a
+purse by finish order, and the purse is the biggest sum in the race. Under it
+sit three shared pools, each split among the ships that drew from it by how
+much they did the thing: the solar pool by time on the golden path, the dark
+matter pool by time off it, the bounty pool by damage dealt. No pool, even
+uncontested, pays one ship more than the gap between first and second place
+purse. Collectors are the equipment that opens a pool: a Solar Vane charges
+on the path, a Dark Matter Scoop charges off it, a Grapple charges on hits.
+Fit two of three. If all three ships fit Vanes and all three run clean, they
+split the solar pool thin and the winner is still the richest.</p>
+<p><strong>Wanted and the cops.</strong> Each Rake hit raises wanted status by a step; it
+decays a step per stage. Past the first threshold a cutter, a police ship,
+joins your next heat, sits on your tail and slows you until you shake it off
+with a few hits. Past the second there are two. Aggression pays, then it
+charges rent.</p>
+<p><strong>The season and eliminations.</strong> Nine players, three to a heat, four stages.
+A heat scores points by finish order, plus a margin bonus for a ship that did
+not win but finished close to the one that did, so a narrow third is worth
+about twice a beaten third. After stage two, and again after stage three, the
+three lowest on points are eliminated. Stage four is one heat of the last
+three. The <strong>Long Line</strong> is declared on the board: it is a route that takes
+the wide branch at every fork. Win with it declared and your margin bonus
+doubles and you take extra credits; finish last with it declared and you lose
+points. Chosen swing, fully seeded, and a bot can say when declaring it pays.</p>
+<h3>How they connect</h3>
+<p>Because the swing spread grows steeply with speed, the player must decide how
+much throttle they can afford to carry into bends they cannot fully see.</p>
+<p>Because reaction time falls with speed and sets the tap window, the player
+must choose between a ship that rarely needs the tap and a ship that needs it
+and might miss it.</p>
+<p>Because gravity wears a humanoid crew in a lap of hard burns, the player must
+match the crew to a throttle plan they have not raced yet.</p>
+<p>Because energy only comes from the golden path and the dark matter pool only
+pays off it, the player must choose which income they are building for on
+the board, not in the race.</p>
+<p>Because a dead or worn-out crew hands the ship to Navigation, the player must
+decide whether Nav is a luxury or the insurance on an aggressive build.</p>
+<p>Because Nav also lights the forks at planning time, the player who skimps on
+it plans a route with holes in it and lets the crew fill them.</p>
+<p>Because pools are shared and capped under the purse, the player must guess
+what the other two fitted, and still race for the win.</p>
+<p>Because every fixture is visible before the start, the player must read six
+pieces of other people&#39;s strategy and plan a route around them.</p>
+<pre class="mermaid">stateDiagram-v2
+  [*] --&gt; OnPath: race start
+  OnPath --&gt; Bend: bend ahead
+  Bend --&gt; OnPath: small swing, or Brace tapped in the window
+  Bend --&gt; Wide: big swing, more likely when fast
+  OnPath --&gt; Wide: wide branch chosen at a fork
+  Wide --&gt; Wide: slower, no energy, pockets, mines, slicks
+  Wide --&gt; OnPath: rejoin the path
+  OnPath --&gt; Hunted: Rake hits raise wanted
+  Hunted --&gt; OnPath: cutter shaken off
+  OnPath --&gt; CrewDown: crew worn out or killed
+  Wide --&gt; CrewDown: crew worn out or killed
+  CrewDown --&gt; [*]: Navigation flies it home, no more taps
+  OnPath --&gt; [*]: finish line</pre><h3>A worked heat</h3>
+<p>Stage two. You are second on points, a little behind. You fit a robot crew,
+high Thrust, middling Handling, a cheap nav system, a Dark Matter Scoop and a
+Grapple, and you set the throttle high. On the board the lap-one loop is
+clear and you plan the path branch at both forks. The lap-two section is dim;
+you pick blind toward what looks like a pocket. The lap-three section is dark
+to your nav and you leave it to the crew. You place a Slick on the gravity
+well exit and a Mine behind it, and you do not declare the Long Line.</p>
+<p>Lap one, everyone holds the path. On the second bend your draw is bad and you
+swing wide, lose a length, and rejoin. Lap two, the well opens. Your blind
+pick was a pocket: you tap Scoop inside a narrow window and come out full,
+two lengths down. Lap three, the dark fork. Your robot crew goes with the
+path, which is fine, and on the back straight the leader is alongside. You
+tap Rake and hit, then Rake again and miss the window. Wanted rises a step. You
+finish third, close.</p>
+<p>A close third is worth about twice a beaten one, so you lose a little ground,
+not a lot. The purse for third is small; the dark matter pool, which nobody
+else drew from, pays you up to the cap; the bounty pool pays a little. The
+winner is still richer than you. Next stage you buy the nav system you skipped,
+because you want to see that third-lap fork before the crew picks it.</p>
+<h3>What changed, and why</h3>
+<p><strong>Jargon.</strong> &quot;Order lands late&quot; is gone with the mechanic it described. Rake is
+defined where it appears: a raking shot at the nearest rival, and a Rake hit is
+one that connects. Elimination is stated plainly in the season section: after
+stages two and three, the three lowest on points are out.</p>
+<p><strong>Numbers versus mechanics.</strong> Every stat value, tick count, damage figure and
+credit sum in the base is gone. What remains is counts that shape the game:
+three ships, three laps, at most three taps, two fixtures, nine players, four
+stages, and the one ratio a mechanic needs, that a close loss is worth about
+twice a beaten one.</p>
+<p><strong>Handling.</strong> The base&#39;s central mechanic, a fixed delay before a tapped order
+executes, is removed, and with it the base&#39;s title. In its place is the note&#39;s
+sketch: on every bend the ship swings out by a seeded draw whose spread grows
+steeply with speed and shrinks with Handling. This is the premise moving. The
+base put the speed-versus-reaction trade on the player&#39;s thumb; this round
+puts it on the ship&#39;s line, where a player cannot learn it away.</p>
+<p><strong>Reaction time.</strong> Now a derived number, from speed, acceleration and crew, that
+governs how the crew handles events on its own: shields shifting toward a shot,
+how much a pocket yields, which way the crew goes at an unplanned fork. The
+note&#39;s extension is taken up: it also sets the width of the tap window.</p>
+<p><strong>Tapping.</strong> Energy from the path gives about one tap per clean lap, so a heat
+is zero to three taps. Each tap is the crew doing at full effect something they
+would have done anyway, and it only works inside a timing window. That is what
+tapping does and why: it buys certainty from a crew that otherwise acts as
+well as their reaction allows.</p>
+<p><strong>Route planning.</strong> The pre-race board gains the route. Clear forks are chosen,
+dim forks are picked blind, dark forks are left to the crew, and Navigation
+is what turns dark into dim into clear. Wide Line, the base&#39;s mid-race active
+for leaving the path, becomes a branch you choose on the board.</p>
+<p><strong>Laps.</strong> Three laps every stage, as the seed and the note both want, and the
+course grows each lap rather than between stages only. The base&#39;s falling lap
+count is reverted.</p>
+<p><strong>Economy defect.</strong> The purse is the largest sum in a heat and no pool pays a
+ship more than the gap between first and second purse. Third cannot leave
+richer than first.</p>
+<p><strong>Gravity defect.</strong> Restated as the shape of a lap: a lap of hard burns halves a
+humanoid crew&#39;s acting, a second lap stops it, coasting recovers it, robots
+ignore it.</p>
+<h3>What does not work, and what I would do instead</h3>
+<p><strong>Reaction lag, the base&#39;s core.</strong> A fixed delay is a fixed thing to learn, as
+the note says. Replaced by the swing above; the same trade, on the line instead
+of the thumb.</p>
+<p><strong>Wide Line as a tap.</strong> With the route planned on the board, a mid-race order
+to leave the path is redundant. Cut as an active; the wide branch at a fork is
+the same choice made in advance.</p>
+<p><strong>Passive collectors.</strong> Still flagged from the base. Income between races is a
+decision-free compounding advantage for whoever is ahead. Collectors stay, on
+the track, as the equipment that opens a pool.</p>
+<p><strong>Randomness at the cut.</strong> Still flagged. A die roll at the cut punishes a good
+build and makes balance unmeasurable. The margin bonus and the Long Line do the
+job it was for, and this round adds a third source of seeded swing that the
+seed did not have: the bend itself.</p>
+<p><strong>&quot;Mods only apply to your own races.&quot;</strong> Still flagged as a contradiction with
+three ships per race. Read as the parenthesis implies: fixtures are carried,
+present in every heat their owner is in.</p>
+<p><strong>The base&#39;s falling lap count.</strong> Reverted per the note, which leaves the risk
+it was solving: three laps of a growing course is a race that grows. The fix
+is in the shape of the growth: a lap adds a section, not a loop, and the base
+loop stays short, so a heat stays a couple of minutes at every stage. If it
+does not, shorten the base loop, not the lap count.</p>
+<p><strong>The base&#39;s pools.</strong> They out-paid the purse. Capped, above.</p>
+<h3>What I added</h3>
+<p>The swing as a seeded draw with a spread the player shapes, and Navigation
+picking the side a wide swing lands on.</p>
+<p>The tap window: a marked moment, wider with reaction time, inside which a tap
+works and outside which it wastes energy.</p>
+<p>Scoop as an active, so a wide-running build has something to tap for besides
+Rake.</p>
+<p>The route on the pre-race board, with clear, dim and dark forks, and the crew
+deciding the dark ones.</p>
+<p>The course growing lap by lap, with the darkest forks in the added sections,
+so Navigation is worth more the longer the heat runs.</p>
+<p>The pool cap under the purse.</p>
+<h3>What needs your call</h3>
+<p><strong>How much of the swing does the player see?</strong> The board could show the spread
+band at each bend for the throttle you set, so the risk is legible before you
+race it, or it could stay felt only. Legible is easier to balance and to
+learn; felt is more of a story.</p>
+<p><strong>Is one tap per lap the right rate?</strong> Energy from the path gives zero to three
+taps and fewer for a ship that runs wide. If you want the count to be a build
+choice instead, make it a part: a bigger energy bank, bought with credits.</p>
+<p><strong>Dark forks: crew pick or blind pick by default?</strong> Right now a fork the nav
+system cannot show at all is the crew&#39;s call. It could instead always allow a
+blind pick, which keeps the player in charge but makes a cheap nav system less
+of a gamble.</p>
+<p><strong>Should Rake need line of sight?</strong> Carried from the base. It hits the nearest
+rival in range with no aiming, which keeps it one tap. If aggression should be
+a skill, it should only fire when you are on the same line as the target, which
+makes wide runners hard to hit.</p>
+</div>
+</section>
+
+<section id="decisions">
+  <h2>Decisions only you can make</h2>
+  <ol class="questions"><li><span class="q">How much of the swing does the player see before racing — a visible spread band per bend for the chosen throttle, or felt only?</span><span class="why">Legible risk is easier to balance and learn; felt risk is more of a story. It decides what the pre-race board shows and how much the throttle choice is a calculation. Both readers want it shown.</span></li>
+<li><span class="q">Is one tap per clean lap the right rate, or should the tap count be a bought part?</span><span class="why">Sets whether zero-to-three taps is a fixed shape of the race or a build axis, and whether wide-running builds are meant to tap less.</span></li>
+<li><span class="q">At a fork the navigation system cannot show at all, should the crew pick, or should the player always get a blind pick?</span><span class="why">Crew pick makes a cheap navigation system a real gamble and gives crew type a job; blind pick keeps the player in charge but weakens what Navigation is worth.</span></li>
+<li><span class="q">Should Rake need line of sight?</span><span class="why">No aiming keeps it one tap and a purchase; requiring the same line makes aggression a skill and makes wide runners hard to hit, which changes how the Long Line and the bounty pool play.</span></li></ol>
+  <h4>What the next round should work on</h4>
+  <p>Both readers say the notes all landed and the idea survives. Both also point at the same hole: the swing is the game now and the player cannot see it. Show a spread band at each bend for the chosen throttle, and give the results screen a one-line ledger per lost length — draw, throttle, fixture, fork — so a loss can be diagnosed. The rules reader's deeper point is that coasting has no rule under it: nothing says a bend sheds speed, so a clean fast build never has to burn and gravity never bites the build it was meant to punish. Make bends shed speed so the throttle is the rate of the burn out of them, and let that one definition of coasting serve gravity and shield regeneration both. Then the smaller fixes: one tap button that names the window it belongs to; the pool cap on a ship's total take rather than per pool; separate crew fatigue from crew health; and state which actives the crew performs unpaid so wanted status cannot rise without the player choosing it. One seed phrase went missing and both readers caught it — the navigation system optimising acceleration and using gravity assists — name it and either keep it or argue it away.</p>
+</section>
+
+<section id="notes">
+  <h2>Notes on the design</h2>
+  <details id="note-the-player">
+<summary><span class="t">The player</span><span class="arrow"></span></summary>
+<div class="body"><h2>Notes: The player</h2>
+<h3>Did the notes land</h3>
+<p>Yes, all seven, and visibly. Jargon: &quot;lands&quot; is gone with its mechanic, Rake is defined in the sentence that introduces it, and elimination is one plain sentence in the season section. Numbers: every tick, point and credit sum is out; what is left is counts and one ratio. Handling: reaction lag is removed and the swing replaces it, and the document says outright that the base&#39;s premise moved. Reaction time: derived from speed, acceleration and crew, governing shields, pockets and unplanned forks, with the timing-window extension taken up. Tapping: zero to three, with a stated why. Route planning: clear, dim and dark forks, Nav lighting them. Laps: three, growing each lap, and the note&#39;s own sentence about variation is nearly quoted. Nothing was argued with; everything was applied.</p>
+<h3>Does the idea survive</h3>
+<p>It is the same design. Golden path, six parts, two crews, fixtures carried into every heat, purse and pools, wanted and cutters, margin bonus, Long Line, nine players and two cuts: all still here in the same words. The one thing that moved was told to move, and the document names it. Wide Line became a fork on the board, which is the note&#39;s route planning doing the same job; Scoop was added so a wide build has a tap. That is notes worked in, not a new game.</p>
+<p>Against the seed, every named system is accounted for except one phrase: the nav system &quot;optimizing acceleration, using gravity assists&quot; is gone without a word. Nav now lights forks, picks the side of a swing, and flies a dead ship home; it no longer plans the fast line. Small, but it vanished rather than being flagged. Passive collectors, randomness at the cut and &quot;mods only for your own races&quot; are all flagged, as they should be.</p>
+<h3>What works</h3>
+<p>&quot;The swing is not a delay, it is weather you dress for.&quot; That is the sentence the round was for. Throttle is one dial that touches swing, reaction, tap window and gravity at once, so the plan on the board is real: how much speed can I carry into bends I cannot see. That is a plan worth making in a five-minute gap.</p>
+<p>&quot;Not tapping is always fine.&quot; This is the right rule for build-and-watch on a phone. I can watch a heat on the train with my thumb in my pocket and the ship is still mine. The tap is an upgrade, not a duty.</p>
+<p>Nav picking the side a wide swing lands on. It turns a bad draw into a story I can tell: I swung wide into the pocket, not the mine, because I paid for Nav.</p>
+<p>The worked heat retells itself in one breath: bad draw on lap one, blind pick paid on lap two, missed the second Rake window on lap three, close third. That is a heat with a story and a lesson.</p>
+<h3>What does not</h3>
+<p>Can I see why I lost? The swing is a seeded draw and the spread is invisible. When I go wide on lap one I do not know if it was my throttle, my Handling or the dice. The document leaves the spread band as an open call. It is not open. Felt-only luck on a two-minute race reads as the game cheating.</p>
+<p>The board is eight decisions: parts, throttle, crew, two of four actives, two of three collectors, two of four fixtures placed, a route at every fork, Long Line yes or no. Five slots of &quot;fit two of N&quot; before a two-minute heat. On a phone the board becomes the race and the race becomes the reward screen.</p>
+<p>Two buttons with windows. Brace fires before a bend, Rake when a rival is near, Burn on a straight, Scoop in a pocket. With two fitted, the screen must tell me which window is coming and I must hit the right button in a window that narrows with speed. That is a rhythm game grafted on with one thumb.</p>
+<p>Words I had to guess at. &quot;Collector&quot; means the pool equipment in one paragraph and the thing a pocket fills in another; &quot;Scoop&quot; is both an active and a collector, so &quot;tap Scoop to fill the Scoop&quot; is a real sentence in this design. &quot;Loses a length&quot;, &quot;costs the ship a beat&quot;, &quot;the season seed&quot; are never defined. &quot;A blind fork&quot; is used in the Crew section before forks exist.</p>
+<p>Gravity has no trigger. Throttle is held, so when does a ship &quot;burn hard out of every bend&quot;? The obvious answer, re-accelerating after every swing at high throttle, is never said, and it is the link that would make gravity a consequence of the swing rather than a separate rule.</p>
+<p>The rivals matter on the board, through fixtures and pools, and barely on the track. Until a Rake, the other two ships are scenery.</p>
+<h3>What I would add</h3>
+<p>Show the spread band at every bend for the throttle set, and after the heat a one-line ledger per lost length: draw, throttle, fixture or fork.</p>
+<p>One button. The approaching window names which fitted active it belongs to; the thumb only says &quot;now&quot;.</p>
+<p>State the gravity trigger: every wide swing costs a hard burn to rejoin, and that burn is the gravity. Then humanoid versus robot bites exactly where the core tension lives.</p>
+<p>Fold the two growth axes into one: the sections that opened this stage stay open next stage. The base loop grows by what the players already raced.</p>
+<p>Rename the pool equipment and the active so no word does two jobs.</p>
+<p>Answer two open calls: dark forks stay the crew&#39;s call, because that is what makes Nav worth buying; Rake needs the same line, because it makes wide runners hard to hit and gives the third lap a reason to be close.</p>
+<h3>What I would cut first</h3>
+<p>The three pools and their three collectors. The document already argues the winner is richest and the pools are capped beneath the purse, so they are a second economy that pays less than the thing I am already trying to do, at the price of a fit slot, three nouns and a cap rule. Replace them with flat payments: a pocket pays whoever passes through it and empties as it is drawn, so it is still shared; a Rake hit pays a bounty on its own. What you lose is the seed&#39;s guess about what the other two fitted, and that is a real loss, because it is one of the few ways the rivals reach the board. Second on the list: the cutter. Keep wanted status as a price on your own head, paying rivals more for hitting you, and drop the police ship AI entirely.</p>
+</div>
+</details>
+<details id="note-the-rules-reader">
+<summary><span class="t">The rules reader</span><span class="arrow"></span></summary>
+<div class="body"><h2>Notes: The rules reader</h2>
+<h3>Did the notes land</h3>
+<p>Yes, all seven. &quot;Lands late&quot; is gone with its mechanic, Rake is defined in the sentence it appears in, and the cut is stated plainly. The numbers are gone; what is left is counts and one ratio. Handling is the swing on a bend, seeded, widened by speed and narrowed by Handling, and the document says out loud that the base&#39;s premise moved. Reaction time is what the crew does on its own, and it sets the tap window as the note suggested. Taps are zero to three and each one is explained. The route is planned on the board with clear, dim and dark forks, and Navigation lights them. Three laps, and the course grows every lap.</p>
+<h3>Does the idea survive</h3>
+<p>It is the same design with a new heart. The golden path, the fixtures, the three pools, Long Line, wanted and the cutter, the two crews, the margin bonus, the season shape: all here, in the same words. What changed is exactly what the note asked to change. The seed&#39;s systems all survive as kept, altered or flagged, with one small loss: the seed&#39;s navigation system &quot;optimizing acceleration, using gravity assists&quot; has no trace. The gravity well is now a junction, not an assist. Minor, but it should be named as dropped rather than left silent.</p>
+<h3>What works</h3>
+<p>The swing is the best-defined mechanic in the document. &quot;A seeded draw of how far the ship overshoots... the spread of that draw grows with entry speed... Handling shrinks the spread.&quot; That is a distribution with two inputs and a threshold, the path width, that Beacon widens. A bot can sweep throttle against Handling and produce a curve. Nothing else needs to be true for it to work.</p>
+<p>The tap window is a tick interval whose length is a function of one number. Tap ticks inside, full effect; outside, energy gone. Clean.</p>
+<p>The route as a pre-race plan is a gift to balance testing. A race becomes a function of the shop, the board and at most three tap ticks. Bots can play whole strategies without a policy for mid-race play.</p>
+<p>The pool cap &quot;no pool, even uncontested, pays one ship more than the gap between first and second place purse&quot; is a rule, not a hope.</p>
+<h3>What does not</h3>
+<p><strong>Coasting has no rule under it.</strong> &quot;You set a throttle... and the ship holds it,&quot; yet gravity comes from &quot;a ship that burns hard out of every bend,&quot; and shields regenerate &quot;faster when the ship is coasting.&quot; Nothing says a bend sheds speed. If the ship holds throttle and stays on the path, it accelerates once at the start and never again, and gravity never bites a clean fast build, which is the build gravity was meant to punish. Bends need to slow the ship so that leaving one is a burn.</p>
+<p><strong>Two crew pools wearing one name.</strong> &quot;Crew is the people, worn down by gravity and by hits that get through,&quot; but a crew &quot;worn to nothing&quot; recovers and a dead crew does not. Either fatigue is a second pool with its own recovery, or gravity kills. Pick one and say which number &quot;acting at about half&quot; scales.</p>
+<p><strong>&quot;The crew does the same things on its own&quot; cannot hold for all four actives.</strong> Brace and Scoop are things a crew would do anyway. Burn and Rake are not. If the crew rakes on its own, wanted rises without the player&#39;s choice and aggression stops being a strategy. If it does not, then the rule that &quot;not tapping is always fine&quot; is false for two of four.</p>
+<p><strong>Burn has no anchor.</strong> Every other window sits on an event: the next bend, the next pocket, a rival in range. &quot;A short hard overspeed on a straight&quot; is a duration, not a moment. Where is the marked window?</p>
+<p><strong>Two kinds of wide.</strong> A swing throws the ship &quot;wide for the rest of the segment.&quot; A fork&#39;s wide branch &quot;goes wide through a pocket or a hazard and rejoins later.&quot; The state diagram treats them as one state. Are the pockets and mines in the segment&#39;s wide zone, on the branch, or both? And Navigation &quot;picks the side,&quot; so a segment&#39;s wide zone has two sides with different contents, which the course model has to carry. Then: a swing on a segment with a fork, does it override the planned branch?</p>
+<p><strong>The cap creeps.</strong> The cap is per pool. A ship fits two collectors, draws two uncontested pools, and takes third purse plus twice the gap. Against a winner on first purse plus a thin solar share, third can still leave richer. Cap the pool total per ship at the gap, not each pool.</p>
+<p><strong>The cutter is unshakeable.</strong> &quot;Shake it off with a few hits&quot; when the only weapon costs a tap and a heat has three. Either the cutter leaves after a lap, or the crew&#39;s own unpaid rakes count.</p>
+<p><strong>Luck needs a definition of &quot;bad.&quot;</strong> A swing beyond path width, a shot that gets through: those have thresholds. A fork has no bad draw until you know what the branch holds. Restrict luck to draws with a failure line.</p>
+<p><strong>Lap growth per ship or per field.</strong> A section &quot;opens on lap two.&quot; If the trailing ship is still on lap one when the leader enters lap two, the junction must open per ship&#39;s own lap counter. Say so.</p>
+<h3>What I would add</h3>
+<p>Bends shed speed, so the throttle is the rate of the burn out of them; that gives coasting, gravity and shield regeneration one shared definition.</p>
+<p>One course model: every segment has a path lane and a wide lane with two sides; a fork is a segment whose wide lane the player may choose in advance; a swing drops the ship into the wide lane mid-segment on the side Navigation chose. A planned branch and a swing then never conflict.</p>
+<p>A precedence rule for overlapping windows: one button per fitted active, so the player chooses which, and a tap with no window open costs nothing.</p>
+<p>Long Line overrides dark forks; the declaration is the crew&#39;s instruction.</p>
+<h3>What I would cut first</h3>
+<p>Burn. The throttle already sells speed on straights, the window has no event to sit on, and it is one of the two actives that breaks &quot;the crew would have done it anyway.&quot; Three actives, fit two, and the contradiction shrinks to Rake alone, where it can be stated as the one exception.</p>
+</div>
+</details>
+</section>
+
+
+
+
+
+<section id="feedback">
+  <h2>How to reply</h2>
+  <div class="feedback-how">
+    <p>Answer the decisions above, or push back on anything here, in any shape. Put it in <code>design\rounds\round-05/feedback.md</code>, or send it as a message and ask for it to be filed there. The next round's proposers read it before the brief. Anything that should hold for every future round goes into <code>design/BRIEF.md</code> too.</p>
+    <p>To start the next round: <em>run the sharpen-round workflow for round 6</em>.</p>
+  </div>
+</section>
+
+<footer>Rendered from <code>design\rounds\round-05/</code> by <code>npm run design-page</code>. The markdown is the record; this page is the reading copy.</footer>
+</div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+const css = getComputedStyle(document.documentElement);
+const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+mermaid.initialize({
+  startOnLoad: true,
+  securityLevel: 'strict',
+  // themeVariables are only consulted under the 'base' theme; without this
+  // line mermaid keeps its own palette and the diagram sits on the page
+  // rather than in it.
+  theme: 'base',
+  fontFamily: '"Source Serif 4", Georgia, serif',
+  themeVariables: {
+    background: v('--surface', '#fbf8f0'),
+    primaryColor: v('--chip', '#e9dcc0'),
+    primaryBorderColor: v('--rule', '#d6cdb6'),
+    primaryTextColor: v('--ink', '#17203a'),
+    lineColor: v('--ink-soft', '#4d5a7a'),
+    secondaryColor: v('--surface', '#fbf8f0'),
+    tertiaryColor: v('--ground', '#f4efe2'),
+  },
+});
+</script>
+</body>
+</html>

@@ -188,7 +188,7 @@ details.schema table { font-size: 12px; }
 <header class="masthead">
   <div class="eyebrow"><span>Star Race</span><span>Round 7</span><span>Mechanics &amp; catalogue</span></div>
   <h1>Fast Ships Swing Wide</h1>
-  <p class="headline">The mechanics at a glance, then every element under each one — 6 of 17 started. Rows are edited in <code>design/catalogue/</code>; this page is rendered from them.</p>
+  <p class="headline">The mechanics at a glance, then every element under each one — 7 of 17 started. Rows are edited in <code>design/catalogue/</code>; this page is rendered from them.</p>
 </header>
 <nav class="toc">
   <a href="#overview">Overview</a>
@@ -623,8 +623,8 @@ details.schema table { font-size: 12px; }
 <td>The ship</td>
 <td>Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection</td>
 <td>catalogue</td>
-<td>untouched</td>
-<td>0</td>
+<td>seeded</td>
+<td>5</td>
 </tr>
 <tr>
 <td>3</td>
@@ -767,7 +767,7 @@ details.schema table { font-size: 12px; }
 </section>
 
 <section class="area" id="area-ship">
-<h2>The ship <span class="count">1/7 started</span></h2>
+<h2>The ship <span class="count">2/7 started</span></h2>
 <details class="element" id="frames">
 <summary><span class="t">Frames</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Starting kits: the engine, shields and crew a ship begins with</span></summary>
 <div class="body"><p>The starting kit. Before anything else, the player picks a frame, and a frame
@@ -824,8 +824,8 @@ them. The choice of crew inside the frame may be the whole difference between
 frames, or frames may differ in the engine and shields too; not said.</p>
 </div>
 </details>
-<details class="element" id="ship-parts">
-<summary><span class="t">Ship parts</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection</span></summary>
+<details class="element" id="ship-parts" open>
+<summary><span class="t">Ship parts</span><span class="status seeded">seeded</span><span class="rows">5 rows</span><span class="w">Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection</span></summary>
 <div class="body"><p>Components you install. A ship has a limited number of <strong>slots</strong>, and the
 slots are the budget: you decide what to prioritise. A part moves the ship&#39;s
 stats and may carry a downside; it is bought with credits and takes a slot.
@@ -895,13 +895,34 @@ is still not bought; it comes from speed and crew.</p>
 <p>Arrows, never numbers. <code>↑</code> is some, <code>↑↑</code> is a lot, <code>↑↑↑</code> is the reason to buy
 it. The build stage turns arrows into values.</p>
 </div></details>
-<h3>Parts</h3><p class="empty">No rows yet.</p>
+<h3>Parts</h3><div class="rows"><div class="row seeded"><div class="t">Speed-focused engine<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">engine</span></div><div class="f"><span class="l">does</span><span class="v">Moderate acceleration and low handling.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Thrust↑ Handling↓</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> accelerates harder again. <strong>L3</strong> harder again, and grants a <strong>boost</strong> ability that carries no gravity cost while it runs — neither crew nor ship feel it.</span></div></div><div class="row seeded"><div class="t">Handling-focused engine<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">engine</span></div><div class="f"><span class="l">does</span><span class="v">Moderate handling and low acceleration.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Handling↑ Thrust↓</code></span></div><div class="f"><span class="l">slots</span><span class="v">1, 2 at L3</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> improves handling, and accelerates a little better. <strong>L3</strong> takes a second slot, improves handling again, and grants an ability: the next three bends are taken perfectly at top speed, and if a bend is reached within three seconds of the last, extra speed is gained — then again on the third bend if it too comes within three seconds.</span></div></div><div class="row seeded"><div class="t">Balanced engine<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">engine</span></div><div class="f"><span class="l">does</span><span class="v">Moderate acceleration and moderate handling.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Thrust↑ Handling↑</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> improves both a little. <strong>L3</strong> improves both again and adds basic <strong>inertia dampeners</strong>, which reduce what gravity does to the crew and to the ship.</span></div></div><div class="row seeded"><div class="t">General shields<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">shields</span></div><div class="f"><span class="l">does</span><span class="v">General defence, in three levels.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Shields↑</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong>, <strong>L3</strong> more shielding.</span></div></div><div class="row seeded"><div class="t">Deflector shields<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">shields</span></div><div class="f"><span class="l">does</span><span class="v">A chance to deflect a hazard away from the ship and into a nearby ship or another hazard.</span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v">Higher levels raise the chance.</span></div></div></div>
 <h3>Notes</h3><p><strong>2026-09-13.</strong> Six categories named: engines; shields and defensive systems;
 crew; navigation systems; weapons and deployables systems; collection systems.
 Crew is a category here, so crew types may end up as rows in this table with
 <code>category: crew</code> rather than a table of their own — decide when dictating
 crew. Collectors likewise (<code>category: collection</code>). The open item in the notes
 is the one this table is for: an initial set of options for each category.</p>
+<p><strong>2026-09-13, engines and the first shields.</strong> Three engines dictated as a
+triad — speed, handling, balanced — each with three levels, and two shields.
+What was said and what was not:</p>
+<ul>
+<li><strong>Levels are the upgrade path.</strong> Every engine was dictated level by level,
+so <code>does</code> holds level 1 and <code>upgrades</code> holds levels 2 and 3. The handling
+engine is the first part to grow a slot: one slot until level 3, two after.</li>
+<li><strong>Names are the dictated descriptions</strong>, not shop names. &quot;Speed focused&quot;,
+&quot;handling focused&quot;, &quot;balanced&quot; and &quot;general shields&quot; are what was said;
+flavour names can replace them later without changing the rows.</li>
+<li><strong>Nothing was said about cost, pairings or what a part is bad with</strong>, so
+those four columns are blank across all five rows.</li>
+<li><strong>General shields is the thinnest row</strong>: &quot;level 1, 2 and 3, general
+defence&quot;. It has no downside, no cost and nothing distinguishing it beyond
+being the plain option. Worth another sentence when convenient.</li>
+<li><strong>Deflector shields moves no stat that was named.</strong> Its whole effect is the
+deflection chance, so <code>moves</code> is left blank rather than guessed.</li>
+<li>Two engine abilities arrive at level 3 — a boost, and the three-bend
+chain — and one engine grants inertia dampeners. All three are flagged in
+<code>mechanics-notes.md</code>, since where abilities come from is an open question.</li>
+</ul>
 </div>
 </details>
 <details class="element" id="corner-plans">
@@ -1299,6 +1320,30 @@ changed on it.</p>
 <td>open</td>
 <td>Where <strong>track augments and fixtures come from</strong> — the shop, or a component that grants one when upgraded far enough.</td>
 <td>Not decided in round 7 either. The notes lean shop-first.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>Abilities come from a component&#39;s third upgrade level.</strong> Dictating engines named two: the speed engine&#39;s boost, and the handling engine&#39;s three-bend chain.</td>
+<td>Bears on the abilities row above, which is still open. This says <em>where</em> an ability comes from — an upgrade path, not a component as bought — but not who fires it or when. The open row stands.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>An ability can suspend the swing</strong>: the handling engine at level 3 takes the next three bends perfectly at top speed, and pays extra speed for each bend reached within three seconds of the last.</td>
+<td>Round 7 makes the swing the price of speed at every bend, and the corner plan the only lever on it. A charged ability that removes the swing outright, and rewards bends taken in quick succession, is a new kind of lever on the core mechanic.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>Gravity acts on the ship, not only the crew.</strong> The balanced engine&#39;s level-3 inertia dampeners &quot;decrease the impact of gravity on crew and ship&quot;.</td>
+<td>Round 7 had gravity as a crew effect: hard acceleration wears a humanoid crew and a robot ignores it. What gravity costs the ship is new and not yet said.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td><strong>Hazards can be deflected.</strong> Deflector shields have a chance to throw a hazard into a nearby ship or into another hazard, and the chance rises with level.</td>
+<td>The ledger closed this in round 3: &quot;shields deflect objects — rejected: nothing to deflect without collisions; two shield modes is one too many.&quot; It is back, now aimed at ships and hazards rather than at nothing. It does not break &quot;ships do not touch&quot; — round 7&#39;s Rake already reaches a rival — but it is a second channel for one ship to damage another, and the ledger entry is superseded rather than still standing.</td>
 </tr>
 </tbody></table>
 </div>

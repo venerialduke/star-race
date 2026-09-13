@@ -36,8 +36,13 @@ it. The build stage turns arrows into values.
 
 ## Parts
 
-| id  | name | category | does | moves | slots | upgrades | costs | pairs with | fights | status |
-| --- | ---- | -------- | ---- | ----- | ----- | -------- | ----- | ---------- | ------ | ------ |
+| id                | name                    | category | does                                                                                      | moves               | slots      | upgrades                                                                                                                                                                                                                                                                                                                                            | costs | pairs with | fights | status |
+| ----------------- | ----------------------- | -------- | ----------------------------------------------------------------------------------------- | ------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ---------- | ------ | ------ |
+| speed-engine      | Speed-focused engine    | engine   | Moderate acceleration and low handling.                                                   | `Thrust↑ Handling↓` | 1          | **L2** accelerates harder again. **L3** harder again, and grants a **boost** ability that carries no gravity cost while it runs — neither crew nor ship feel it.                                                                                                                                                                                    |       |            |        | seeded |
+| handling-engine   | Handling-focused engine | engine   | Moderate handling and low acceleration.                                                   | `Handling↑ Thrust↓` | 1, 2 at L3 | **L2** improves handling, and accelerates a little better. **L3** takes a second slot, improves handling again, and grants an ability: the next three bends are taken perfectly at top speed, and if a bend is reached within three seconds of the last, extra speed is gained — then again on the third bend if it too comes within three seconds. |       |            |        | seeded |
+| balanced-engine   | Balanced engine         | engine   | Moderate acceleration and moderate handling.                                              | `Thrust↑ Handling↑` | 1          | **L2** improves both a little. **L3** improves both again and adds basic **inertia dampeners**, which reduce what gravity does to the crew and to the ship.                                                                                                                                                                                         |       |            |        | seeded |
+| general-shields   | General shields         | shields  | General defence, in three levels.                                                         | `Shields↑`          | 1          | **L2**, **L3** more shielding.                                                                                                                                                                                                                                                                                                                      |       |            |        | seeded |
+| deflector-shields | Deflector shields       | shields  | A chance to deflect a hazard away from the ship and into a nearby ship or another hazard. |                     | 1          | Higher levels raise the chance.                                                                                                                                                                                                                                                                                                                     |       |            |        | seeded |
 
 ## Notes
 
@@ -47,3 +52,24 @@ Crew is a category here, so crew types may end up as rows in this table with
 `category: crew` rather than a table of their own — decide when dictating
 crew. Collectors likewise (`category: collection`). The open item in the notes
 is the one this table is for: an initial set of options for each category.
+
+**2026-09-13, engines and the first shields.** Three engines dictated as a
+triad — speed, handling, balanced — each with three levels, and two shields.
+What was said and what was not:
+
+- **Levels are the upgrade path.** Every engine was dictated level by level,
+  so `does` holds level 1 and `upgrades` holds levels 2 and 3. The handling
+  engine is the first part to grow a slot: one slot until level 3, two after.
+- **Names are the dictated descriptions**, not shop names. "Speed focused",
+  "handling focused", "balanced" and "general shields" are what was said;
+  flavour names can replace them later without changing the rows.
+- **Nothing was said about cost, pairings or what a part is bad with**, so
+  those four columns are blank across all five rows.
+- **General shields is the thinnest row**: "level 1, 2 and 3, general
+  defence". It has no downside, no cost and nothing distinguishing it beyond
+  being the plain option. Worth another sentence when convenient.
+- **Deflector shields moves no stat that was named.** Its whole effect is the
+  deflection chance, so `moves` is left blank rather than guessed.
+- Two engine abilities arrive at level 3 — a boost, and the three-bend
+  chain — and one engine grants inertia dampeners. All three are flagged in
+  `mechanics-notes.md`, since where abilities come from is an open question.

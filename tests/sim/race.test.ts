@@ -5,20 +5,20 @@
 import { describe, expect, it } from 'vitest';
 import { seedFrom } from '../../src/sim/rng';
 import { simulate, type RaceConfig } from '../../src/sim/race';
-import { SLICE_TRACK, holdingSpeed } from '../../src/sim/track';
+import { KESTREL_LOOP, TRACKS, holdingSpeed, type Track } from '../../src/sim/track';
 
 const base = (overrides: Partial<RaceConfig> = {}): RaceConfig => ({
-  track: SLICE_TRACK,
+  track: KESTREL_LOOP,
   stats: { thrust: 1, handling: 1 },
   plan: 'carry',
   seed: seedFrom('kestrel'),
   ...overrides,
 });
 
-describe('the track', () => {
+describe.each(TRACKS)('$name', (track: Track) => {
   it('closes: the loop ends where it started', () => {
-    const first = SLICE_TRACK.samples.at(0);
-    const last = SLICE_TRACK.samples.at(-1);
+    const first = track.samples.at(0);
+    const last = track.samples.at(-1);
     if (first === undefined || last === undefined) throw new Error('empty track');
     expect(Math.hypot(last.pos.x - first.pos.x, last.pos.y - first.pos.y)).toBeLessThan(
       12,
@@ -29,9 +29,9 @@ describe('the track', () => {
     // The check that catches an arc curving the wrong way, which is what a
     // mis-signed centre does — the heading says one thing, the position another.
     let worst = 0;
-    for (let i = 1; i < SLICE_TRACK.samples.length; i += 1) {
-      const a = SLICE_TRACK.samples[i - 1];
-      const b = SLICE_TRACK.samples[i];
+    for (let i = 1; i < track.samples.length; i += 1) {
+      const a = track.samples[i - 1];
+      const b = track.samples[i];
       if (a === undefined || b === undefined) throw new Error('gap in samples');
       worst = Math.max(worst, Math.hypot(b.pos.x - a.pos.x, b.pos.y - a.pos.y));
     }
@@ -39,8 +39,28 @@ describe('the track', () => {
   });
 
   it('has bends of more than one radius', () => {
-    const radii = new Set(SLICE_TRACK.bends.map((b) => b.radius));
-    expect(radii.size).toBeGreaterThan(1);
+    expect(new Set(track.bends.map((b) => b.radius)).size).toBeGreaterThan(1);
+  });
+
+  it('can be lapped, and its laps differ by plan', () => {
+    const lap = (plan: 'lift' | 'charge'): number => {
+      const state = simulate(base({ track, plan }), 9000);
+      return state.lastLapTicks ?? Infinity;
+    };
+    expect(lap('lift')).toBeLessThan(Infinity);
+    expect(lap('charge')).toBeLessThan(lap('lift'));
+  });
+});
+
+describe('the three tracks', () => {
+  it('are different lengths', () => {
+    const lengths = TRACKS.map((t) => Math.round(t.length));
+    expect(new Set(lengths).size).toBe(TRACKS.length);
+  });
+
+  it('differ in how tight their bends are', () => {
+    const tightest = TRACKS.map((t) => Math.min(...t.bends.map((b) => b.radius)));
+    expect(new Set(tightest).size).toBe(TRACKS.length);
   });
 });
 

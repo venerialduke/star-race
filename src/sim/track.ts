@@ -36,6 +36,8 @@ export interface Bend {
 
 export interface Track {
   readonly name: string;
+  /** A few words for the player: how long it is and what kind of bends it has. */
+  readonly shape: string;
   readonly samples: readonly Sample[];
   readonly bends: readonly Bend[];
   /** Distance of each checkpoint from the start line; the first is 0. */
@@ -194,20 +196,78 @@ export function buildTrack(
     checkpoints.push((travelled * i) / sectorCount);
   }
 
-  return { name, samples, bends, checkpoints, length: travelled, bounds: { min, max } };
+  return {
+    name,
+    shape: '',
+    samples,
+    bends,
+    checkpoints,
+    length: travelled,
+    bounds: { min, max },
+  };
 }
 
 /**
- * The first loop. Its half turns through 180° — a long sweeper, a tight right,
- * then a hairpin — and is walked twice, so the circuit closes exactly.
+ * A loop from a half that turns through 180°, walked twice. The second copy is
+ * the first rotated half a turn, so the circuit closes exactly.
  */
-const HALF: readonly Piece[] = [
-  { kind: 'straight', length: 260 },
-  { kind: 'bend', radius: 70, sweep: 70 },
-  { kind: 'straight', length: 90 },
-  { kind: 'bend', radius: 42, sweep: -55 },
-  { kind: 'straight', length: 70 },
-  { kind: 'bend', radius: 55, sweep: 165 },
-];
+function loopFromHalf(
+  name: string,
+  shape: string,
+  half: readonly Piece[],
+  sectorCount: number,
+): Track {
+  const sweep = half.reduce((sum, p) => sum + (p.kind === 'bend' ? p.sweep : 0), 0);
+  if (Math.abs(sweep - 180) > 1e-9) {
+    throw new Error(`${name}: a half must sweep 180°, not ${sweep}°`);
+  }
+  return { ...buildTrack(name, [...half, ...half], sectorCount), shape };
+}
 
-export const SLICE_TRACK: Track = buildTrack('Kestrel Loop', [...HALF, ...HALF], 4);
+/** A middling circuit: a sweeper, a tight right, a hairpin. Where the game started. */
+export const KESTREL_LOOP = loopFromHalf(
+  'Kestrel Loop',
+  'medium · mixed bends',
+  [
+    { kind: 'straight', length: 260 },
+    { kind: 'bend', radius: 70, sweep: 70 },
+    { kind: 'straight', length: 90 },
+    { kind: 'bend', radius: 42, sweep: -55 },
+    { kind: 'straight', length: 70 },
+    { kind: 'bend', radius: 55, sweep: 165 },
+  ],
+  4,
+);
+
+/** Long straights and open sweepers: a track that pays for top speed. */
+export const MERIDIAN_RUN = loopFromHalf(
+  'Meridian Run',
+  'long · open sweepers',
+  [
+    { kind: 'straight', length: 420 },
+    { kind: 'bend', radius: 85, sweep: 60 },
+    { kind: 'straight', length: 300 },
+    { kind: 'bend', radius: 110, sweep: 55 },
+    { kind: 'straight', length: 200 },
+    { kind: 'bend', radius: 62, sweep: 65 },
+  ],
+  4,
+);
+
+/** Short and tight, barely a straight on it: a track that punishes carrying speed. */
+export const CINDER_COIL = loopFromHalf(
+  'Cinder Coil',
+  'short · tight and busy',
+  [
+    { kind: 'straight', length: 80 },
+    { kind: 'bend', radius: 30, sweep: 90 },
+    { kind: 'straight', length: 50 },
+    { kind: 'bend', radius: 26, sweep: -70 },
+    { kind: 'straight', length: 40 },
+    { kind: 'bend', radius: 34, sweep: 160 },
+  ],
+  3,
+);
+
+/** Every track, in the order the player sees them. */
+export const TRACKS: readonly Track[] = [KESTREL_LOOP, MERIDIAN_RUN, CINDER_COIL];

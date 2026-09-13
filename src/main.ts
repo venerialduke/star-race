@@ -4,7 +4,7 @@
 import { drawRace } from './render/draw';
 import { seedFrom } from './sim/rng';
 import { startRace, stepRace, type RaceConfig, type RaceState } from './sim/race';
-import { SLICE_TRACK } from './sim/track';
+
 import { TICK_HZ } from './sim/tuning';
 import { mountControls } from './ui/controls';
 
@@ -25,7 +25,7 @@ const controls = mountControls(
 );
 
 const configNow = (): RaceConfig => ({
-  track: SLICE_TRACK,
+  track: controls.settings.track,
   stats: { thrust: controls.settings.thrust, handling: controls.settings.handling },
   plan: controls.settings.plan,
   seed: seedFrom(controls.settings.seed),
@@ -62,7 +62,7 @@ function frame(now: number): void {
   if (accumulator > MS_PER_TICK * MAX_TICKS_PER_FRAME) accumulator = 0;
 
   const rect = canvas.getBoundingClientRect();
-  drawRace(ctx, SLICE_TRACK, state, rect.width, rect.height);
+  drawRace(ctx, controls.settings.track, state, rect.width, rect.height);
   controls.update(state);
   requestAnimationFrame(frame);
 }

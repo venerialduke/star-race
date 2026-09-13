@@ -23,7 +23,7 @@ the code in `src/`.
 
 | # | Element | Under | What it is | Shape | Status | Rows |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [Frames](frames.md) | The ship | Starting kits: the engine, shields and crew a ship begins with — or nothing, if starting stock in the shop replaces them (open) | catalogue | untouched | 0 |
+| 1 | [Starting shop](starting-shop.md) | The ship | What a season opens with: the budget, and the stock on the shelf | catalogue | untouched | 0 |
 | 2 | [Ship parts](ship-parts.md) | The ship | Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection | catalogue | seeded | 18 |
 | 3 | [Corner plans](corner-plans.md) | The ship | What the ship does at a bend: Lift, Carry, Charge, others | catalogue | untouched | 0 |
 | 4 | [Nav goals](nav-goals.md) | The ship | What the navigation system optimises for | catalogue | untouched | 0 |

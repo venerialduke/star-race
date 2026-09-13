@@ -713,7 +713,9 @@ watch a tracking bar and, at pit stops, change their mind.</p>
   Shop -. &quot;every few heats&quot; .-&gt; Phase
   Phase[&quot;Phase end&lt;br/&gt;the cut, then the track grows&quot;] --&gt; Shop</pre><h3>The ship</h3>
 <p><strong>Slots are the budget.</strong> A ship starts with four and gains one for every race
-it finishes; more can be bought with credits. Components come in six
+it finishes; more can be bought with credits. There is no frame: a season opens
+with an <strong>initial budget</strong> and a stocked shop, and the player deploys what they
+choose. Components come in six
 categories — <strong>engines</strong>, <strong>shields and defensive systems</strong>, <strong>crew</strong>,
 <strong>navigation</strong>, <strong>weapons and deployables</strong>, <strong>collection</strong> — and a category
 may be fitted more than once. Two shields is a build, not a mistake: the
@@ -998,17 +1000,21 @@ considerably more of it than round 7 had:</p>
 </tr>
 </tbody></table></div>
 <h3>Open calls</h3>
-<p>These are the owner&#39;s, and nothing above resolves them.</p>
+<p><strong>Three were answered on 2026-09-13, when the build was planned.</strong> They are
+folded into the prose above and recorded in <code>mechanics-notes.md</code>:</p>
+<ul>
+<li><strong>Frames are cut.</strong> A player starts with an <strong>initial budget</strong> and a shop
+already stocked, and chooses what to deploy. There is no named starting kit.</li>
+<li><strong>Abilities fire automatically</strong> — on proximity to a rival, on track
+conditions, on the moment being right — <em>unless</em> an ability is specifically a
+placed one, in which case the player sets where its charge is spent before
+the run. Both kinds can exist; automatic is the default.</li>
+<li><strong>Opponents are bots</strong> for the initial build, and the player races them.
+Real players are the destination, so nothing in the sim may assume the
+opponent&#39;s decisions are locally available at any particular moment.</li>
+</ul>
+<p>Three remain, and are the owner&#39;s:</p>
 <ol>
-<li><strong>Do frames exist?</strong> Either a frame is a named collection of components —
-which needs a spread of plain engines, shields and nav systems before it
-means anything — or players simply start with some components in their shop
-and choose what to deploy. The second is simpler and would retire element 1
-and change how a season opens. The owner leans to the second but has not
-called it.</li>
-<li><strong>Who fires an ability?</strong> Round 7 had the crew judge the moment. A later
-note had the player place where each charge fires before the run. The
-catalogue now has several abilities and says nothing about the trigger.</li>
 <li><strong>Is solar still a pool?</strong> The solar ion collector was dictated as a buff —
 speed and handling on the path, shields and recharge at level 3 — with no
 mention of collecting. Either solar stopped being a pool, or the collecting
@@ -1017,10 +1023,8 @@ the pool system is two pools or one.</li>
 <li><strong>Is the corner plan manual?</strong> The owner asked whether slowing into a turn
 should just be automatic from components, nav and crew. The corner plan
 stands until they decide — but the handling engine&#39;s three-bend ability is
-now a second lever on the same thing.</li>
-<li><strong>Where do fixtures and augments come from?</strong> The shop, or a component
-upgraded far enough. Both, now: the shop sells them, and one ability makes
-one.</li>
+now a second lever on the same thing, and the build tests the manual version
+first because it is the one you can see working.</li>
 <li><strong>Does the cut ever fall between heats</strong>, rather than only at a phase end?
 Raised in round 6, left open in round 7, untouched since.</li>
 </ol>
@@ -1048,9 +1052,9 @@ the frames question harder to answer than it needs to be.</p>
 </thead>
 <tbody><tr>
 <td>1</td>
-<td><a href="#frames">Frames</a></td>
+<td><a href="#starting-shop">Starting shop</a></td>
 <td>The ship</td>
-<td>Starting kits: the engine, shields and crew a ship begins with — or nothing, if starting stock in the shop replaces them (open)</td>
+<td>What a season opens with: the budget, and the stock on the shelf</td>
 <td>catalogue</td>
 <td>untouched</td>
 <td>0</td>
@@ -1206,8 +1210,8 @@ the frames question harder to answer than it needs to be.</p>
 
 <section class="area" id="area-ship">
 <h2>The ship <span class="count">2/7 started</span></h2>
-<details class="element" id="frames">
-<summary><span class="t">Frames</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Starting kits: the engine, shields and crew a ship begins with — or nothing, if starting stock in the shop replaces them (open)</span></summary>
+<details class="element" id="starting-shop">
+<summary><span class="t">Starting shop</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">What a season opens with: the budget, and the stock on the shelf</span></summary>
 <div class="body"><p>The starting kit. Before anything else, the player picks a frame, and a frame
 comes with an engine, shields, and a crew already fitted. The ship starts with
 four slots, so after choosing a frame there is one slot left and the first
@@ -1705,9 +1709,11 @@ rather than a purchase.</p>
 confirmed rather than invented: what round 7 said, plus what the notes added
 or changed.</p>
 
-<h3>Stages</h3><div class="rows"><div class="row seeded"><div class="t">frame<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Frame</span></div><div class="f"><span class="l">what happens</span><span class="v">Pick a starting frame: an engine, shields and a crew in three of four slots. The shop opens with a random selection to fill the fourth.</span></div><div class="f"><span class="l">from</span><span class="v">notes</span></div></div><div class="row seeded"><div class="t">pacing-lap<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Pacing lap</span></div><div class="f"><span class="l">what happens</span><span class="v">Two laps of the initial track with one pit stop, no opponents. Paid by your time against the track&#39;s benchmarks, not against anyone. The pit stop and the end of lap one are purchase opportunities.</span></div><div class="f"><span class="l">from</span><span class="v">notes</span></div></div><div class="row seeded"><div class="t">heat<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Heat</span></div><div class="f"><span class="l">what happens</span><span class="v">Two laps against the same three ships, a pit stop at the end of each lap. Scores once, by total time and margin.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div><div class="row seeded"><div class="t">phase<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Phase</span></div><div class="f"><span class="l">what happens</span><span class="v">Several heats. Groups redrawn between heats. The track grows at the end.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div><div class="row seeded"><div class="t">cut<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">The cut</span></div><div class="f"><span class="l">what happens</span><span class="v">At the end of a phase, everyone below a set points line is out, however many that is.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div></div>
-<h3>Notes</h3><p><strong>2026-09-13.</strong> The frame choice and the pacing lap are new: round 7&#39;s loop
-began at the shop before the first heat. The pacing lap is the first time a
+<h3>Stages</h3><div class="rows"><div class="row seeded"><div class="t">opening<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Opening shop</span></div><div class="f"><span class="l">what happens</span><span class="v">No frame. The player starts with an <strong>initial budget</strong> and a stocked shop, and deploys what they choose into four slots.</span></div><div class="f"><span class="l">from</span><span class="v">build call, 2026-09-13</span></div></div><div class="row seeded"><div class="t">pacing-lap<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Pacing lap</span></div><div class="f"><span class="l">what happens</span><span class="v">Two laps of the initial track with one pit stop, no opponents. Paid by your time against the track&#39;s benchmarks, not against anyone. The pit stop and the end of lap one are purchase opportunities.</span></div><div class="f"><span class="l">from</span><span class="v">notes</span></div></div><div class="row seeded"><div class="t">heat<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Heat</span></div><div class="f"><span class="l">what happens</span><span class="v">Two laps against the same three ships, a pit stop at the end of each lap. Scores once, by total time and margin.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div><div class="row seeded"><div class="t">phase<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Phase</span></div><div class="f"><span class="l">what happens</span><span class="v">Several heats. Groups redrawn between heats. The track grows at the end.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div><div class="row seeded"><div class="t">cut<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">The cut</span></div><div class="f"><span class="l">what happens</span><span class="v">At the end of a phase, everyone below a set points line is out, however many that is.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13, the build call.</strong> Frames are cut. The season opens with an
+initial budget and a stocked shop rather than a named starting kit; element 1
+becomes &quot;Starting shop&quot; and holds what that stock and budget are. The pacing
+lap is unchanged: round 7&#39;s loop began at the shop before the first heat. The pacing lap is the first time a
 player sees the track and the first credits they earn. Whether the cut could
 also fall between heats was raised in round 6&#39;s notes and left open in round
 7; nothing here decides it.</p>
@@ -1911,6 +1917,24 @@ changed on it.</p>
 <td>adds</td>
 <td><strong>A stat can be the sum of several fitted components</strong>: collected-fixture storage scales with the ship&#39;s <em>total</em> shield capacity, and fitting more than one shield raises it.</td>
 <td>The first stat in the catalogue that reads across parts rather than from one. It also confirms plainly that a category can be fitted more than once — two shields is a build, not a mistake — which the slot budget allowed but nothing had yet used on purpose.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td><strong>Frames are cut.</strong> A season opens with an <strong>initial budget</strong> and a shop already stocked; the player deploys what they choose. No named starting kit.</td>
+<td>Answers the open row above, and supersedes round 7 and the earlier note that opened the season with a frame. <code>season-structure.md</code> and element 1 (&quot;Starting shop&quot;) follow it. The &quot;we need more basic components before a frame means anything&quot; problem dissolves: the opening shop can carry whatever it carries.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td><strong>Abilities fire automatically</strong> — on proximity to a rival, on track conditions, on the moment being right — unless an ability is specifically a <strong>placed</strong> one, where the player sets before the run where its charge is spent.</td>
+<td>Answers the open row above. Round 7 had the crew judge the moment; a later note had the player place every charge. Both survive, with automatic as the default and placement as a property of the particular ability. <code>abilities.md</code> gains a column for which kind an ability is.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>Opponents are bots in the initial build; real players are the destination.</strong></td>
+<td>A build decision, not a design one, but it constrains the sim: nothing may assume an opponent&#39;s decisions are available locally at a given moment, because one day they will arrive over a wire. Inputs stay data; the race stays a pure function of them.</td>
 </tr>
 </tbody></table>
 </div>

@@ -46,7 +46,9 @@ flowchart TD
 ## The ship
 
 **Slots are the budget.** A ship starts with four and gains one for every race
-it finishes; more can be bought with credits. Components come in six
+it finishes; more can be bought with credits. There is no frame: a season opens
+with an **initial budget** and a stocked shop, and the player deploys what they
+choose. Components come in six
 categories — **engines**, **shields and defensive systems**, **crew**,
 **navigation**, **weapons and deployables**, **collection** — and a category
 may be fitted more than once. Two shields is a build, not a mistake: the
@@ -241,30 +243,32 @@ flowchart LR
 
 ## Open calls
 
-These are the owner's, and nothing above resolves them.
+**Three were answered on 2026-09-13, when the build was planned.** They are
+folded into the prose above and recorded in `mechanics-notes.md`:
 
-1. **Do frames exist?** Either a frame is a named collection of components —
-   which needs a spread of plain engines, shields and nav systems before it
-   means anything — or players simply start with some components in their shop
-   and choose what to deploy. The second is simpler and would retire element 1
-   and change how a season opens. The owner leans to the second but has not
-   called it.
-2. **Who fires an ability?** Round 7 had the crew judge the moment. A later
-   note had the player place where each charge fires before the run. The
-   catalogue now has several abilities and says nothing about the trigger.
-3. **Is solar still a pool?** The solar ion collector was dictated as a buff —
+- **Frames are cut.** A player starts with an **initial budget** and a shop
+  already stocked, and chooses what to deploy. There is no named starting kit.
+- **Abilities fire automatically** — on proximity to a rival, on track
+  conditions, on the moment being right — *unless* an ability is specifically a
+  placed one, in which case the player sets where its charge is spent before
+  the run. Both kinds can exist; automatic is the default.
+- **Opponents are bots** for the initial build, and the player races them.
+  Real players are the destination, so nothing in the sim may assume the
+  opponent's decisions are locally available at any particular moment.
+
+Three remain, and are the owner's:
+
+1. **Is solar still a pool?** The solar ion collector was dictated as a buff —
    speed and handling on the path, shields and recharge at level 3 — with no
    mention of collecting. Either solar stopped being a pool, or the collecting
    went without saying. With dark matter now inventory, this decides whether
    the pool system is two pools or one.
-4. **Is the corner plan manual?** The owner asked whether slowing into a turn
+2. **Is the corner plan manual?** The owner asked whether slowing into a turn
    should just be automatic from components, nav and crew. The corner plan
    stands until they decide — but the handling engine's three-bend ability is
-   now a second lever on the same thing.
-5. **Where do fixtures and augments come from?** The shop, or a component
-   upgraded far enough. Both, now: the shop sells them, and one ability makes
-   one.
-6. **Does the cut ever fall between heats**, rather than only at a phase end?
+   now a second lever on the same thing, and the build tests the manual version
+   first because it is the one you can see working.
+3. **Does the cut ever fall between heats**, rather than only at a phase end?
    Raised in round 6, left open in round 7, untouched since.
 
 ## What the catalogue still wants

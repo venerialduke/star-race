@@ -1,47 +1,69 @@
-// The browser end of the game: a canvas, a clock, and a seed.
-//
-// Everything else lives in ui/game.ts, which can be played through in a test
-// without any of these.
+// Fixed timestep: wall-clock time in, whole ticks out. The only place where
+// real time and the simulation meet.
 
-import { createGame } from './ui/game';
-import { drawField, type Viewport } from './render/draw';
+import { drawRace } from './render/draw';
+import { seedFrom } from './sim/rng';
+import { startRace, stepRace, type RaceConfig, type RaceState } from './sim/race';
+import { SLICE_TRACK } from './sim/track';
+import { TICK_HZ } from './sim/tuning';
+import { mountControls } from './ui/controls';
 
-function getCanvas(): HTMLCanvasElement {
-  const el = document.getElementById('game');
-  if (!(el instanceof HTMLCanvasElement)) throw new Error('Missing <canvas id="game">');
-  return el;
-}
+const canvas = document.getElementById('game') as HTMLCanvasElement;
+const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+const panel = document.getElementById('panel') as HTMLElement;
 
-function getContext(el: HTMLCanvasElement): CanvasRenderingContext2D {
-  const c = el.getContext('2d');
-  if (c === null) throw new Error('Canvas 2D context unavailable');
-  return c;
-}
+let state: RaceState = startRace();
 
-const canvas: HTMLCanvasElement = getCanvas();
-const ctx: CanvasRenderingContext2D = getContext(canvas);
+const controls = mountControls(
+  panel,
+  () => {
+    /* settings are read fresh every tick */
+  },
+  () => {
+    state = startRace();
+  },
+);
 
-let viewport: Viewport = { width: 0, height: 0, dpr: 1 };
+const configNow = (): RaceConfig => ({
+  track: SLICE_TRACK,
+  stats: { thrust: controls.settings.thrust, handling: controls.settings.handling },
+  plan: controls.settings.plan,
+  seed: seedFrom(controls.settings.seed),
+});
 
 function resize(): void {
-  const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  viewport = { width, height, dpr };
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.round(rect.width * ratio);
+  canvas.height = Math.round(rect.height * ratio);
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 }
 window.addEventListener('resize', resize);
 resize();
 
-const game = createGame({
-  root: document.body,
-  render: (field) => drawField(ctx, field, viewport),
-  seed: Math.floor(Date.now() % 100000),
-});
+const MS_PER_TICK = 1000 / TICK_HZ;
+/** Never simulate more than this in one frame: a backgrounded tab must not catch up violently. */
+const MAX_TICKS_PER_FRAME = 8;
+
+let previous = performance.now();
+let accumulator = 0;
 
 function frame(now: number): void {
-  game.frame(now);
+  accumulator += now - previous;
+  previous = now;
+
+  const config = configNow();
+  let ticks = 0;
+  while (accumulator >= MS_PER_TICK && ticks < MAX_TICKS_PER_FRAME) {
+    state = stepRace(state, config);
+    accumulator -= MS_PER_TICK;
+    ticks += 1;
+  }
+  if (accumulator > MS_PER_TICK * MAX_TICKS_PER_FRAME) accumulator = 0;
+
+  const rect = canvas.getBoundingClientRect();
+  drawRace(ctx, SLICE_TRACK, state, rect.width, rect.height);
+  controls.update(state);
   requestAnimationFrame(frame);
 }
 

@@ -5,10 +5,14 @@ option for every mechanic in it — the parts, the crews, the fixtures, the
 abilities — as tables the owner dictates and edits. It is a living document;
 git is its history. Nothing here is a round.
 
-**Framework:** [round 7, "Fast Ships Swing Wide"](../rounds/round-07/sharpened.md).
-The catalogue is written against that document. If dictation changes a
-mechanic rather than populating one, it goes in `mechanics-notes.md` and is
-flagged, so the framework and the catalogue never silently diverge.
+**Framework:** [`framework.md`](framework.md) — "Fast Ships Swing Wide",
+[round 7](../rounds/round-07/sharpened.md) with every later dictation worked
+in. That is the living document and the thing the catalogue is written
+against; the round stays on disk unchanged, because rounds are the record of
+how we got here. If dictation changes a mechanic rather than populating one,
+it goes in `mechanics-notes.md` first and is flagged, so the framework and the
+catalogue never silently diverge — and `framework.md` is rewritten when the
+owner asks for a reconciliation pass, not automatically.
 
 **The build is clean slate.** Nothing here is costed against, or shaped by,
 the code in `src/`.
@@ -19,22 +23,22 @@ the code in `src/`.
 
 | # | Element | Under | What it is | Shape | Status | Rows |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [Frames](frames.md) | The ship | Starting kits: the engine, shields and crew a ship begins with | catalogue | untouched | 0 |
+| 1 | [Frames](frames.md) | The ship | Starting kits: the engine, shields and crew a ship begins with — or nothing, if starting stock in the shop replaces them (open) | catalogue | untouched | 0 |
 | 2 | [Ship parts](ship-parts.md) | The ship | Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection | catalogue | seeded | 18 |
 | 3 | [Corner plans](corner-plans.md) | The ship | What the ship does at a bend: Lift, Carry, Charge, others | catalogue | untouched | 0 |
 | 4 | [Nav goals](nav-goals.md) | The ship | What the navigation system optimises for | catalogue | untouched | 0 |
-| 5 | [Crew types](crew-types.md) | The ship | Humanoid, robot, and whatever else | catalogue | untouched | 0 |
-| 6 | [Abilities](abilities.md) | The ship | Charged moves, if components have them: boost, teleport, others — unresolved | catalogue | partial | 2 (2 stub) |
+| 5 | [Crew types](crew-types.md) | The ship | What a crew is made of, and what endurance means — the five crews themselves are rows in ship parts | catalogue | untouched | 0 |
+| 6 | [Abilities](abilities.md) | The ship | Charged moves, if components have them: boost, teleport, others — unresolved | catalogue | partial | 4 (1 stub) |
 | 7 | [Ship stats](ship-stats.md) | The ship | The stats themselves and what each drives | definitions | untouched | 0 |
 | 8 | [Split anatomy](split-anatomy.md) | The track | The pieces a split is made of: straights, corners, bends, banking | catalogue | seeded | 4 |
-| 9 | [Off-path features](off-path-features.md) | The track | What lives on a split: hazards that hurt or move you, pockets that pay | catalogue | partial | 2 (2 stub) |
+| 9 | [Off-path features](off-path-features.md) | The track | What lives on a split: hazards that hurt or move you, pockets that pay | catalogue | partial | 3 (2 stub) |
 | 10 | [Fixtures](fixtures.md) | The track | Objects a player buys and places on the track | catalogue | untouched | 0 |
 | 11 | [Track augments](track-augments.md) | The track | Splits or whole sectors a player adds, temporary or permanent | catalogue | partial | 2 (2 stub) |
 | 12 | [Track growth](track-growth.md) | The track | How the loop grows between phases | rules | untouched | 0 |
-| 13 | [Collectors](collectors.md) | Money & points | Equipment that opens a pool | catalogue | untouched | 0 |
+| 13 | [Collectors](collectors.md) | Money & points | Equipment that opens a pool, or fills a hold you cash in later | catalogue | untouched | 0 |
 | 14 | [Pools](pools.md) | Money & points | The shared pots and what earns a share | catalogue | untouched | 0 |
 | 15 | [Declarations](declarations.md) | Money & points | Pre-heat bets: Long Line, Hold the Line, others | catalogue | untouched | 0 |
-| 16 | [Economy flow](economy-flow.md) | Money & points | Every income, every cost, every shop, and when each happens | parameters | partial | 10 (3 stub) |
+| 16 | [Economy flow](economy-flow.md) | Money & points | Every income, every cost, every shop, and when each happens | parameters | partial | 12 (3 stub) |
 | 17 | [Season structure](season-structure.md) | The season | Pacing lap, phases, heats, groups, the cut | parameters | seeded | 5 |
 
 <!-- tracker:end -->

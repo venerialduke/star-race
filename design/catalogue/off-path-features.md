@@ -19,10 +19,11 @@ carry features from this table.
 
 ## Features
 
-| id           | name         | kind   | effect | does | answer | status |
-| ------------ | ------------ | ------ | ------ | ---- | ------ | ------ |
-| gravity-well | Gravity well | hazard |        |      |        | stub   |
-| solar-storm  | Solar storm  | hazard |        |      |        | stub   |
+| id           | name         | kind   | effect                | does                                                                                                                                                                      | answer               | status |
+| ------------ | ------------ | ------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ------ |
+| gravity-well | Gravity well | hazard |                       |                                                                                                                                                                           |                      | stub   |
+| solar-storm  | Solar storm  | hazard |                       |                                                                                                                                                                           |                      | stub   |
+| black-hole   | Black hole   | hazard | `damages` · `bounces` | Terrain as much as hazard: a corner can be caused by, or sit near, a black hole. A ship built for them takes such a corner far faster and takes no damage from it at all. | a dark matter engine | seeded |
 
 ## Notes
 
@@ -33,3 +34,12 @@ you power into them push you to another split of the sector — and are the
 `effect` vocabulary above. Which hazard does which is not said. Whether a
 split is on the golden path and whether it has a resource are properties of
 the split, not features on it; they belong to whatever describes a split.
+
+**2026-09-13, from dictating the dark matter engine.** Black holes arrived
+sideways, as the thing that engine is built for, so the row above is what the
+engine's description implies rather than a feature dictated on its own terms.
+What is new about it is that a hazard can **shape the track** — "corners
+caused by or near a black hole" — where every other feature sits on a split
+that exists without it. A small one can also be created mid-race, by that
+engine's boost, which makes it the only feature a player can put down while
+racing.

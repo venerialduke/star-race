@@ -146,8 +146,9 @@
   <div class="step">
     <span class="k">Start</span
     ><span class="d"
-      >pick a <b>frame</b> — engine, shields, crew in 3 of 4 slots · shop for the fourth ·
-      a <b>pacing lap</b> alone, paid against the track's par</span
+      >start with some components — a <b>frame</b>, or simply stock in your shop
+      (<i>open</i>) · 4 slots · a <b>pacing lap</b> alone, paid against the track's
+      par</span
     >
   </div>
   <div class="arrow">↓<small>once, then the loop</small></div>
@@ -171,21 +172,24 @@
     <span class="k">Pit stop</span
     ><span class="d"
       >all restart level · <b>clock keeps running</b> · tracking bar shows who leads ·
-      small buys</span
+      small buys · pool share paid · re-plan the route <b>if Nav 3</b></span
     >
   </div>
   <div class="arrow">↓<small>lap 2 = run again, same 3 ships</small></div>
   <div class="step pay">
     <span class="k">Payout</span
     ><span class="d"
-      ><b>credits</b> ← purse + pools &nbsp;·&nbsp; <b>points</b> ← finish order +
-      margin</span
+      ><b>credits</b> ← purse + pools + salvage &nbsp;·&nbsp; <b>points</b> ← finish order
+      + margin &nbsp;·&nbsp; <b>+1 slot</b> for finishing</span
     >
   </div>
   <div class="arrow">↓</div>
   <div class="step">
     <span class="k">Between heats</span
-    ><span class="d">shop, or hold for interest · new group of three</span>
+    ><span class="d"
+      >shop &amp; <b>inventory</b> — buy, hold, fit, remove, sell · hold credits for
+      interest · new group of three</span
+    >
   </div>
   <div class="arrow">↓<small>every few heats</small></div>
   <div class="step">
@@ -228,7 +232,7 @@
     <rect class="n" x="234" y="76" width="80" height="26" rx="4" />
     <text x="274" y="93" text-anchor="middle">abilities</text>
     <rect class="n" x="234" y="140" width="80" height="26" rx="4" />
-    <text x="274" y="157" text-anchor="middle">crew wear</text>
+    <text x="274" y="157" text-anchor="middle">wear</text>
     <!-- edges -->
     <path class="e" d="M68,21 L110,21" />
     <path class="e hi" d="M148,34 L148,74" />
@@ -242,7 +246,7 @@
     <path class="e" d="M148,102 L148,138" />
     <text class="s" x="153" y="123">Charge ⇒</text>
     <path class="e" d="M184,153 L232,153" />
-    <text class="s" x="208" y="146" text-anchor="middle">if humanoid</text>
+    <text class="s" x="208" y="146" text-anchor="middle">crew &amp; ship</text>
     <path class="e" d="M274,138 L274,104" />
     <text class="s" x="279" y="123">lowers</text>
   </svg>
@@ -251,27 +255,36 @@
       <span class="k">Corner plan</span
       ><span class="d"
         ><b>Lift</b> brake, no swing · <b>Carry</b> take the swing · <b>Charge</b> keep
-        burning, widest swing, gravity</span
+        burning, widest swing, gravity on crew <b>and ship</b></span
       >
     </div>
     <div class="box">
       <span class="k">Three layers</span
       ><span class="d"
-        >Shields absorb, regen, deflect above half → Hull → Crew, who also time the
-        abilities</span
+        >Shields absorb, regen, deflect above half → Hull → Crew · a shield may also
+        <b>deflect a hazard</b> or <b>keep what hits it</b>, to sell</span
       >
     </div>
-    <div class="box">
-      <span class="k">Nav</span
+    <div class="box hi">
+      <span class="k">Nav gates the route</span
       ><span class="d"
-        >lights splits ahead · follows a goal · flies alone when the crew is out</span
+        ><b>1</b> choose at more splits · <b>2</b> see the unseen, plan the whole heat ·
+        <b>3</b> re-plan at a pit stop</span
       >
     </div>
     <div class="box">
       <span class="k">Crew</span
       ><span class="d"
-        ><b>humanoid</b> reacts, gets lucky, wears · <b>robot</b> tougher, ignores
-        gravity, slower</span
+        >five kinds, graded by <b>endurance</b> · scientists · engineers · mercenaries ·
+        androids · nanites</span
+      >
+    </div>
+    <div class="box wide">
+      <span class="k">Slots are the budget</span
+      ><span class="d"
+        >4 to start, +1 per race finished, more for credits · six categories, and a
+        category may repeat · <b>upgrades</b> deepen a component and often cost another
+        slot at L3 — where most <b>abilities</b> arrive</span
       >
     </div>
   </div>
@@ -298,11 +311,24 @@
     </div>
     <div class="box">
       <span class="k">Wide</span
-      ><span class="d">slower · hazards that hurt · pockets that pay</span>
+      ><span class="d"
+        >slower · hazards that hurt — power into one and it may shove you to another split
+        · pockets that pay</span
+      >
     </div>
     <div class="box">
       <span class="k">Fixtures</span
-      ><span class="d">objects you own on a sector — in every heat you race</span>
+      ><span class="d"
+        >objects you own on a sector, shown to your heat · or dropped <b>mid-race</b> by
+        an ability, seen by nobody</span
+      >
+    </div>
+    <div class="box wide">
+      <span class="k">Black holes</span
+      ><span class="d"
+        >terrain as well as hazard: a corner can be <b>caused by</b> one · the right
+        engine reads it as an opening and takes no damage</span
+      >
     </div>
     <div class="box">
       <span class="k">Augments</span
@@ -323,6 +349,41 @@
   </div>
 </div>
 
+<h2>How ships reach each other</h2>
+<div class="card">
+  <div class="grid2">
+    <div class="box wide hi">
+      <span class="k">Still no contact</span
+      ><span class="d"
+        >ships never touch · everything below reaches a rival through the <b>track</b>,
+        the <b>economy</b> or the <b>shop</b></span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Push them off course</span
+      ><span class="d"
+        >gravity mines · tractor beam (ships <i>and</i> fixtures) · a boost's black hole ·
+        the swing is no longer the only way off the path</span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Hurt them</span
+      ><span class="d">missiles, short to long range · a deflected hazard</span>
+    </div>
+    <div class="box">
+      <span class="k">Take their shot</span
+      ><span class="d"
+        >a full shield can <b>keep</b> the weapon that hit it — their fire, your
+        salvage</span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Shape what they fly</span
+      ><span class="d">fixtures and augments you own sit in your heat's track</span>
+    </div>
+  </div>
+</div>
+
 <h2>Money &amp; points</h2>
 <div class="card">
   <div class="grid2">
@@ -333,17 +394,36 @@
     <div class="box">
       <span class="k">Pools</span
       ><span class="d"
-        >solar · dark matter · bounty — shared, thin as more draw,
+        >bounty by damage · solar <i>(a pool still? open)</i> — shared, thin as more draw,
         <b>capped under the purse</b></span
       >
     </div>
     <div class="box">
-      <span class="k">Collectors</span
-      ><span class="d">equipment that opens a pool for you</span>
+      <span class="k">Dark matter</span
+      ><span class="d"
+        ><b>inventory, not a pool</b>: collected in the race, feeds a boost, cashed in
+        with a L3 collector</span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Salvage</span
+      ><span class="d"
+        >weapons and fixtures your shields caught, sold when the race ends</span
+      >
     </div>
     <div class="box">
       <span class="k">Interest &amp; bills</span
-      ><span class="d">held credits earn, to a cap · hurt crew costs</span>
+      ><span class="d"
+        >held credits earn, to a cap · hurt crew costs · the ship has a maintenance
+        bill</span
+      >
+    </div>
+    <div class="box wide">
+      <span class="k">Spending</span
+      ><span class="d"
+        >components · their upgrades · more <b>slots</b> · fixtures and augments ·
+        repairs</span
+      >
     </div>
     <div class="box wide">
       <span class="k">Points</span

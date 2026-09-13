@@ -1,11 +1,18 @@
 # Mechanics notes
 
 Things said during dictation that change a **mechanic** rather than populate
-one. The framework is pinned to
-[round 7](../rounds/round-07/sharpened.md); it does not move because a
-catalogue entry needed it to. This file is the record of where the owner's
-later notes and round 7 differ, so that when the framework is next rewritten,
-nothing is lost and nothing stale survives.
+one. The framework does not move because a catalogue entry needed it to: a
+note lands here first, and the framework is rewritten only when the owner asks
+for a pass.
+
+**Reconciled 2026-09-13.** That pass has now run once. Every `supersedes` and
+`adds` row below is worked into [`framework.md`](framework.md), which is the
+pinned framework from here on; [round 7](../rounds/round-07/sharpened.md) is
+unchanged on disk, because rounds are append-only and are the record of how we
+got here. The `open` rows were **not** resolved — they are carried into the
+framework's "Open calls" section, still waiting on the owner. Nothing below is
+deleted or edited: this table stays the history, and new notes append to it as
+before.
 
 Three kinds of row. **Supersedes** — the note plainly replaces something round
 7 or the catalogue said; the catalogue has been changed to match and the old

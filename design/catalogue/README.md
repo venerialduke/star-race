@@ -15,39 +15,42 @@ the code in `src/`.
 
 ## Tracker
 
-| #   | Element                     | Under               | What it is                                                                             | Shape       | Status        | Rows |
-| --- | --------------------------- | ------------------- | -------------------------------------------------------------------------------------- | ----------- | ------------- | ---- |
-| 1   | [Ship parts](ship-parts.md) | The ship            | What you bolt on: drives, frames, nav units, shield generators                         | catalogue   | **untouched** | 0    |
-| 2   | Corner plans                | The ship            | What the ship does at a bend: Lift, Carry, Charge, and any others                      | catalogue   | untouched     | 0    |
-| 3   | Nav goals                   | The ship            | What the navigation system optimises for: lap time, collection, safety, others         | catalogue   | untouched     | 0    |
-| 4   | Crew types                  | Crew                | Humanoid, robot, and whatever else — what each is good and bad at                      | catalogue   | untouched     | 0    |
-| 5   | Abilities                   | Abilities           | Self-firing moves charged by the golden path: Brace, Rake, Burn, Scoop, others         | catalogue   | untouched     | 0    |
-| 6   | Section types               | The track           | The building blocks a track is assembled from: bend kinds, straight kinds, split kinds | catalogue   | untouched     | 0    |
-| 7   | Off-path features           | The track           | What lives wide of the path: hazards that hurt, pockets that pay                       | catalogue   | untouched     | 0    |
-| 8   | Fixtures                    | Fixtures and splits | Things a player buys and places on a section: Beacon, Slick, Mine, Relay, others       | catalogue   | untouched     | 0    |
-| 9   | Player splits               | Fixtures and splits | Routes a player buys and splices in: pocket split, cut split, temporary, permanent     | catalogue   | untouched     | 0    |
-| 10  | Collectors                  | Money               | Equipment that opens a pool: Solar Vane, Dark Matter Scoop, Grapple                    | catalogue   | untouched     | 0    |
-| 11  | Pools                       | Money               | The shared pots and what earns a share of each: solar, dark matter, bounty             | catalogue   | untouched     | 0    |
-| 12  | Declarations                | Points              | Pre-heat bets: Long Line, Hold the Line, others                                        | catalogue   | untouched     | 0    |
-| 13  | Ship stats                  | The ship            | The stats themselves — what each one is and what it drives                             | definitions | untouched     | 0    |
-| 14  | Season structure            | Season              | Phases, heats per phase, group size, where the cut falls                               | parameters  | untouched     | 0    |
-| 15  | Economy flow                | Money               | Every income and every cost, and when each is paid                                     | parameters  | untouched     | 0    |
-| 16  | Track growth                | The track           | How the loop grows between phases and on purchase                                      | rules       | untouched     | 0    |
+<!-- tracker:start -->
 
-**Status** is one of: `untouched` — nothing dictated yet; `seeded` — the
-owner has given a first pass and every row has at least a name and a sentence;
-`partial` — some rows are stubs; `reviewed` — a review pass has run against it
-(not yet; reviews come after seeding).
+| # | Element | Under | What it is | Shape | Status | Rows |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | [Frames](frames.md) | The ship | Starting kits: the engine, shields and crew a ship begins with | catalogue | untouched | 0 |
+| 2 | [Ship parts](ship-parts.md) | The ship | Components you install: engines, shields, crew, navigation, weapons and deployables, collection | catalogue | untouched | 0 |
+| 3 | [Corner plans](corner-plans.md) | The ship | What the ship does at a bend: Lift, Carry, Charge, others | catalogue | untouched | 0 |
+| 4 | [Nav goals](nav-goals.md) | The ship | What the navigation system optimises for | catalogue | untouched | 0 |
+| 5 | [Crew types](crew-types.md) | The ship | Humanoid, robot, and whatever else | catalogue | untouched | 0 |
+| 6 | [Abilities](abilities.md) | The ship | Charged moves: Brace, Rake, Burn, Scoop, boost, teleport, others | catalogue | partial | 2 (2 stub) |
+| 7 | [Ship stats](ship-stats.md) | The ship | The stats themselves and what each drives | definitions | untouched | 0 |
+| 8 | [Section types](section-types.md) | The track | The building blocks a route is made of: straights, corners, bends, banking | catalogue | seeded | 4 |
+| 9 | [Off-path features](off-path-features.md) | The track | What lives on a route: hazards that hurt or move you, pockets that pay | catalogue | partial | 2 (2 stub) |
+| 10 | [Fixtures](fixtures.md) | The track | Objects a player buys and places on the track | catalogue | untouched | 0 |
+| 11 | [Track augments](track-augments.md) | The track | Routes or whole sectors a player adds, temporary or permanent | catalogue | partial | 2 (2 stub) |
+| 12 | [Track growth](track-growth.md) | The track | How the loop grows between phases | rules | untouched | 0 |
+| 13 | [Collectors](collectors.md) | Money & points | Equipment that opens a pool | catalogue | untouched | 0 |
+| 14 | [Pools](pools.md) | Money & points | The shared pots and what earns a share | catalogue | untouched | 0 |
+| 15 | [Declarations](declarations.md) | Money & points | Pre-heat bets: Long Line, Hold the Line, others | catalogue | untouched | 0 |
+| 16 | [Economy flow](economy-flow.md) | Money & points | Every income, every cost, every shop, and when each happens | parameters | partial | 10 (3 stub) |
+| 17 | [Season structure](season-structure.md) | The season | Pacing lap, phases, heats, groups, the cut | parameters | untouched | 0 |
+
+<!-- tracker:end -->
+
+**Status** is derived from each element's file, not typed: `untouched` — no
+rows; `partial` — some rows are stubs; `seeded` — every row has a sentence.
+Review status comes later.
 
 **Shape** says what kind of table it is. A _catalogue_ is many rows of the
 same kind of thing, one option per row. _Definitions_ name a fixed small set.
-_Parameters_ and _rules_ are short and may not be tables at all.
+_Parameters_ and _rules_ are short lists, confirmed rather than invented.
 
-Elements 1–12 are the ones to dictate. 13–16 are mostly already said in the
-framework and need confirming rather than inventing.
-
-Rows 10 and 1 may merge: a collector could be a ship part with `slot: collector`.
-Decide when dictating collectors.
+The tracker above and the page at `/design/mechanics.html` are both rendered
+from `index.json` and the element files by `npm run mechanics-page`. Add an
+element in `index.json`; add rows in the element's file; run the script. A
+row is edited in exactly one place.
 
 ## How to dictate
 

@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "balance": "tsx scripts/balance.ts",
-    "design-page": "tsx scripts/design-page.ts"
+    "design-page": "tsx scripts/design-page.ts",
+    "mechanics-page": "tsx scripts/mechanics-page.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

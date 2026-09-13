@@ -1,14 +1,16 @@
 # Ship parts
 
-What the player bolts on between heats. A part moves the ship's stats and may
-carry a downside; it is bought with credits and takes a slot. Against
-[round 7](../rounds/round-07/sharpened.md): the stats a part can move are
-**Thrust** (acceleration and top speed), **Handling** (holding speed at a
+Components you install. A ship has a limited number of **slots**, and the
+slots are the budget: you decide what to prioritise. A part moves the ship's
+stats and may carry a downside; it is bought with credits and takes a slot.
+Parts have **upgrades**, which appear in the shop once the part is fitted and
+which can grow to take more than one slot.
+
+Against [round 7](../rounds/round-07/sharpened.md), the stats a part can move
+are **Thrust** (acceleration and top speed), **Handling** (holding speed at a
 bend), **Nav** (how much of a split is visible, how well the ship follows a
 goal), **Shields** and **Hull**. Reaction time is not bought; it comes from
-speed and crew. Gravity is not a stat but a part can make it worse.
-
-**Status:** untouched · **Rows:** 0
+speed and crew.
 
 ## Schema
 
@@ -16,13 +18,14 @@ speed and crew. Gravity is not a stat but a part can make it worse.
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `id`         | short slug, lowercase, hyphens                                                                                                                                                                         |
 | `name`       | what the shop calls it                                                                                                                                                                                 |
-| `slot`       | where it goes — suggested: `drive`, `frame`, `nav`, `shield`, `collector`; add a slot if dictation needs one                                                                                           |
+| `category`   | one of the six: `engine` · `shields` (and defensive systems) · `crew` · `navigation` · `weapons` (and deployables) · `collection`                                                                      |
 | `does`       | one plain sentence, mechanic not value                                                                                                                                                                 |
 | `moves`      | arrows only, more arrows for more: `Thrust↑↑ Handling↓`. Things a part can move: `Thrust`, `Handling`, `Nav`, `Shields`, `Hull`, `gravity`, `charge` (how fast the path charges abilities), `reaction` |
-| `costs`      | credit tier as `$`, `$$`, `$$$`, plus any stated downside in words                                                                                                                                     |
-| `pairs with` | what it is meant for: a corner plan (`Charge`), a crew type (`robot`), a declaration (`Long Line`), a nav goal, another part                                                                           |
+| `slots`      | how many it takes, `1` unless said otherwise                                                                                                                                                           |
+| `upgrades`   | what its upgrade path does, in a few words, and whether it grows in slots                                                                                                                              |
+| `costs`      | credit tier as `$`, `$$`, `$$$`, plus any stated downside                                                                                                                                              |
+| `pairs with` | what it is meant for: a corner plan, a crew type, a declaration, another part                                                                                                                          |
 | `fights`     | what it works against or is bad with                                                                                                                                                                   |
-| `unlocks`    | the phase it becomes available, `1`, `2`, `3`… — blank if not said                                                                                                                                     |
 | `status`     | `stub` — named only · `seeded` — has a sentence and arrows · `cut` — struck, kept for the record                                                                                                       |
 
 Arrows, never numbers. `↑` is some, `↑↑` is a lot, `↑↑↑` is the reason to buy
@@ -30,13 +33,14 @@ it. The build stage turns arrows into values.
 
 ## Parts
 
-| id  | name | slot | does | moves | costs | pairs with | fights | unlocks | status |
-| --- | ---- | ---- | ---- | ----- | ----- | ---------- | ------ | ------- | ------ |
+| id  | name | category | does | moves | slots | upgrades | costs | pairs with | fights | status |
+| --- | ---- | -------- | ---- | ----- | ----- | -------- | ----- | ---------- | ------ | ------ |
 
 ## Notes
 
-Anything said about parts that does not fit a column goes here, dated. Slot
-rules ("a ship has one drive and up to two frames"), how many parts a ship
-carries, whether parts can be sold back, what the shop shows at a pit stop
-versus between heats — these are the kind of thing that lands here first and
-becomes a column or a parameter later.
+**2026-09-13.** Six categories named: engines; shields and defensive systems;
+crew; navigation systems; weapons and deployables systems; collection systems.
+Crew is a category here, so crew types may end up as rows in this table with
+`category: crew` rather than a table of their own — decide when dictating
+crew. Collectors likewise (`category: collection`). The open item in the notes
+is the one this table is for: an initial set of options for each category.

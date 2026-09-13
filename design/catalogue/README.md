@@ -20,22 +20,22 @@ the code in `src/`.
 | # | Element | Under | What it is | Shape | Status | Rows |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | [Frames](frames.md) | The ship | Starting kits: the engine, shields and crew a ship begins with | catalogue | untouched | 0 |
-| 2 | [Ship parts](ship-parts.md) | The ship | Components you install: engines, shields, crew, navigation, weapons and deployables, collection | catalogue | untouched | 0 |
+| 2 | [Ship parts](ship-parts.md) | The ship | Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection | catalogue | untouched | 0 |
 | 3 | [Corner plans](corner-plans.md) | The ship | What the ship does at a bend: Lift, Carry, Charge, others | catalogue | untouched | 0 |
 | 4 | [Nav goals](nav-goals.md) | The ship | What the navigation system optimises for | catalogue | untouched | 0 |
 | 5 | [Crew types](crew-types.md) | The ship | Humanoid, robot, and whatever else | catalogue | untouched | 0 |
-| 6 | [Abilities](abilities.md) | The ship | Charged moves: Brace, Rake, Burn, Scoop, boost, teleport, others | catalogue | partial | 2 (2 stub) |
+| 6 | [Abilities](abilities.md) | The ship | Charged moves, if components have them: boost, teleport, others — unresolved | catalogue | partial | 2 (2 stub) |
 | 7 | [Ship stats](ship-stats.md) | The ship | The stats themselves and what each drives | definitions | untouched | 0 |
-| 8 | [Section types](section-types.md) | The track | The building blocks a route is made of: straights, corners, bends, banking | catalogue | seeded | 4 |
-| 9 | [Off-path features](off-path-features.md) | The track | What lives on a route: hazards that hurt or move you, pockets that pay | catalogue | partial | 2 (2 stub) |
+| 8 | [Split anatomy](split-anatomy.md) | The track | The pieces a split is made of: straights, corners, bends, banking | catalogue | seeded | 4 |
+| 9 | [Off-path features](off-path-features.md) | The track | What lives on a split: hazards that hurt or move you, pockets that pay | catalogue | partial | 2 (2 stub) |
 | 10 | [Fixtures](fixtures.md) | The track | Objects a player buys and places on the track | catalogue | untouched | 0 |
-| 11 | [Track augments](track-augments.md) | The track | Routes or whole sectors a player adds, temporary or permanent | catalogue | partial | 2 (2 stub) |
+| 11 | [Track augments](track-augments.md) | The track | Splits or whole sectors a player adds, temporary or permanent | catalogue | partial | 2 (2 stub) |
 | 12 | [Track growth](track-growth.md) | The track | How the loop grows between phases | rules | untouched | 0 |
 | 13 | [Collectors](collectors.md) | Money & points | Equipment that opens a pool | catalogue | untouched | 0 |
 | 14 | [Pools](pools.md) | Money & points | The shared pots and what earns a share | catalogue | untouched | 0 |
 | 15 | [Declarations](declarations.md) | Money & points | Pre-heat bets: Long Line, Hold the Line, others | catalogue | untouched | 0 |
 | 16 | [Economy flow](economy-flow.md) | Money & points | Every income, every cost, every shop, and when each happens | parameters | partial | 10 (3 stub) |
-| 17 | [Season structure](season-structure.md) | The season | Pacing lap, phases, heats, groups, the cut | parameters | untouched | 0 |
+| 17 | [Season structure](season-structure.md) | The season | Pacing lap, phases, heats, groups, the cut | parameters | seeded | 5 |
 
 <!-- tracker:end -->
 

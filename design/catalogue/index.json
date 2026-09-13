@@ -25,7 +25,7 @@
       "area": "ship",
       "file": "ship-parts.md",
       "shape": "catalogue",
-      "what": "Components you install: engines, shields, crew, navigation, weapons and deployables, collection"
+      "what": "Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection"
     },
     {
       "id": "corner-plans",
@@ -57,7 +57,7 @@
       "area": "ship",
       "file": "abilities.md",
       "shape": "catalogue",
-      "what": "Charged moves: Brace, Rake, Burn, Scoop, boost, teleport, others"
+      "what": "Charged moves, if components have them: boost, teleport, others — unresolved"
     },
     {
       "id": "ship-stats",
@@ -68,12 +68,12 @@
       "what": "The stats themselves and what each drives"
     },
     {
-      "id": "section-types",
-      "name": "Section types",
+      "id": "split-anatomy",
+      "name": "Split anatomy",
       "area": "track",
-      "file": "section-types.md",
+      "file": "split-anatomy.md",
       "shape": "catalogue",
-      "what": "The building blocks a route is made of: straights, corners, bends, banking"
+      "what": "The pieces a split is made of: straights, corners, bends, banking"
     },
     {
       "id": "off-path-features",
@@ -81,7 +81,7 @@
       "area": "track",
       "file": "off-path-features.md",
       "shape": "catalogue",
-      "what": "What lives on a route: hazards that hurt or move you, pockets that pay"
+      "what": "What lives on a split: hazards that hurt or move you, pockets that pay"
     },
     {
       "id": "fixtures",
@@ -97,7 +97,7 @@
       "area": "track",
       "file": "track-augments.md",
       "shape": "catalogue",
-      "what": "Routes or whole sectors a player adds, temporary or permanent"
+      "what": "Splits or whole sectors a player adds, temporary or permanent"
     },
     {
       "id": "track-growth",

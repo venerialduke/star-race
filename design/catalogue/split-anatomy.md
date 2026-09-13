@@ -1,8 +1,9 @@
-# Section types
+# Split anatomy
 
-The building blocks a route through a sector is made of. A route is a chain
-of these; where the chain differs between routes, that is what makes one
-route faster, safer, or richer than another.
+The pieces a split is made of. A **sector** is the stretch between two
+checkpoints; a **split** is one path through it, and a sector may offer
+several. A split is a chain of these pieces, and where the chain differs
+between splits is what makes one faster, safer, or richer than another.
 
 ## Schema
 

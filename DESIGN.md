@@ -55,9 +55,11 @@ consumes it.
 
 ## What is built
 
-**S1 — the swing.** One ship, three authored loops, no opponents and no
-economy. The ship flies; the player picks the track and the corner plan and
-moves two sliders; the swing is visible. Everything below describes S1 exactly.
+**S1 — the swing**, and **S2 — the heat**. Three ships fly one of three
+authored loops for two laps, with a pit stop between them. The player picks the
+track, the corner plan and two stats; the rivals are bots that read the track
+and choose for themselves. No economy yet, and no components: the stats are
+still sliders.
 
 ## The track
 
@@ -169,10 +171,60 @@ lateral offset is drawn as the thing it is: a ship pushed off the line, tethered
 back to where it should be. The last few bends leave marks where they threw it,
 fading as they fall behind.
 
-Speed, the current sector, lap time, and the last bend's swing. Three buttons
-for the track, three for the corner plan, two sliders for Thrust and Handling,
-and a seed box — because the same seed must produce the same race, and being
-able to prove that by eye is the point.
+Three ships fly it, each in its own colour, each nudged into its own drawing
+lane so they do not sit on top of each other — a drawing trick only: the
+simulation has no lanes and no ship can touch another. The player's ship is
+drawn brightest and on top, and only the player's bends leave marks.
+
+The **tracking bar** is the thing that says who is winning: a lane per ship with
+its place, how far round the lap it is, and what it is giving away on total
+time. At a pit stop and at the finish it shows totals instead of gaps.
+
+Three buttons for the track, three for the corner plan, two sliders for Thrust
+and Handling, and a seed box — because the same seed must produce the same
+heat, and being able to prove that by eye is the point.
+
+## The heat
+
+A **heat** is `LAPS_PER_HEAT` laps of one track by three ships, stepped in
+lockstep. Ships never touch, and none of them can see another: each carries its
+own race state and draws its swings from its own seeded stream, keyed by which
+ship it is and which lap this is. One ship's luck can never shift another's.
+
+A lap ends for a ship when it crosses the line; it then waits. When the last
+ship is in, the heat goes to the **pit stop** — or to the finish, if that was
+the final lap.
+
+**The pit stop resets the line, not the clock.** Everyone restarts level, from
+a standstill, at the start of a fresh lap. What each ship keeps is its total
+time, which is the sum of its laps, and that is what decides the heat. So being
+ahead on the track is not the same as leading, which is the whole reason the
+tracking bar exists.
+
+The player may change the corner plan at the pit stop, and the bots choose
+again too. Every decision is an input, fixed before the lap that consumes it —
+never during it.
+
+**Standings** while a lap is running are projected: a ship's total so far, plus
+this lap's ticks, plus what it would take to close the gap to the furthest ship
+at its current pace. When everyone is in, the projection is just the total.
+
+## The rivals
+
+A **bot** reads the track and picks a build and a plan, seeded, before the lap.
+
+Its build follows the track's **tightness** — how far its bends sit below what
+a stock ship could take flat out, averaged over the bends. A coil of hairpins
+tilts the bot toward Handling; a run of open sweepers tilts it toward Thrust.
+The draw then pushes it off that, so a bot that reads the track well still has
+to commit before it knows how the bends fall.
+
+Its plan follows its own build: a ship with Handling to spare can afford to
+Charge, and one without it usually Carries. It re-picks each lap.
+
+Nothing about a bot is privileged. It decides from the track and its own state,
+before the lap, and hands the result in as an input — which is exactly the seam
+a networked player's choices will arrive through.
 
 ## Tuning
 

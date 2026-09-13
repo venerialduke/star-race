@@ -1,8 +1,12 @@
-// The controls and the readouts. One thumb, bottom of the screen.
+// The controls, the readouts and the tracking bar. One thumb, bottom of the
+// screen. The bar is the thing that says who is winning: a lane per ship, its
+// place, how far round the lap it is, and what it is giving away on total time.
 
-import type { CornerPlan, RaceState } from '../sim/race';
+import { standings, type FieldState } from '../sim/field';
+import type { CornerPlan } from '../sim/race';
 import { TRACKS, type Track } from '../sim/track';
 import { TICK_HZ } from '../sim/tuning';
+import { SHIP_COLOURS } from '../render/draw';
 
 export interface Settings {
   track: Track;
@@ -15,7 +19,7 @@ export interface Settings {
 export interface Controls {
   readonly element: HTMLElement;
   readonly settings: Settings;
-  update(state: RaceState): void;
+  update(field: FieldState, track: Track): void;
 }
 
 const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
@@ -24,12 +28,14 @@ const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
   { id: 'charge', label: 'Charge', hint: 'keep burning · widest swing' },
 ];
 
-const seconds = (ticks: number | undefined): string =>
-  ticks === undefined ? '—' : `${(ticks / TICK_HZ).toFixed(2)}s`;
+const seconds = (ticks: number): string => `${(ticks / TICK_HZ).toFixed(2)}s`;
+
+const gap = (ticks: number): string =>
+  ticks <= 0.5 ? 'leader' : `+${(ticks / TICK_HZ).toFixed(2)}`;
 
 export function mountControls(
   parent: HTMLElement,
-  onChange: () => void,
+  onGo: () => void,
   onRestart: () => void,
 ): Controls {
   const settings: Settings = {
@@ -43,12 +49,7 @@ export function mountControls(
   const element = document.createElement('div');
   element.className = 'panel';
   element.innerHTML = `
-    <div class="readouts">
-      <div class="r"><b id="r-speed">0.00</b><span>speed</span></div>
-      <div class="r"><b id="r-swing">—</b><span>last swing</span></div>
-      <div class="r"><b id="r-sector">1</b><span>sector</span></div>
-      <div class="r"><b id="r-lap">—</b><span>last lap</span></div>
-    </div>
+    <div id="bar" class="bar"></div>
     <div id="r-state" class="state">on the path</div>
     <div class="tracks" role="group" aria-label="Track">
       ${TRACKS.map(
@@ -70,64 +71,53 @@ export function mountControls(
     </div>
     <div class="seedrow">
       <label>Seed <input id="s-seed" type="text" value="kestrel" spellcheck="false" /></label>
-      <button type="button" id="b-restart">Restart</button>
+      <button type="button" id="b-go" class="go" hidden>Go</button>
+      <button type="button" id="b-restart">New heat</button>
     </div>`;
   parent.appendChild(element);
 
   const byId = <T extends HTMLElement>(id: string): T =>
     element.querySelector(`#${id}`) as T;
 
-  const planButtons = Array.from(
-    element.querySelectorAll<HTMLButtonElement>('[data-plan]'),
-  );
-  const paintPlans = (): void => {
-    for (const button of planButtons) {
-      button.classList.toggle('on', button.dataset['plan'] === settings.plan);
+  const paint = (
+    selector: string,
+    isOn: (button: HTMLButtonElement) => boolean,
+  ): void => {
+    for (const button of element.querySelectorAll<HTMLButtonElement>(selector)) {
+      button.classList.toggle('on', isOn(button));
     }
   };
-  for (const button of planButtons) {
-    button.addEventListener('click', () => {
-      settings.plan = button.dataset['plan'] as CornerPlan;
-      paintPlans();
-      onChange();
-    });
-  }
-  paintPlans();
+  const paintTracks = (): void =>
+    paint('[data-track]', (b) => TRACKS[Number(b.dataset['track'])] === settings.track);
+  const paintPlans = (): void =>
+    paint('[data-plan]', (b) => b.dataset['plan'] === settings.plan);
 
-  const trackButtons = Array.from(
-    element.querySelectorAll<HTMLButtonElement>('[data-track]'),
-  );
-  const paintTracks = (): void => {
-    for (const button of trackButtons) {
-      button.classList.toggle('on', TRACKS[Number(button.dataset['track'])] === settings.track);
-    }
-  };
-  for (const button of trackButtons) {
+  for (const button of element.querySelectorAll<HTMLButtonElement>('[data-track]')) {
     button.addEventListener('click', () => {
       settings.track = TRACKS[Number(button.dataset['track'])] as Track;
       paintTracks();
       onRestart();
     });
   }
+  for (const button of element.querySelectorAll<HTMLButtonElement>('[data-plan]')) {
+    button.addEventListener('click', () => {
+      settings.plan = button.dataset['plan'] as CornerPlan;
+      paintPlans();
+    });
+  }
   paintTracks();
+  paintPlans();
 
-  const thrust = byId<HTMLInputElement>('s-thrust');
-  const handling = byId<HTMLInputElement>('s-handling');
-  const outThrust = byId<HTMLOutputElement>('o-thrust');
-  const outHandling = byId<HTMLOutputElement>('o-handling');
-  const bind = (
-    input: HTMLInputElement,
-    out: HTMLOutputElement,
-    key: 'thrust' | 'handling',
-  ): void => {
+  const bind = (id: string, out: string, key: 'thrust' | 'handling'): void => {
+    const input = byId<HTMLInputElement>(id);
+    const output = byId<HTMLOutputElement>(out);
     input.addEventListener('input', () => {
       settings[key] = Number(input.value);
-      out.textContent = settings[key].toFixed(2);
-      onChange();
+      output.textContent = settings[key].toFixed(2);
     });
   };
-  bind(thrust, outThrust, 'thrust');
-  bind(handling, outHandling, 'handling');
+  bind('s-thrust', 'o-thrust', 'thrust');
+  bind('s-handling', 'o-handling', 'handling');
 
   const seed = byId<HTMLInputElement>('s-seed');
   seed.addEventListener('change', () => {
@@ -135,26 +125,62 @@ export function mountControls(
     onRestart();
   });
   byId<HTMLButtonElement>('b-restart').addEventListener('click', onRestart);
+  const go = byId<HTMLButtonElement>('b-go');
+  go.addEventListener('click', onGo);
 
-  const rSpeed = byId<HTMLElement>('r-speed');
-  const rSwing = byId<HTMLElement>('r-swing');
-  const rSector = byId<HTMLElement>('r-sector');
-  const rLap = byId<HTMLElement>('r-lap');
+  const bar = byId<HTMLElement>('bar');
   const rState = byId<HTMLElement>('r-state');
 
   return {
     element,
     settings,
-    update(state) {
-      rSpeed.textContent = state.speed.toFixed(2);
-      rSector.textContent = String(state.sector + 1);
-      rLap.textContent = seconds(state.lastLapTicks);
-      const last = state.swings[state.swings.length - 1];
-      rSwing.textContent = last === undefined ? '—' : last.swing.toFixed(1);
-      rState.textContent = state.wide
-        ? 'WIDE — off the golden path, losing time'
-        : 'on the path';
-      rState.classList.toggle('wide', state.wide);
+    update(field, track) {
+      const rows = standings(field);
+      const leader = rows[0];
+      bar.innerHTML = rows
+        .map((row) => {
+          const lane = field.ships.indexOf(row.ship);
+          const colour = SHIP_COLOURS[lane % SHIP_COLOURS.length] as string;
+          const progress = row.ship.waiting
+            ? 1
+            : Math.min(1, row.ship.state.distance / track.length);
+          const behind = leader === undefined ? 0 : row.ticks - leader.ticks;
+          const time =
+            field.phase === 'done' || field.phase === 'pit'
+              ? seconds(row.ship.totalTicks)
+              : gap(behind);
+          const who = row.ship.entrant.isPlayer ? 'You' : row.ship.entrant.name;
+          return `<div class="lane${row.ship.entrant.isPlayer ? ' me' : ''}">
+            <span class="pip" style="background:${colour}"></span>
+            <span class="who">${row.place}. ${who}</span>
+            <span class="track-bar"><i style="width:${(progress * 100).toFixed(1)}%;background:${colour}"></i></span>
+            <span class="gap">${time}</span>
+          </div>`;
+        })
+        .join('');
+
+      const me = field.ships.find((s) => s.entrant.isPlayer);
+      const mine = rows.find((r) => r.ship.entrant.isPlayer);
+      go.hidden = field.phase !== 'pit';
+
+      if (field.phase === 'pit') {
+        rState.textContent = `Pit stop — everyone restarts level, the clock keeps running. Change the plan, then Go.`;
+        rState.className = 'state pit';
+      } else if (field.phase === 'done') {
+        rState.textContent =
+          mine === undefined
+            ? 'Heat over.'
+            : mine.place === 1
+              ? `Won the heat — ${seconds(mine.ship.totalTicks)} on total time.`
+              : `P${mine.place} of ${rows.length} — ${seconds(mine.ticks - (leader?.ticks ?? 0))} off the win.`;
+        rState.className = 'state done';
+      } else if (me?.state.wide === true) {
+        rState.textContent = 'WIDE — off the golden path, losing time';
+        rState.className = 'state wide';
+      } else {
+        rState.textContent = `Lap ${field.lap + 1} · ${me === undefined ? '' : `${me.state.speed.toFixed(2)} speed`}`;
+        rState.className = 'state';
+      }
     },
   };
 }

@@ -65,35 +65,43 @@ as faster or slower rather than only watched.
 Done when: crossing a checkpoint shows the sector's time against par, and the
 lap ends with a total.
 
-## S2 — the heat
+## S2 — the heat — **done**
 
-**S2 is done when:** three ships fly the same loop for two laps with a pit stop
-between, the tracking bar says who leads on total time, and you can tell at a
-glance whether you are winning.
+**S2 was done when:** three ships fly the same loop for two laps with a pit
+stop between, the tracking bar says who leads on total time, and you can tell
+at a glance whether you are winning. All four items are merged.
 
-### S2.1 Three ships
+- **S2.1 Three ships.** `src/sim/field.ts` steps three entrants in lockstep,
+  each with its own state and its own seeded draws. A test holds the line that
+  matters: changing the player's plan does not move a rival's time by a tick.
+- **S2.2 Bots.** `src/sim/bot.ts` reads the track's **tightness** and tilts its
+  build toward Handling or Thrust, then wanders off that on a seeded draw, and
+  picks a plan to suit its own build. It re-picks every lap. On the Meridian
+  Run bots build for Thrust; on the Cinder Coil they build for Handling.
+- **S2.3 Two laps and the pit stop.** The clock never resets; the pit stop
+  halts everyone, restarts them level from a standstill, and is where the plan
+  may change.
+- **S2.4 The tracking bar.** A lane per ship: place, progress round the lap,
+  and the gap on total time — totals instead of gaps once everyone is in.
 
-`src/sim/field.ts`: three entrants stepped in lockstep through one race, each
-with its own state and its own seeded draws, no contact. Produces a finishing
-order on total time.
+**What the numbers say.** 40 seeded heats per cell, player at Thrust 1 /
+Handling 1 against two bots:
 
-### S2.2 Bots
+| Track | Lift | Carry | Charge |
+| --- | --- | --- | --- |
+| Kestrel Loop | 0% | 13% | 45% |
+| Meridian Run | 0% | 0% | 0% |
+| Cinder Coil | 0% | 33% | 33% |
 
-`src/sim/bot.ts`: a rule that picks a corner plan and a build, with seeded
-variation, so the two rivals are opponents rather than metronomes. Every
-decision enters the race as an input made before the tick that consumes it —
-the seam a real player will arrive through.
+The Meridian column is the interesting one, and it is not a dead track: the
+bots build for Thrust there because that is what the track rewards, and a
+balanced ship simply cannot go with them. Move the player's Thrust to 1.3 and
+the win rate goes to 63%; to 1.55 and Carry wins 75%. Reading the track and
+building for it is the game, and the bots do it too.
 
-### S2.3 Two laps and the pit stop
-
-The clock never resets; the pit stop halts all three ships, restarts them
-level, and is where the corner plan may change. A run between pit stops is
-about thirty seconds.
-
-### S2.4 The tracking bar
-
-Total time across every sector, drawn as the bar the framework describes, on a
-phone.
+Lift never wins a heat on any track. That is honest — it is the safe plan, and
+safety is currently worth nothing because there is no damage and nothing to
+protect. It should become a real choice when run health arrives.
 
 ## S3 — the ship, and the shop
 

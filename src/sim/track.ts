@@ -1,270 +1,213 @@
-// The course: what the ship flies through, and where the race pauses.
+// A track is a closed loop walked out from an ordered list of pieces. Walking
+// them produces the centreline — the golden path — as evenly spaced samples,
+// and fixes where every bend begins and ends.
 //
-// A track is an ordered list of segments. A segment has a length measured in
-// ticks at base speed — a ship faster than base crosses it in fewer ticks —
-// and a list of hazard placements sitting inside it. Stage gates mark the
-// segments at whose end the race pauses and the player returns to the garage.
-//
-// Geometry is separate from timing on purpose. `path` is a spline used only to
-// draw the course and to place the ship on screen; nothing in the simulation
-// reads it. Lengths, hazards and gates decide what actually happens.
-//
-// The numbers in SLICE_TRACK below are level data — the shape of a course, not
-// balance knobs. See the tuning.ts header for that distinction.
+// The pieces are level data, not tuning: the shape of a track is content.
 
-import { makeSpline, type Spline } from './spline';
+import { HOLD_GRIP } from './tuning';
 
-/** The four hazards in the vertical slice. One function each in hazards.ts. */
-export type HazardKind = 'asteroidField' | 'gammaBurst' | 'blackHole' | 'ringedPlanet';
-
-export interface HazardPlacement {
-  readonly kind: HazardKind;
-  /** Ticks from the start of its segment where the hazard begins. */
-  readonly startTick: number;
-  /** How long it lasts, in ticks. An instantaneous burst is 1. */
-  readonly lengthTicks: number;
+export interface Vec {
+  readonly x: number;
+  readonly y: number;
 }
 
-export interface Segment {
-  /** Shown in the garage and in logs; not used by the simulation. */
-  readonly name: string;
-  /** How long the segment takes at base speed, in whole ticks. */
-  readonly lengthTicks: number;
-  readonly hazards: readonly HazardPlacement[];
+export type Piece =
+  | { readonly kind: 'straight'; readonly length: number }
+  /** `sweep` is in degrees: positive turns left, negative turns right. */
+  | { readonly kind: 'bend'; readonly radius: number; readonly sweep: number };
+
+/** One sample of the centreline, every SAMPLE_STEP units of arc. */
+export interface Sample {
+  readonly pos: Vec;
+  /** Direction of travel, in radians. */
+  readonly heading: number;
+  /** The radius of the bend here, or 0 on a straight. */
+  readonly radius: number;
+  /** +1 turning left, -1 turning right, 0 on a straight. */
+  readonly turn: number;
+}
+
+export interface Bend {
+  readonly start: number;
+  readonly end: number;
+  readonly radius: number;
+  readonly turn: number;
 }
 
 export interface Track {
-  readonly segments: readonly Segment[];
-  /**
-   * Segment indices at whose end the race pauses. Sorted, no duplicates, and
-   * never the final segment — the race ends there rather than pausing. Three
-   * stages means two gates.
-   */
-  readonly gates: readonly number[];
-  /** Geometry only: the line the course is drawn along. */
-  readonly path: Spline;
+  readonly name: string;
+  readonly samples: readonly Sample[];
+  readonly bends: readonly Bend[];
+  /** Distance of each checkpoint from the start line; the first is 0. */
+  readonly checkpoints: readonly number[];
+  readonly length: number;
+  readonly bounds: { readonly min: Vec; readonly max: Vec };
 }
 
-/** A contiguous run of segments the ship flies without returning to the garage. */
-export interface Stage {
-  /** Index of the first segment of the stage. */
-  readonly firstSegment: number;
-  /** Index of the last segment of the stage, inclusive. */
-  readonly lastSegment: number;
-  readonly lengthTicks: number;
+/** Arc length between centreline samples. Structural: the resolution of the polyline. */
+const SAMPLE_STEP = 3;
+
+/** The fastest a ship can take this bend and stay on the path. */
+export function holdingSpeed(radius: number, handling: number): number {
+  return Math.sqrt(HOLD_GRIP * handling * radius);
+}
+
+/** Where the ship is at a distance around the loop, wrapping at the lap. */
+export function sampleAt(track: Track, distance: number): Sample {
+  const samples = track.samples;
+  const wrapped = ((distance % track.length) + track.length) % track.length;
+  const index = Math.floor(wrapped / SAMPLE_STEP) % samples.length;
+  return samples[index] as Sample;
+}
+
+/** The unit vector pointing left of travel. Offsets are measured along it. */
+export function normalOf(sample: Sample): Vec {
+  return { x: -Math.sin(sample.heading), y: Math.cos(sample.heading) };
+}
+
+/** The next bend at or after a distance, and how far ahead it starts. */
+export function nextBend(
+  track: Track,
+  distance: number,
+): { bend: Bend; gap: number } | undefined {
+  const wrapped = ((distance % track.length) + track.length) % track.length;
+  let best: { bend: Bend; gap: number } | undefined;
+  for (const bend of track.bends) {
+    const raw = bend.start - wrapped;
+    const gap = raw < 0 ? raw + track.length : raw;
+    if (best === undefined || gap < best.gap) best = { bend, gap };
+  }
+  return best;
+}
+
+/** Which sector a distance falls in, counting from 0 at the start line. */
+export function sectorAt(track: Track, distance: number): number {
+  const wrapped = ((distance % track.length) + track.length) % track.length;
+  let sector = 0;
+  for (let i = 0; i < track.checkpoints.length; i += 1) {
+    if (wrapped >= (track.checkpoints[i] as number)) sector = i;
+  }
+  return sector;
 }
 
 /**
- * Build a track, rejecting anything the simulation could not run: empty
- * tracks, non-positive or non-integer segment lengths, hazards that fall
- * outside their segment, and gates that are out of order or in the wrong
- * place.
+ * Walk the pieces into samples. A piece list whose sweeps total 180° and which
+ * is then repeated twice closes exactly: the second copy is the first rotated
+ * half a turn, so its displacement cancels the first's.
  */
-export function makeTrack(
-  segments: readonly Segment[],
-  gates: readonly number[],
-  path: Spline,
+export function buildTrack(
+  name: string,
+  pieces: readonly Piece[],
+  sectorCount: number,
 ): Track {
-  if (segments.length === 0) {
-    throw new Error('A track needs at least one segment.');
-  }
+  const samples: Sample[] = [];
+  const bends: Bend[] = [];
+  let pos: Vec = { x: 0, y: 0 };
+  let heading = 0;
+  /** Arc length already emitted, so samples stay evenly spaced across pieces. */
+  let emitted = 0;
+  let travelled = 0;
 
-  segments.forEach((segment, i) => {
-    if (!Number.isInteger(segment.lengthTicks) || segment.lengthTicks <= 0) {
-      throw new Error(
-        `Segment ${i} (${segment.name}) must be a positive whole number of ticks, got ${segment.lengthTicks}.`,
+  const emitUpTo = (
+    endOfPiece: number,
+    at: (distanceIntoPiece: number) => Sample,
+    pieceStart: number,
+  ): void => {
+    while (emitted <= endOfPiece - 1e-9) {
+      samples.push(at(emitted - pieceStart));
+      emitted += SAMPLE_STEP;
+    }
+  };
+
+  for (const piece of pieces) {
+    const pieceStart = travelled;
+    if (piece.kind === 'straight') {
+      const dir = { x: Math.cos(heading), y: Math.sin(heading) };
+      const from = pos;
+      const held = heading;
+      emitUpTo(
+        pieceStart + piece.length,
+        (into) => ({
+          pos: { x: from.x + dir.x * into, y: from.y + dir.y * into },
+          heading: held,
+          radius: 0,
+          turn: 0,
+        }),
+        pieceStart,
       );
-    }
-    segment.hazards.forEach((hazard) => {
-      if (!Number.isInteger(hazard.startTick) || !Number.isInteger(hazard.lengthTicks)) {
-        throw new Error(
-          `Hazard ${hazard.kind} in segment ${i} (${segment.name}) must be placed on whole ticks.`,
-        );
-      }
-      if (hazard.lengthTicks <= 0) {
-        throw new Error(
-          `Hazard ${hazard.kind} in segment ${i} (${segment.name}) must last at least one tick.`,
-        );
-      }
-      if (
-        hazard.startTick < 0 ||
-        hazard.startTick + hazard.lengthTicks > segment.lengthTicks
-      ) {
-        throw new Error(
-          `Hazard ${hazard.kind} runs from ${hazard.startTick} to ${
-            hazard.startTick + hazard.lengthTicks
-          } but segment ${i} (${segment.name}) is only ${segment.lengthTicks} ticks long.`,
-        );
-      }
-    });
-  });
-
-  gates.forEach((gate, i) => {
-    if (!Number.isInteger(gate) || gate < 0 || gate >= segments.length) {
-      throw new Error(`Gate ${gate} is not a segment index of this track.`);
-    }
-    if (gate === segments.length - 1) {
-      throw new Error('The last segment cannot carry a gate: the race ends there.');
-    }
-    const previous = gates[i - 1];
-    if (previous !== undefined && gate <= previous) {
-      throw new Error(`Gates must be sorted and unique; ${gate} follows ${previous}.`);
-    }
-  });
-
-  return { segments, gates, path };
-}
-
-/** The whole course in ticks at base speed. */
-export function totalLengthTicks(track: Track): number {
-  return track.segments.reduce((sum, segment) => sum + segment.lengthTicks, 0);
-}
-
-/** Tick, measured from the start of the race, at which a segment begins. */
-export function segmentStartTick(track: Track, index: number): number {
-  if (!Number.isInteger(index) || index < 0 || index >= track.segments.length) {
-    throw new Error(`Segment ${index} is not on this track.`);
-  }
-  let start = 0;
-  for (let i = 0; i < index; i++) {
-    const segment = track.segments[i];
-    if (segment === undefined) throw new Error('unreachable: segment index in range');
-    start += segment.lengthTicks;
-  }
-  return start;
-}
-
-/** Which segment a race tick falls in. The finish tick belongs to the last segment. */
-export function segmentAtTick(track: Track, tick: number): number {
-  if (tick < 0) throw new Error(`Tick ${tick} is before the start of the race.`);
-  let elapsed = 0;
-  for (let i = 0; i < track.segments.length; i++) {
-    const segment = track.segments[i];
-    if (segment === undefined) throw new Error('unreachable: segment index in range');
-    elapsed += segment.lengthTicks;
-    if (tick < elapsed) return i;
-  }
-  return track.segments.length - 1;
-}
-
-/** A hazard placed on the track, as distances from the start line. */
-export interface HazardAt {
-  readonly kind: HazardKind;
-  /** Distance at which it begins. */
-  readonly from: number;
-  /** Distance at which it ends. */
-  readonly to: number;
-}
-
-/**
- * Every hazard on the track as a distance, in order. Wanted by anything that
- * looks ahead: a pilot deciding when to raise shields, and the screen deciding
- * when to slow time down.
- */
-export function hazardsOnTrack(track: Track): HazardAt[] {
-  const out: HazardAt[] = [];
-  track.segments.forEach((segment, index) => {
-    const start = segmentStartTick(track, index);
-    segment.hazards.forEach((hazard) => {
-      out.push({
-        kind: hazard.kind,
-        from: start + hazard.startTick,
-        to: start + hazard.startTick + hazard.lengthTicks,
+      pos = { x: from.x + dir.x * piece.length, y: from.y + dir.y * piece.length };
+      travelled += piece.length;
+    } else {
+      const turn = Math.sign(piece.sweep);
+      const sweepRad = (piece.sweep * Math.PI) / 180;
+      const arc = Math.abs(sweepRad) * piece.radius;
+      // Centre of the arc sits perpendicular to travel, on the inside: to the
+      // left of travel for a left turn, to the right for a right one.
+      const centre: Vec = {
+        x: pos.x - Math.sin(heading) * piece.radius * turn,
+        y: pos.y + Math.cos(heading) * piece.radius * turn,
+      };
+      const startAngle = Math.atan2(pos.y - centre.y, pos.x - centre.x);
+      const held = heading;
+      emitUpTo(
+        pieceStart + arc,
+        (into) => {
+          const t = into / piece.radius;
+          const angle = startAngle + t * turn;
+          return {
+            pos: {
+              x: centre.x + Math.cos(angle) * piece.radius,
+              y: centre.y + Math.sin(angle) * piece.radius,
+            },
+            heading: held + t * turn,
+            radius: piece.radius,
+            turn,
+          };
+        },
+        pieceStart,
+      );
+      bends.push({
+        start: pieceStart,
+        end: pieceStart + arc,
+        radius: piece.radius,
+        turn,
       });
-    });
-  });
-  return out.sort((a, b) => a.from - b.from);
-}
-
-/** The stages, split at the gates. Three stages on the slice track. */
-export function stages(track: Track): Stage[] {
-  const out: Stage[] = [];
-  let firstSegment = 0;
-  const boundaries = [...track.gates, track.segments.length - 1];
-  boundaries.forEach((lastSegment) => {
-    let lengthTicks = 0;
-    for (let i = firstSegment; i <= lastSegment; i++) {
-      const segment = track.segments[i];
-      if (segment === undefined) throw new Error('unreachable: segment index in range');
-      lengthTicks += segment.lengthTicks;
+      const endAngle = startAngle + Math.abs(sweepRad) * turn;
+      pos = {
+        x: centre.x + Math.cos(endAngle) * piece.radius,
+        y: centre.y + Math.sin(endAngle) * piece.radius,
+      };
+      heading = held + Math.abs(sweepRad) * turn;
+      travelled += arc;
     }
-    out.push({ firstSegment, lastSegment, lengthTicks });
-    firstSegment = lastSegment + 1;
-  });
-  return out;
+  }
+
+  let min = { x: Infinity, y: Infinity };
+  let max = { x: -Infinity, y: -Infinity };
+  for (const s of samples) {
+    min = { x: Math.min(min.x, s.pos.x), y: Math.min(min.y, s.pos.y) };
+    max = { x: Math.max(max.x, s.pos.x), y: Math.max(max.y, s.pos.y) };
+  }
+
+  const checkpoints: number[] = [];
+  for (let i = 0; i < sectorCount; i += 1) {
+    checkpoints.push((travelled * i) / sectorCount);
+  }
+
+  return { name, samples, bends, checkpoints, length: travelled, bounds: { min, max } };
 }
 
 /**
- * Where along the drawn course a race tick sits, as a spline parameter for
- * `evaluate`. Progress is linear in ticks-at-base-speed, so a long segment
- * takes up more of the line. Rendering only.
+ * The first loop. Its half turns through 180° — a long sweeper, a tight right,
+ * then a hairpin — and is walked twice, so the circuit closes exactly.
  */
-export function splineParamAtTick(track: Track, tick: number): number {
-  const total = totalLengthTicks(track);
-  const clamped = tick <= 0 ? 0 : tick >= total ? total : tick;
-  return (clamped / total) * track.path.segmentCount;
-}
-
-// ---------------------------------------------------------------------------
-// The slice track: one star system, three stages, all four hazards.
-// Level data. Lengths are ticks at base speed; at 60 ticks/s the whole course
-// is about 22 seconds, roughly 7 per stage.
-// ---------------------------------------------------------------------------
-
-const SLICE_PATH: Spline = makeSpline([
-  { x: 0.08, y: 0.85 },
-  { x: 0.22, y: 0.62 },
-  { x: 0.3, y: 0.45 },
-  { x: 0.42, y: 0.28 },
-  { x: 0.58, y: 0.3 },
-  { x: 0.72, y: 0.42 },
-  { x: 0.84, y: 0.62 },
-  { x: 0.9, y: 0.78 },
-  { x: 0.75, y: 0.9 },
-  { x: 0.55, y: 0.82 },
-  { x: 0.4, y: 0.9 },
-  { x: 0.2, y: 0.92 },
-  { x: 0.08, y: 0.85 },
-]);
-
-const SLICE_SEGMENTS: readonly Segment[] = [
-  // Stage 1 — teaches the asteroid field.
-  { name: 'Launch', lengthTicks: 120, hazards: [] },
-  {
-    name: 'Asteroid belt',
-    lengthTicks: 180,
-    hazards: [{ kind: 'asteroidField', startTick: 30, lengthTicks: 120 }],
-  },
-  { name: 'Open run', lengthTicks: 120, hazards: [] },
-
-  // Stage 2 — the ringed planet's gravity assist, then a burst to shield.
-  {
-    name: 'Ringed planet',
-    lengthTicks: 150,
-    hazards: [{ kind: 'ringedPlanet', startTick: 20, lengthTicks: 110 }],
-  },
-  {
-    name: 'Gamma corridor',
-    lengthTicks: 160,
-    hazards: [{ kind: 'gammaBurst', startTick: 80, lengthTicks: 1 }],
-  },
-  {
-    name: 'Debris tail',
-    lengthTicks: 140,
-    hazards: [{ kind: 'asteroidField', startTick: 40, lengthTicks: 80 }],
-  },
-
-  // Stage 3 — the black hole you could see from the start line.
-  { name: 'Inner system', lengthTicks: 130, hazards: [] },
-  {
-    name: 'Black hole',
-    lengthTicks: 200,
-    hazards: [{ kind: 'blackHole', startTick: 40, lengthTicks: 130 }],
-  },
-  { name: 'Finish straight', lengthTicks: 120, hazards: [] },
+const HALF: readonly Piece[] = [
+  { kind: 'straight', length: 260 },
+  { kind: 'bend', radius: 70, sweep: 70 },
+  { kind: 'straight', length: 90 },
+  { kind: 'bend', radius: 42, sweep: -55 },
+  { kind: 'straight', length: 70 },
+  { kind: 'bend', radius: 55, sweep: 165 },
 ];
 
-/** Gates close stage 1 after 'Open run' and stage 2 after 'Debris tail'. */
-const SLICE_GATES: readonly number[] = [2, 5];
-
-export const SLICE_TRACK: Track = makeTrack(SLICE_SEGMENTS, SLICE_GATES, SLICE_PATH);
+export const SLICE_TRACK: Track = buildTrack('Kestrel Loop', [...HALF, ...HALF], 4);

@@ -25,12 +25,12 @@
   ],
   "elements": [
     {
-      "id": "frames",
-      "name": "Frames",
+      "id": "starting-shop",
+      "name": "Starting shop",
       "area": "ship",
-      "file": "frames.md",
+      "file": "starting-shop.md",
       "shape": "catalogue",
-      "what": "Starting kits: the engine, shields and crew a ship begins with — or nothing, if starting stock in the shop replaces them (open)"
+      "what": "What a season opens with: the budget, and the stock on the shelf"
     },
     {
       "id": "ship-parts",

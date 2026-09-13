@@ -37,7 +37,7 @@ const BROWSER_OR_NONDETERMINISTIC_GLOBALS = [
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '.claude/**', 'public/**'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '.claude/**', 'public/**', 'legacy/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

@@ -1,269 +1,148 @@
 # Backlog
 
-One item per agent session. Each item is written as an acceptance test.
-Pick the top unblocked item, work in a branch or worktree, open a PR.
+One item per agent session, written as an acceptance test. Pick the top
+unblocked item, work in a branch, open a PR.
 
-S2 is done when: a test runs 1,000 seeded races on three builds and prints a
-stats table. No rendering changes in S2.
-
-**S2 is done.** Every item below is merged; the harness prints its table in
-under a second. Kept here as the record of what was built.
-
-## S2 — the simulation
-
-### S2.1 Seeded RNG
-
-Add `src/sim/rng.ts`: a small seeded PRNG (e.g. mulberry32 or xoshiro) with
-`nextFloat()`, `nextInt(min, max)`, and `fork()` for independent streams.
-Done when: `tests/sim/rng.test.ts` shows the same seed gives the same
-sequence, different seeds differ, and values stay in range. ESLint still
-forbids `Math.random` in `src/sim`.
-
-### S2.2 Tuning file
+The design is `design/catalogue/framework.md`; `DESIGN.md` is what is built so
+far and grows one stage at a time. The 2026 vertical slice is finished — its
+last commit is `543ac1e`, and its code sits in `legacy/` until someone deletes
+it — and this backlog builds the framework from a clean slate.
 
-Add `src/sim/tuning.ts` exporting every balance constant as a named export
-with a one-line comment. Move `TICK_RATE` and `SPEED` out of `demo.ts`.
-Done when: `grep` finds no _balance_ numeric literals in `src/sim` outside
-`tuning.ts`, and all tests pass. Three kinds of number are not balance and
-stay where they are:
-
-- **Algorithm internals**: the Catmull-Rom basis in `spline.ts`, the
-  mulberry32 constants in `rng.ts`. Changing one is a bug, not a tuning call.
-- **Level data**: spline control points (`demo.ts` today, `track.ts` from
-  S2.3). The shape of a track is content, not a knob.
-- **Structural numbers**: array indices, `+ 1` in a counter, `/ 2` for a
-  midpoint.
-
-### S2.3 Track model
-
-Add `src/sim/track.ts`: a track is an ordered list of segments, each with a
-length in ticks-at-base-speed and a list of hazard placements; stage gates
-mark segment indices where the race pauses. Include one hard-coded slice
-track with three stages. Reuse `spline.ts` for geometry only.
-Done when: `tests/sim/track.test.ts` covers total length, gate positions, and
-that every hazard placement lands inside a segment. `DESIGN.md` Track section
-updated.
-
-### S2.4 Ship stats and parts
-
-Add `src/sim/ship.ts`: base stats, the `Part` type, and `resolveBuild(parts)
-→ DerivedStats`. Add the six slice parts (names and effects go in
-`DESIGN.md`).
-Done when: `tests/sim/ship.test.ts` has one test per part showing its stat
-delta, and a test that an empty build equals base stats.
-
-### S2.5 Tick loop and simulate()
-
-Add `src/sim/race.ts`: `simulate(track, build, inputs, seed) → RaceOutcome`
-with `{ finishTicks, damageTaken, survived, log }`. Ship moves along the
-track per tick using derived speed and acceleration. No hazards yet.
-Done when: `tests/sim/race.test.ts` shows a faster build finishes sooner,
-the same inputs produce an identical outcome, and a stage gate pauses the
-tick count correctly.
+**The order is deliberate.** S1 is the bet the game rests on and it is cheap to
+test. If a ship swinging wide is not interesting to watch and plan against,
+nothing further down the list saves it.
 
-### S2.6 Hazard: asteroid field
+## S1 — the swing
 
-Add the asteroid-field hazard in `src/sim/hazards.ts` (one function per
-hazard). Hull damage per tick inside the field, scaled by speed; seeded
-variance.
-Done when: `tests/sim/hazards.test.ts` covers it, damage is deterministic
-per seed, and a slower ship takes less damage. `DESIGN.md` describes it.
+**S1 is done when:** a ship flies an authored loop on a phone, you can see it
+swing wide when it carries too much speed into a bend, and switching between
+Lift, Carry and Charge visibly changes the race.
 
-### S2.7 Hazard: gamma-ray burst
-
-Timed burst at a fixed tick in its segment. Shielded ship survives;
-unshielded ship loses a large fraction of hull (constant in `tuning.ts`).
-Done when: the hazards test covers both shielded and unshielded outcomes and
-`DESIGN.md` describes it.
-
-### S2.8 Hazard: black hole
-
-Pulls the ship: reduces effective speed inside its segment, with a hull
-threshold below which the ship is lost.
-Done when: hazards test covers slowdown and the lost-ship case; `DESIGN.md`
-describes it.
-
-### S2.9 Hazard: ringed planet
-
-Gravity assist with a heat cost: speeds the ship up through the segment but
-adds heat per tick; exceeding heat tolerance damages hull.
-Done when: hazards test covers the speed gain, heat gain, and the overheat
-case; `DESIGN.md` describes it.
-
-### S2.10 Actives with cooldowns
-
-Add `src/sim/actives.ts`: shields (absorb damage for N ticks) and power
-reroute (temporary speed boost at a heat cost), each with a cooldown in
-ticks. `playerInputs` is a list of `{ tick, active }` events consumed by
-`simulate()`.
-Done when: `tests/sim/actives.test.ts` shows an active fires once per
-cooldown, inputs during cooldown are ignored, and shields prevent gamma
-damage when timed correctly.
-
-### S2.11 Balance harness
-
-Add `scripts/balance.ts` and `npm run balance -- --races N`: runs N seeded
-races for three standard builds against the slice track and prints a table
-of finish time (mean, p50), survival rate, and mean damage per build.
-Done when: `npm run balance -- --races 1000` prints the table in under ten
-seconds, and `tests/balance.test.ts` runs 1,000 races and asserts sanity
-bounds (survival between 5% and 95%, no NaN, finish time monotone in speed).
-This closes S2.
-
-**S3 is done.** All five items are merged: a run is three stages with a garage
-before each, the ship flies the drawn course, the HUD has two thumb-sized
-actives, and a results screen says what killed you. Kept here as the record.
-
-## S3 — garage and stages
-
-S3 is done when: on a phone, you can play three stages with a garage between
-them, see the ship fly the course, and get a results screen — and want to try a
-different build.
-
-### S3.1 Run state and the garage offer
-
-Add `src/sim/run.ts`: a run is three stages of the slice track with one build
-carried forward and **hull carried forward too** — the black hole in stage 3
-only means something if damage accumulates. A `Run` is immutable state with a
-phase (garage, racing, done); `choosePart`, `runStage` return a new one.
-`simulate()` grows options for running a single stage and starting from a given
-hull. Add `src/sim/garage.ts`: three distinct parts offered per garage, drawn
-from the seeded RNG.
-Done when: `tests/sim/run.test.ts` covers a whole three-stage run, hull
-carrying between stages, a run ending early when the ship is lost, and offers
-being deterministic per seed. `DESIGN.md` describes the run.
-
-### S3.2 Draw the course
-
-Replace the S1 demo dot: `src/render/` draws the slice track from the spline,
-the ship at its current distance, hazard markers with a shape per kind, and
-stage gates. Everything reads sim state and writes none.
-Done when: the Pages build shows the ship flying the real course with hazards
-visible ahead of it, at phone width.
-
-### S3.3 HUD and actives
-
-Hull, heat and shield readouts, plus two big tap targets with visible
-cooldowns. One thumb, bottom of the screen.
-Done when: tapping a button feeds a `PlayerInput` into the sim at the right
-tick, cooldowns are visible, and the readouts track the sim.
-
-### S3.4 Garage screen
-
-Three part cards between stages, each showing what it gives and what it costs.
-One tap picks one and starts the next stage.
-Done when: a run can be played end to end on a phone-sized screen.
-
-### S3.5 Results screen
-
-After three stages: finish time per stage, total, damage taken, what killed you
-if anything, and the build you ended with. One tap to run again.
-Done when: a finished run lands on the results screen and can be replayed.
-
-## S5 — polish and balance (done)
-
-Post-slice work, driven by measurement rather than a plan. Each item started as a
-question the numbers could answer.
-
-- **S5.1 Rivals shop in the same garage.** Whole-run measurement showed picking
-  at random beat every deliberate strategy: rivals had hand-picked builds while
-  the player drew three random cards, so the garage was noise. Rivals now draw
-  from the same pool and take what is nearest the top of their wish list.
-- **S5.2 Parts stack, on purpose.** Measured: doubling down wins 25%, never
-  repeating 30%, taking the fastest part offered 39%. Stacking is a trade, not a
-  lever, so it stays — with a test that fails if that stops being true.
-- **S5.3 The garage shows the course and the standings.** The design bet is that
-  you can see the black hole in stage 3 and build for it; until now you could
-  only see the course while flying it.
-- **S5.4 Mirror Shielding earns its place.** It was the only part below a blind
-  pick — one burst on the course, and a base pool already covered it. It carries
-  hull now.
-
-**What is left, and needs a human call rather than a measurement:**
-
-- **Contact between ships.** Collisions, blocking, drafting. A real design job,
-  not a tweak: it changes what a race is.
-- **A second track, or a fourth ship.** Both are content decisions.
-- **Whether a run should be winnable more than ~40% of the time** with good play.
-  It sits a little above an even three-way split, which reads right, but it is a
-  taste call.
-
-**S4 is done.** All eight items are merged: the loop is under test, the course
-fits a phone, pilots fly the rivals, three ships race every stage, the results
-screen shows the standings, time slows before a burst, and a run prints its
-telemetry. The vertical slice is complete.
-
-## S4 — the field, and feel
-
-S4 is done when: three ships fly every stage, the results screen shows where you
-came, and three runs on a phone make you want a different build.
-
-Done in the order below. The two fixes come first because they are cheap and
-everything after them is easier to trust.
-
-### S4.1 Close the main.ts gap, and a beat before the stage starts
-
-`main.ts` is the only untested code in the repo — the glue that moves between
-garage, race and results. Add `tests/ui/loop.test.ts` driving a whole run
-through it with a fake clock. While in there: the race currently starts the
-instant a part is tapped, with no moment to look at the course. Add a short
-countdown before the ship launches.
-Done when: a test plays garage, stage, results and run-again without a browser,
-and a stage opens with a beat rather than a jump.
-
-### S4.2 Fit the course to the screen
-
-The course is drawn into the largest centred square, which on a phone wastes the
-top and bottom of the screen. Fit the track's bounding box to the viewport
-instead, leaving room for the HUD. Three ships need more room, not less.
-Done when: the course fills the space between the readouts and the buttons at
-phone sizes.
-
-### S4.3 Pilots
-
-Add `src/sim/pilot.ts`: a rule that reads a race each tick and returns the taps
-to make — shields when a burst is close ahead, reroute on clear track — with
-seeded imperfect timing. Move the balance harness's reference player onto it, so
-one rule flies rivals and the harness both.
-Done when: `tests/sim/pilot.test.ts` shows a pilot shielding a burst it can see,
-missing sometimes, never tapping into a cooldown, and being deterministic per
-seed. The balance table still reads sensibly.
-
-### S4.4 The field
-
-Add `src/sim/field.ts`: three ships stepped in lockstep through one stage, each
-with its own race state and its own hazard dice, no contact between them.
-Produces a finishing order, with lost ships behind finishers. `run.ts` carries
-two rivals with the fixed builds and upgrade schedule in `DESIGN.md`, their hull
-carried between stages like the player's.
-Done when: `tests/sim/field.test.ts` covers finishing order, lost ships placed
-last, determinism per seed, and rivals growing a part per stage.
-
-### S4.5 Draw the field
-
-Three ships on screen, offset into lanes so they are legible, each with its own
-colour, and a position readout in the HUD.
-Done when: three ships fly the course without overlapping, and the player can
-tell at a glance whether they are winning.
-
-### S4.6 Results with standings
-
-Per-stage position, overall standings across the field, and a headline that says
-whether the run was won — including the case where the ship survived and still
-came last.
-Done when: the results screen shows the field, and a surviving-but-slow run
-reads as a loss.
-
-### S4.7 Slow-motion beat when a hazard is imminent
-
-The renderer slows time as the ship closes on a burst, so it is something the
-player sees coming rather than reacts to late. The simulation never learns about
-it: only the rate ticks are fed to it changes.
-Done when: approaching a burst visibly slows, the sim's tick count is unchanged
-by it, and a race replays identically with or without slow motion.
-
-### S4.8 Telemetry to the console
-
-Taps made, taps wasted on cooldown, near-misses, per-stage positions. What
-tells us whether the timing windows are right.
-Done when: a finished run prints one readable block.
+### S1.1 Scaffold and the loop — **done**
+
+Vite, TypeScript, ESLint with the `src/sim` purity rule, Vitest, CI, Pages.
+`src/sim/rng.ts` (seeded), `src/sim/tuning.ts`, `src/sim/track.ts` walking
+pieces into a centreline, `src/sim/race.ts` with the tick loop and the swing,
+canvas rendering, and the controls.
+Done when: the Pages URL shows the ship flying the loop, and the same seed
+replays identically.
+
+### S1.2 Make the swing feel like something
+
+The first pass is arithmetic; this is the pass where it becomes a moment.
+Candidates: the ship visibly fighting back to the line rather than lerping, the
+golden path reading as a surface rather than a stripe, and the numbers moved
+until a Charge lap is a real gamble.
+
+Two findings from S1.1, measured over 40 seeded laps each, that this item
+should answer:
+
+- **Thrust dominates.** A reckless build — Thrust 1.6, Handling 0.6 — laps in
+  23.95s on Charge against a balanced build's 28.63s, because the flat
+  `WIDE_SPEED_PENALTY` never costs enough to price the speed it buys. Likely
+  fix: the penalty should scale with how far off the path the ship is, so a
+  big swing hurts more than a small one rather than the same.
+- **A slow enough ship has no corner decision.** At Thrust 0.8 and Handling
+  1.5 the ship never exceeds any holding speed, so all three plans lap
+  identically at 34.52s and the corner plan is inert. That is arguably correct,
+  but it means a whole corner of the build space has nothing to play.
+
+Done when: three laps in a row make you want to try the other corner plan, and
+no single slider position is simply the answer.
+
+### S1.3 Sector times and a par
+
+A sector is timed and the loop has a par time per sector, so a run can be read
+as faster or slower rather than only watched.
+Done when: crossing a checkpoint shows the sector's time against par, and the
+lap ends with a total.
+
+## S2 — the heat
+
+**S2 is done when:** three ships fly the same loop for two laps with a pit stop
+between, the tracking bar says who leads on total time, and you can tell at a
+glance whether you are winning.
+
+### S2.1 Three ships
+
+`src/sim/field.ts`: three entrants stepped in lockstep through one race, each
+with its own state and its own seeded draws, no contact. Produces a finishing
+order on total time.
+
+### S2.2 Bots
+
+`src/sim/bot.ts`: a rule that picks a corner plan and a build, with seeded
+variation, so the two rivals are opponents rather than metronomes. Every
+decision enters the race as an input made before the tick that consumes it —
+the seam a real player will arrive through.
+
+### S2.3 Two laps and the pit stop
+
+The clock never resets; the pit stop halts all three ships, restarts them
+level, and is where the corner plan may change. A run between pit stops is
+about thirty seconds.
+
+### S2.4 The tracking bar
+
+Total time across every sector, drawn as the bar the framework describes, on a
+phone.
+
+## S3 — the ship, and the shop
+
+**S3 is done when:** the player starts with a budget and a stocked shop, fits
+components into four slots, and a fitted build visibly changes how the ship
+takes bends.
+
+- **S3.1 Stats and components.** `ship.ts`: the stats in `DESIGN.md`, and
+  `resolveBuild(components) → stats`. Start with the plain end of
+  `design/catalogue/ship-parts.md`: one engine of each kind, one shield, one
+  nav, one crew.
+- **S3.2 Slots and the shop as an inventory.** Buy, hold unfitted, fit, remove,
+  sell. Four slots to start, +1 for finishing a race.
+- **S3.3 Upgrades.** Levels on a fitted component, and a level 3 that takes a
+  second slot.
+- **S3.4 The board.** The pre-heat screen: fit, set the corner plan, start.
+
+## S4 — the route
+
+**S4 is done when:** a sector offers more than one way through it, the player's
+navigation decides how much of that they can see and choose, and a big enough
+swing throws the ship into a split it did not plan.
+
+- **S4.1 Splits.** A sector with several paths that all end at the next
+  checkpoint.
+- **S4.2 Navigation.** The three levels in the framework: choose at more
+  splits, see the unseen and plan the whole heat, re-plan at a pit stop.
+- **S4.3 Swung into the wrong split.** The bend at a fork, and the swing that
+  decides it.
+
+## S5 — the season
+
+**S5 is done when:** a run is several heats with a cut at the end of a phase,
+and the standings are worth protecting.
+
+- **S5.1 The purse and points.** Finish order, and the margin bonus.
+- **S5.2 Credits, interest and the shop between heats.**
+- **S5.3 Phases, groups and the cut.**
+- **S5.4 The pacing lap**, paid against par rather than against anyone.
+
+## S6 — interaction
+
+**S6 is done when:** what another ship bought changes your race.
+
+- **S6.1 Abilities**, firing automatically on proximity, track conditions or
+  the moment — and the placed kind, for abilities that are specifically placed.
+- **S6.2 Weapons**: missiles, gravity mines, the tractor beam. Displacement,
+  not contact.
+- **S6.3 Fixtures**: bought and placed before a heat, shown to the heat — and
+  the ability-made kind that appears mid-race.
+- **S6.4 Collection**: dark matter as inventory, salvage from a shield that
+  keeps what hits it.
+
+## Not scheduled
+
+**Real players.** The destination, and the reason for the third rule in
+`DESIGN.md`. Nothing above blocks it; it is a project of its own.
+
+**A closer view of the terrain.** Parked in the brief: the top-down view is
+functional, and the systems matter more until they are proven.

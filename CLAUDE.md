@@ -6,10 +6,15 @@ original project plan and is background only.
 
 ## What this is
 
-Auto-chess meets racing. The player builds a ship between stages; the ship
-flies the course on its own; the player makes a handful of timed calls
-(actives) during the race. One star system, three stages, six parts, two
-actives, four hazard types. See `DESIGN.md`.
+Auto-chess meets racing. The player builds a ship between heats; the ship flies
+the loop on its own. The bet the game rests on is one sentence: **the faster a
+ship goes into a bend, the wider and less predictably it swings off the golden
+path.**
+
+The 2026 vertical slice is finished and is **not** what is being built now. Its
+code sits in `legacy/` (last commit `543ac1e`) and carries nothing forward but
+its engineering conventions. `DESIGN.md` is the game as built; the wider design
+is `design/catalogue/framework.md`.
 
 ## The two rules everything depends on
 
@@ -26,10 +31,11 @@ actives, four hazard types. See `DESIGN.md`.
 ```
 src/sim/       PURE. No DOM, no Date, no Math.random, no imports from render/ or ui/.
 src/render/    Canvas drawing. Reads sim state, never writes it.
-src/ui/        Garage, results, HUD buttons.
+src/ui/        Controls and readouts.
 src/main.ts    Fixed timestep: input → sim → render.
-tests/sim/     Unit tests per hazard, part, active.
-tests/         balance.test.ts runs N seeded races and asserts sanity bounds.
+tests/sim/     Determinism and the properties everything later stands on.
+legacy/        The finished 2026 slice. Nothing imports it; delete when ready.
+design/        The design rounds, the catalogue, and the framework.
 ```
 
 ## Conventions (these are enforced or reviewed, not optional)
@@ -37,8 +43,9 @@ tests/         balance.test.ts runs N seeded races and asserts sanity bounds.
 - `src/sim` imports nothing from `render`, `ui` or `main.ts`, and nothing
   nondeterministic. ESLint enforces this (`eslint.config.js`, the
   `src/sim/**` block). A violation is a lint error, not a review comment.
-- Every hazard and every part has a test. A PR that adds one without the
-  other is incomplete.
+- The visual stages (S1, S2) are judged by eye, so they carry determinism
+  tests and little else. The suite grows when the economy does, where the
+  answers are numbers rather than feel.
 - Balance numbers live in one file, `src/sim/tuning.ts`. Never inline a
   tuning constant. Tuning PRs should be one-file diffs.
 - Commit messages describe the player-visible change first, the code change
@@ -57,6 +64,7 @@ npm run typecheck    # tsc --noEmit
 npm run lint         # eslint .
 npm test             # vitest run
 npm run build        # vite build → dist/ (base path /star-race/)
+npm run mechanics-page   # design/catalogue/ → public/design/mechanics.html
 ```
 
 Before reporting a task done: `npm run typecheck && npm run lint && npm test`.
@@ -72,10 +80,15 @@ subagent.
 ## Working style
 
 - One backlog item per session. Small enough to finish in one sitting.
+- Measure before tuning. A claim about balance should come with the seeded
+  runs behind it, and findings belong in `BACKLOG.md` where the next session
+  will read them.
 - Work in a branch or worktree, open a PR with a short summary the owner can
   read on a phone: what changed for the player, what changed in code, which
   tests were added.
-- Do not touch `main` directly. Do not force-push. Do not `rm -rf`.
+- Work on a branch and open a PR. Merging it is allowed once CI is green — the
+  owner granted that on 2026-09-13 — but `main` must never go red, so never
+  merge on a red or pending check. Do not force-push. Do not `rm -rf`.
 - If a task needs a rule change not covered by `DESIGN.md`, stop and ask.
 
 ## Design rounds (`design/`)
@@ -102,8 +115,6 @@ Running a round, and the two things that have gone wrong doing it:
 
 ## Milestones
 
-- S1 (done when: Pages URL shows a moving dot, CI green): scaffold, canvas,
-  spline demo, CI, Pages.
-- S2: the `sim/` module. See `BACKLOG.md`.
-- S3: garage and stages.
-- S4: actives and feel.
+See `BACKLOG.md`. S1 the swing · S2 the heat · S3 the ship and the shop ·
+S4 the route · S5 the season · S6 interaction. S1 is the bet: if a ship
+swinging wide is not interesting to watch, nothing below it saves the game.

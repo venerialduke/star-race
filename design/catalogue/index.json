@@ -1,0 +1,151 @@
+{
+  "framework": {
+    "round": 7,
+    "title": "Fast Ships Swing Wide",
+    "file": "design/rounds/round-07/sharpened.md"
+  },
+  "areas": [
+    { "id": "ship", "name": "The ship" },
+    { "id": "track", "name": "The track" },
+    { "id": "money", "name": "Money & points" },
+    { "id": "season", "name": "The season" }
+  ],
+  "elements": [
+    {
+      "id": "frames",
+      "name": "Frames",
+      "area": "ship",
+      "file": "frames.md",
+      "shape": "catalogue",
+      "what": "Starting kits: the engine, shields and crew a ship begins with"
+    },
+    {
+      "id": "ship-parts",
+      "name": "Ship parts",
+      "area": "ship",
+      "file": "ship-parts.md",
+      "shape": "catalogue",
+      "what": "Components you install: engines, shields, crew, navigation, weapons and deployables, collection"
+    },
+    {
+      "id": "corner-plans",
+      "name": "Corner plans",
+      "area": "ship",
+      "file": "corner-plans.md",
+      "shape": "catalogue",
+      "what": "What the ship does at a bend: Lift, Carry, Charge, others"
+    },
+    {
+      "id": "nav-goals",
+      "name": "Nav goals",
+      "area": "ship",
+      "file": "nav-goals.md",
+      "shape": "catalogue",
+      "what": "What the navigation system optimises for"
+    },
+    {
+      "id": "crew-types",
+      "name": "Crew types",
+      "area": "ship",
+      "file": "crew-types.md",
+      "shape": "catalogue",
+      "what": "Humanoid, robot, and whatever else"
+    },
+    {
+      "id": "abilities",
+      "name": "Abilities",
+      "area": "ship",
+      "file": "abilities.md",
+      "shape": "catalogue",
+      "what": "Charged moves: Brace, Rake, Burn, Scoop, boost, teleport, others"
+    },
+    {
+      "id": "ship-stats",
+      "name": "Ship stats",
+      "area": "ship",
+      "file": "ship-stats.md",
+      "shape": "definitions",
+      "what": "The stats themselves and what each drives"
+    },
+    {
+      "id": "section-types",
+      "name": "Section types",
+      "area": "track",
+      "file": "section-types.md",
+      "shape": "catalogue",
+      "what": "The building blocks a route is made of: straights, corners, bends, banking"
+    },
+    {
+      "id": "off-path-features",
+      "name": "Off-path features",
+      "area": "track",
+      "file": "off-path-features.md",
+      "shape": "catalogue",
+      "what": "What lives on a route: hazards that hurt or move you, pockets that pay"
+    },
+    {
+      "id": "fixtures",
+      "name": "Fixtures",
+      "area": "track",
+      "file": "fixtures.md",
+      "shape": "catalogue",
+      "what": "Objects a player buys and places on the track"
+    },
+    {
+      "id": "track-augments",
+      "name": "Track augments",
+      "area": "track",
+      "file": "track-augments.md",
+      "shape": "catalogue",
+      "what": "Routes or whole sectors a player adds, temporary or permanent"
+    },
+    {
+      "id": "track-growth",
+      "name": "Track growth",
+      "area": "track",
+      "file": "track-growth.md",
+      "shape": "rules",
+      "what": "How the loop grows between phases"
+    },
+    {
+      "id": "collectors",
+      "name": "Collectors",
+      "area": "money",
+      "file": "collectors.md",
+      "shape": "catalogue",
+      "what": "Equipment that opens a pool"
+    },
+    {
+      "id": "pools",
+      "name": "Pools",
+      "area": "money",
+      "file": "pools.md",
+      "shape": "catalogue",
+      "what": "The shared pots and what earns a share"
+    },
+    {
+      "id": "declarations",
+      "name": "Declarations",
+      "area": "money",
+      "file": "declarations.md",
+      "shape": "catalogue",
+      "what": "Pre-heat bets: Long Line, Hold the Line, others"
+    },
+    {
+      "id": "economy-flow",
+      "name": "Economy flow",
+      "area": "money",
+      "file": "economy-flow.md",
+      "shape": "parameters",
+      "what": "Every income, every cost, every shop, and when each happens"
+    },
+    {
+      "id": "season-structure",
+      "name": "Season structure",
+      "area": "season",
+      "file": "season-structure.md",
+      "shape": "parameters",
+      "what": "Pacing lap, phases, heats, groups, the cut"
+    }
+  ]
+}

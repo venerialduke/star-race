@@ -1,119 +1,209 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#0d1730" />
-    <title>Star Race — the mechanics on one page</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;700&display=swap"
-    />
-    <style>
-      :root {
-        --ground: #f4efe2;
-        --surface: #fbf8f0;
-        --ink: #17203a;
-        --ink-soft: #4d5a7a;
-        --rule: #d6cdb6;
-        --accent: #b46a0c;
-        --accent-ink: #7a4706;
-        --chip: #e9dcc0;
-        --good: #2f7a3e;
-        --bad: #b2372e;
-        color-scheme: light dark;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme='light']) {
-          --ground: #0d1730;
-          --surface: #152140;
-          --ink: #e9e4d6;
-          --ink-soft: #9aabcb;
-          --rule: #2c3a5e;
-          --accent: #f2a93b;
-          --accent-ink: #f2a93b;
-          --chip: #253359;
-          --good: #7fd48c;
-          --bad: #e2685f;
-        }
-      }
-      :root[data-theme='dark'] {
-        --ground: #0d1730;
-        --surface: #152140;
-        --ink: #e9e4d6;
-        --ink-soft: #9aabcb;
-        --rule: #2c3a5e;
-        --accent: #f2a93b;
-        --accent-ink: #f2a93b;
-        --chip: #253359;
-        --good: #7fd48c;
-        --bad: #e2685f;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        margin: 0;
-        background: var(--ground);
-        color: var(--ink);
-      }
-      body {
-        font:
-          14px/1.35 'Source Serif 4',
-          Georgia,
-          serif;
-        padding: 14px 12px 28px;
-        max-width: 520px;
-        margin: 0 auto;
-      }
-      h1,
-      h2,
-      h3,
-      .k {
-        font-family: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
-      }
-      .eyebrow {
-        font:
-          600 10px/1 'JetBrains Mono',
-          monospace;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--accent-ink);
-        display: flex;
-        gap: 10px;
-      }
-      h1 {
-        font-size: 26px;
-        line-height: 1.05;
-        margin: 6px 0 2px;
-      }
-      .sub {
-        color: var(--ink-soft);
-        margin: 0 0 14px;
-        font-size: 13px;
-      }
-      h2 {
-        font-size: 12px;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--accent-ink);
-        margin: 18px 0 6px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      h2::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--rule);
-      }
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1730">
+<title>Star Race — the mechanics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+:root {
+  --ground: #f4efe2;
+  --surface: #fbf8f0;
+  --ink: #17203a;
+  --ink-soft: #4d5a7a;
+  --rule: #d6cdb6;
+  --accent: #b46a0c;
+  --accent-ink: #7a4706;
+  --good: #2f7a3e;
+  --bad: #b2372e;
+  --chip: #e9dcc0;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1730;
+    --surface: #152140;
+    --ink: #e9e4d6;
+    --ink-soft: #9aabcb;
+    --rule: #2c3a5e;
+    --accent: #f2a93b;
+    --accent-ink: #f2a93b;
+    --good: #7fd48c;
+    --bad: #e2685f;
+    --chip: #253359;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0d1730;
+  --surface: #152140;
+  --ink: #e9e4d6;
+  --ink-soft: #9aabcb;
+  --rule: #2c3a5e;
+  --accent: #f2a93b;
+  --accent-ink: #f2a93b;
+  --good: #7fd48c;
+  --bad: #e2685f;
+  --chip: #253359;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 17px/1.55 "Source Serif 4", Georgia, "Times New Roman", serif;
+  -webkit-text-size-adjust: 100%;
+}
+.page { max-width: 44rem; margin: 0 auto; padding: 0 20px 96px; }
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
+.masthead { padding: 40px 0 24px; border-bottom: 2px solid var(--ink); }
+.eyebrow {
+  font: 600 12px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+h1 {
+  font: 700 clamp(30px, 7vw, 44px)/1.05 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.01em; margin: 14px 0 12px; text-wrap: balance;
+}
+.headline { font-size: 20px; line-height: 1.4; margin: 0; color: var(--ink); text-wrap: balance; }
+
+nav.toc {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--ground); border-bottom: 1px solid var(--rule);
+  margin: 0 -20px; padding: 10px 20px;
+  display: flex; gap: 6px 16px; overflow-x: auto; white-space: nowrap;
+  font: 500 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.04em;
+}
+nav.toc a { text-decoration: none; color: var(--ink-soft); padding: 4px 0; }
+nav.toc a:hover { color: var(--accent-ink); }
+
+section { padding-top: 40px; }
+h2 {
+  font: 700 24px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+}
+h3 { font: 700 20px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 32px 0 8px; }
+h4 { font: 600 17px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 24px 0 6px; }
+h5 { font: 600 15px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; margin: 18px 0 4px; color: var(--ink-soft); }
+p { margin: 0 0 1em; }
+ul, ol { padding-left: 1.4em; margin: 0 0 1em; }
+li { margin-bottom: 0.35em; }
+blockquote { margin: 0 0 1em; padding: 0 0 0 16px; border-left: 3px solid var(--accent); color: var(--ink-soft); }
+code { font: 0.9em "JetBrains Mono", ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 12px; }
+pre code { background: none; padding: 0; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 8px; margin: 20px 0; overflow-x: auto; text-align: center; font-family: inherit; line-height: normal; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+pre.mermaid:not([data-processed]) { font: 0.85em "JetBrains Mono", ui-monospace, monospace; text-align: left; white-space: pre; color: var(--ink-soft); }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+.scroll { overflow-x: auto; margin: 0 -20px 12px; padding: 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { font: 600 12px/1.2 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+table.scores td { text-align: right; font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 14px; }
+table.scores td.mean { font-weight: 700; }
+table.scores td.hi { color: var(--good); font-weight: 700; }
+table.scores td.lo { color: var(--bad); font-weight: 700; }
+table.scores th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.caption { font-size: 14px; color: var(--ink-soft); margin: 0 0 20px; }
+.chip {
+  display: inline-block; font: 600 11px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-ink);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 4px 8px; margin-left: 8px; vertical-align: middle;
+}
+
+.questions { counter-reset: q; list-style: none; padding: 0; }
+.questions li { counter-increment: q; display: grid; grid-template-columns: 2.2rem 1fr; gap: 0 8px; padding: 14px 0; border-bottom: 1px solid var(--rule); margin: 0; }
+.questions li::before { content: counter(q, decimal-leading-zero); font: 700 18px/1.3 "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--accent); }
+.questions .q { font-weight: 600; }
+.questions .why { grid-column: 2; color: var(--ink-soft); font-size: 15px; }
+
+details { border-top: 1px solid var(--rule); }
+details:last-of-type { border-bottom: 1px solid var(--rule); }
+summary {
+  cursor: pointer; padding: 16px 0; list-style: none;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline;
+}
+summary::-webkit-details-marker { display: none; }
+summary .t { font: 700 19px/1.25 "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+summary .s { grid-column: 1; color: var(--ink-soft); font-size: 15px; }
+summary .arrow { font: 600 13px/1 "Chakra Petch", "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; color: var(--accent-ink); text-transform: uppercase; }
+details[open] summary .arrow::after { content: "Close"; }
+details:not([open]) summary .arrow::after { content: "Read"; }
+details .body { padding: 0 0 24px; }
+details .body > h2:first-child { margin-top: 0; }
+
+.synthesis { background: var(--surface); border: 1px solid var(--rule); padding: 20px; margin: 0 -20px; }
+@media (min-width: 720px) { .synthesis { margin: 0; padding: 32px; } }
+
+.gaps { padding-left: 1.4em; }
+.gaps li { margin-bottom: 0.6em; }
+.feedback-how { background: var(--surface); border: 1px dashed var(--rule); padding: 16px 20px; }
+.feedback-how code { white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-soft); }
+
+.masthead .headline { max-width: 34em; }
+.tracker { font-size: 13px; }
+.status { font: 600 10px/1 "JetBrains Mono", monospace; letter-spacing: .04em; text-transform: uppercase; border-radius: 3px; padding: 3px 6px; vertical-align: middle; }
+.status.untouched { color: var(--ink-soft); border: 1px dashed var(--rule); }
+.status.partial { color: var(--accent-ink); border: 1px solid var(--accent); }
+.status.seeded { color: var(--good); border: 1px solid var(--good); }
+.area { margin-top: 28px; }
+.area > h2 { display: flex; align-items: baseline; gap: 10px; }
+.area > h2 .count { font: 400 12px/1 "JetBrains Mono", monospace; color: var(--ink-soft); }
+details.element { border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); margin: 8px 0; }
+details.element > summary { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 12px; cursor: pointer; list-style: none; }
+details.element > summary::-webkit-details-marker { display: none; }
+details.element > summary .t { font: 700 15px/1.2 "Chakra Petch", system-ui, sans-serif; }
+details.element > summary .w { grid-column: 1 / -1; color: var(--ink-soft); font-size: 13px; margin-top: -4px; }
+details.element > summary .rows { font: 400 12px/1 "JetBrains Mono", monospace; color: var(--ink-soft); }
+details.element > .body { padding: 0 12px 12px; border-top: 1px solid var(--rule); }
+details.element > .body h3 { font-size: 15px; margin-top: 16px; }
+details.element > .body .scroll { overflow-x: auto; }
+details.element > .body table { font-size: 12.5px; }
+details.element .empty { color: var(--ink-soft); font-style: italic; padding: 12px; }
+details.schema { margin: 10px 0; border: 1px dashed var(--rule); border-radius: 4px; }
+details.schema > summary { padding: 6px 10px; font: 600 12px/1 "JetBrains Mono", monospace; color: var(--ink-soft); cursor: pointer; }
+details.schema table { font-size: 12px; }
+.rows { display: grid; gap: 8px; margin: 8px 0 12px; }
+.rows .row { border: 1px solid var(--rule); border-radius: 4px; background: var(--ground); padding: 8px 10px; }
+.rows .row.stub { border-style: dashed; }
+.rows .row.cut { opacity: .55; text-decoration: line-through; }
+.rows .row .t { font: 700 14px/1.2 "Chakra Petch", system-ui, sans-serif; display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+.rows .row .f { display: grid; grid-template-columns: 6.5em 1fr; gap: 6px; font-size: 12.5px; padding: 2px 0; }
+.rows .row .l { font: 600 10px/1.6 "JetBrains Mono", monospace; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+.rows .row .v code { font-size: 11px; }
+.status.stub { color: var(--ink-soft); border: 1px dashed var(--rule); }
+.status.cut { color: var(--bad); border: 1px solid var(--bad); }
+.notes-section table { font-size: 12.5px; }
+</style>
+
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <div class="eyebrow"><span>Star Race</span><span>Round 7</span><span>Mechanics &amp; catalogue</span></div>
+  <h1>Fast Ships Swing Wide</h1>
+  <p class="headline">The mechanics at a glance, then every element under each one — 5 of 17 started. Rows are edited in <code>design/catalogue/</code>; this page is rendered from them.</p>
+</header>
+<nav class="toc">
+  <a href="#overview">Overview</a>
+  <a href="#tracker">Tracker</a>
+  <a href="#area-ship">The ship</a>
+  <a href="#area-track">The track</a>
+  <a href="#area-money">Money &amp; points</a>
+  <a href="#area-season">The season</a>
+  <a href="#mechanics-notes">Notes</a>
+  <a href="round-07.html">Round 7</a>
+</nav>
+
+<section id="overview">
+<!-- The one-page graphic. Hand-authored; the sections below it on the page are rendered from the catalogue files. Only the CSS that is specific to the graphic lives here — palette and fonts come from the page. -->
+<style>
       /* the loop */
       .loop {
         display: grid;
@@ -253,27 +343,7 @@
       svg .e.hi {
         stroke: var(--accent);
       }
-      .legend {
-        margin-top: 16px;
-        font-size: 11.5px;
-        color: var(--ink-soft);
-        border-top: 1px solid var(--rule);
-        padding-top: 8px;
-      }
-      .legend a {
-        color: var(--accent-ink);
-      }
-    </style>
-  </head>
-  <body>
-    <div class="eyebrow">
-      <span>Star Race</span><span>Round 7</span><span>One page</span>
-    </div>
-    <h1>Fast Ships Swing Wide</h1>
-    <p class="sub">
-      The mechanics, at a glance. The ship flies itself; you decide before, and at pit
-      stops.
-    </p>
+</style>
 
     <h2>The loop</h2>
     <div class="loop">
@@ -516,10 +586,722 @@
       <div class="chips"><span class="chip">season structure</span></div>
     </div>
 
-    <p class="legend">
-      <b>◇</b> = a catalogue element waiting to be dictated — 16 in all, 12 to fill, 4 to
-      confirm. Framework: <a href="round-07.html">round 7</a>. Tracker:
-      <code>design/catalogue/README.md</code>.
-    </p>
-  </body>
+
+</section>
+
+<section id="tracker" class="tracker">
+<h2>Tracker</h2>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Element</th>
+<th>Under</th>
+<th>What it is</th>
+<th>Shape</th>
+<th>Status</th>
+<th>Rows</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><a href="#frames">Frames</a></td>
+<td>The ship</td>
+<td>Starting kits: the engine, shields and crew a ship begins with</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="#ship-parts">Ship parts</a></td>
+<td>The ship</td>
+<td>Components you install: engines, shields, crew, navigation, weapons and deployables, collection</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="#corner-plans">Corner plans</a></td>
+<td>The ship</td>
+<td>What the ship does at a bend: Lift, Carry, Charge, others</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="#nav-goals">Nav goals</a></td>
+<td>The ship</td>
+<td>What the navigation system optimises for</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>5</td>
+<td><a href="#crew-types">Crew types</a></td>
+<td>The ship</td>
+<td>Humanoid, robot, and whatever else</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>6</td>
+<td><a href="#abilities">Abilities</a></td>
+<td>The ship</td>
+<td>Charged moves: Brace, Rake, Burn, Scoop, boost, teleport, others</td>
+<td>catalogue</td>
+<td>partial</td>
+<td>2 (2 stub)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><a href="#ship-stats">Ship stats</a></td>
+<td>The ship</td>
+<td>The stats themselves and what each drives</td>
+<td>definitions</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>8</td>
+<td><a href="#section-types">Section types</a></td>
+<td>The track</td>
+<td>The building blocks a route is made of: straights, corners, bends, banking</td>
+<td>catalogue</td>
+<td>seeded</td>
+<td>4</td>
+</tr>
+<tr>
+<td>9</td>
+<td><a href="#off-path-features">Off-path features</a></td>
+<td>The track</td>
+<td>What lives on a route: hazards that hurt or move you, pockets that pay</td>
+<td>catalogue</td>
+<td>partial</td>
+<td>2 (2 stub)</td>
+</tr>
+<tr>
+<td>10</td>
+<td><a href="#fixtures">Fixtures</a></td>
+<td>The track</td>
+<td>Objects a player buys and places on the track</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>11</td>
+<td><a href="#track-augments">Track augments</a></td>
+<td>The track</td>
+<td>Routes or whole sectors a player adds, temporary or permanent</td>
+<td>catalogue</td>
+<td>partial</td>
+<td>2 (2 stub)</td>
+</tr>
+<tr>
+<td>12</td>
+<td><a href="#track-growth">Track growth</a></td>
+<td>The track</td>
+<td>How the loop grows between phases</td>
+<td>rules</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>13</td>
+<td><a href="#collectors">Collectors</a></td>
+<td>Money &amp; points</td>
+<td>Equipment that opens a pool</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>14</td>
+<td><a href="#pools">Pools</a></td>
+<td>Money &amp; points</td>
+<td>The shared pots and what earns a share</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>15</td>
+<td><a href="#declarations">Declarations</a></td>
+<td>Money &amp; points</td>
+<td>Pre-heat bets: Long Line, Hold the Line, others</td>
+<td>catalogue</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+<tr>
+<td>16</td>
+<td><a href="#economy-flow">Economy flow</a></td>
+<td>Money &amp; points</td>
+<td>Every income, every cost, every shop, and when each happens</td>
+<td>parameters</td>
+<td>partial</td>
+<td>10 (3 stub)</td>
+</tr>
+<tr>
+<td>17</td>
+<td><a href="#season-structure">Season structure</a></td>
+<td>The season</td>
+<td>Pacing lap, phases, heats, groups, the cut</td>
+<td>parameters</td>
+<td>untouched</td>
+<td>0</td>
+</tr>
+</tbody></table>
+</div>
+<p class="caption"><b>untouched</b> — nothing dictated · <b>partial</b> — some rows are stubs · <b>seeded</b> — every row has a sentence. Derived from the files, not typed.</p>
+</section>
+
+<section class="area" id="area-ship">
+<h2>The ship <span class="count">1/7 started</span></h2>
+<details class="element" id="frames">
+<summary><span class="t">Frames</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Starting kits: the engine, shields and crew a ship begins with</span></summary>
+<div class="body"><p>The starting kit. Before anything else, the player picks a frame, and a frame
+comes with an engine, shields, and a crew already fitted. The ship starts with
+four slots, so after choosing a frame there is one slot left and the first
+shop visit is to fill it.</p>
+
+<details class="schema"><summary>Schema</summary><div class="scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What goes in it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>short slug</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>what the frame is called</td>
+</tr>
+<tr>
+<td><code>engine</code></td>
+<td>which engine it ships with, by part id or in words</td>
+</tr>
+<tr>
+<td><code>shields</code></td>
+<td>which shields it ships with</td>
+</tr>
+<tr>
+<td><code>crew</code></td>
+<td><code>small human</code> or <code>small robot</code>, or another named crew</td>
+</tr>
+<tr>
+<td><code>slots</code></td>
+<td>how many slots it starts with, <code>4</code> unless said otherwise</td>
+</tr>
+<tr>
+<td><code>leans</code></td>
+<td>arrows: what this frame is built toward, <code>Thrust↑ Hull↓</code></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>stub</code> · <code>seeded</code> · <code>cut</code></td>
+</tr>
+</tbody></table>
+</div></details>
+<h3>Frames</h3><p class="empty">No rows yet.</p>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> From the notes: a frame guarantees one engine, one shields,
+and a crew that is a small human or a small robot. Four slots to start. No
+frames named yet — the notes describe the shape of a frame, not a list of
+them. The choice of crew inside the frame may be the whole difference between
+frames, or frames may differ in the engine and shields too; not said.</p>
+</div>
+</details>
+<details class="element" id="ship-parts">
+<summary><span class="t">Ship parts</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Components you install: engines, shields, crew, navigation, weapons and deployables, collection</span></summary>
+<div class="body"><p>Components you install. A ship has a limited number of <strong>slots</strong>, and the
+slots are the budget: you decide what to prioritise. A part moves the ship&#39;s
+stats and may carry a downside; it is bought with credits and takes a slot.
+Parts have <strong>upgrades</strong>, which appear in the shop once the part is fitted and
+which can grow to take more than one slot.</p>
+<p>Against <a href="../rounds/round-07/sharpened.md">round 7</a>, the stats a part can move
+are <strong>Thrust</strong> (acceleration and top speed), <strong>Handling</strong> (holding speed at a
+bend), <strong>Nav</strong> (how much of a split is visible, how well the ship follows a
+goal), <strong>Shields</strong> and <strong>Hull</strong>. Reaction time is not bought; it comes from
+speed and crew.</p>
+
+<details class="schema"><summary>Schema</summary><div class="scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What goes in it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>short slug, lowercase, hyphens</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>what the shop calls it</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>one of the six: <code>engine</code> · <code>shields</code> (and defensive systems) · <code>crew</code> · <code>navigation</code> · <code>weapons</code> (and deployables) · <code>collection</code></td>
+</tr>
+<tr>
+<td><code>does</code></td>
+<td>one plain sentence, mechanic not value</td>
+</tr>
+<tr>
+<td><code>moves</code></td>
+<td>arrows only, more arrows for more: <code>Thrust↑↑ Handling↓</code>. Things a part can move: <code>Thrust</code>, <code>Handling</code>, <code>Nav</code>, <code>Shields</code>, <code>Hull</code>, <code>gravity</code>, <code>charge</code> (how fast the path charges abilities), <code>reaction</code></td>
+</tr>
+<tr>
+<td><code>slots</code></td>
+<td>how many it takes, <code>1</code> unless said otherwise</td>
+</tr>
+<tr>
+<td><code>upgrades</code></td>
+<td>what its upgrade path does, in a few words, and whether it grows in slots</td>
+</tr>
+<tr>
+<td><code>costs</code></td>
+<td>credit tier as <code>$</code>, <code>$$</code>, <code>$$$</code>, plus any stated downside</td>
+</tr>
+<tr>
+<td><code>pairs with</code></td>
+<td>what it is meant for: a corner plan, a crew type, a declaration, another part</td>
+</tr>
+<tr>
+<td><code>fights</code></td>
+<td>what it works against or is bad with</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>stub</code> — named only · <code>seeded</code> — has a sentence and arrows · <code>cut</code> — struck, kept for the record</td>
+</tr>
+</tbody></table>
+<p>Arrows, never numbers. <code>↑</code> is some, <code>↑↑</code> is a lot, <code>↑↑↑</code> is the reason to buy
+it. The build stage turns arrows into values.</p>
+</div></details>
+<h3>Parts</h3><p class="empty">No rows yet.</p>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> Six categories named: engines; shields and defensive systems;
+crew; navigation systems; weapons and deployables systems; collection systems.
+Crew is a category here, so crew types may end up as rows in this table with
+<code>category: crew</code> rather than a table of their own — decide when dictating
+crew. Collectors likewise (<code>category: collection</code>). The open item in the notes
+is the one this table is for: an initial set of options for each category.</p>
+</div>
+</details>
+<details class="element" id="corner-plans">
+<summary><span class="t">Corner plans</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">What the ship does at a bend: Lift, Carry, Charge, others</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Corner plans." and talk.</p></div>
+</details>
+<details class="element" id="nav-goals">
+<summary><span class="t">Nav goals</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">What the navigation system optimises for</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Nav goals." and talk.</p></div>
+</details>
+<details class="element" id="crew-types">
+<summary><span class="t">Crew types</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Humanoid, robot, and whatever else</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Crew types." and talk.</p></div>
+</details>
+<details class="element" id="abilities" open>
+<summary><span class="t">Abilities</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">Charged moves: Brace, Rake, Burn, Scoop, boost, teleport, others</span></summary>
+<div class="body"><p>Charged moves. Golden-path time charges the ship; an ability spends charge.
+Round 7 has them fire on their own when the crew judges the moment. The
+newest notes float a different model — see <code>mechanics-notes.md</code> — where the
+player picks <em>where on the course</em> a charge is spent, before the run. Either
+way, this table is the list of what an ability can be.</p>
+
+<details class="schema"><summary>Schema</summary><div class="scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What goes in it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>short slug</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>what it is called</td>
+</tr>
+<tr>
+<td><code>does</code></td>
+<td>one plain sentence</td>
+</tr>
+<tr>
+<td><code>spends</code></td>
+<td>what it costs: charge, and anything else — crew wear, a slot</td>
+</tr>
+<tr>
+<td><code>wants</code></td>
+<td>when it is worth firing: a bend, a straight, a rival in range, a pocket, a split</td>
+</tr>
+<tr>
+<td><code>from</code></td>
+<td>which component category grants it, if said: <code>engine</code>, <code>weapons</code>, <code>collection</code>, <code>navigation</code></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>stub</code> · <code>seeded</code> · <code>cut</code></td>
+</tr>
+</tbody></table>
+</div></details>
+<h3>Abilities</h3><div class="rows"><div class="row stub"><div class="t">Boost<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">A burst of speed at a spot you pick.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a straight</span></div></div><div class="row stub"><div class="t">Teleport<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">Jump to a different route of the sector you are in.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a split</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> Round 7 names four example abilities — Brace, Rake, Burn,
+Scoop — as examples, not a fixed set. They are not in these notes and are left
+off this table until the owner names them. Boost and Teleport are the two the
+notes name, as examples of what placing a charge could do.</p>
+</div>
+</details>
+<details class="element" id="ship-stats">
+<summary><span class="t">Ship stats</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">The stats themselves and what each drives</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Ship stats." and talk.</p></div>
+</details>
+</section>
+<section class="area" id="area-track">
+<h2>The track <span class="count">3/5 started</span></h2>
+<details class="element" id="section-types" open>
+<summary><span class="t">Section types</span><span class="status seeded">seeded</span><span class="rows">4 rows</span><span class="w">The building blocks a route is made of: straights, corners, bends, banking</span></summary>
+<div class="body"><p>The building blocks a route through a sector is made of. A route is a chain
+of these; where the chain differs between routes, that is what makes one
+route faster, safer, or richer than another.</p>
+
+<details class="schema"><summary>Schema</summary><div class="scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What goes in it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>short slug</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>what it is called</td>
+</tr>
+<tr>
+<td><code>does</code></td>
+<td>one plain sentence: what a ship does through it, what it asks of the ship</td>
+</tr>
+<tr>
+<td><code>tests</code></td>
+<td>which stat or choice it puts under pressure: <code>Thrust</code>, <code>Handling</code>, <code>corner plan</code>, <code>Nav</code>, <code>crew</code></td>
+</tr>
+<tr>
+<td><code>parts</code></td>
+<td>the named pieces inside it, if it has any: <code>braking zone</code>, <code>apex</code>, <code>curb</code></td>
+</tr>
+<tr>
+<td><code>space</code></td>
+<td>the space-flavoured version, if one was said: a black hole standing in for banking</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>stub</code> · <code>seeded</code> · <code>cut</code></td>
+</tr>
+</tbody></table>
+</div></details>
+<h3>Types</h3><div class="rows"><div class="row seeded"><div class="t">Straightaway<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A straight run; the ship accelerates toward top speed and nothing asks it to slow.</span></div><div class="f"><span class="l">tests</span><span class="v">Thrust</span></div></div><div class="row seeded"><div class="t">Corner<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A bend with a braking zone, an apex and curbs; the ship arrives fast, has to be slow at the apex, and pays for the difference.</span></div><div class="f"><span class="l">tests</span><span class="v">Handling, corner plan</span></div><div class="f"><span class="l">parts</span><span class="v">braking zone, apex, curbs</span></div></div><div class="row seeded"><div class="t">Soft bend<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A gentler corner of lower degree; keeps a straightaway interesting without demanding a full brake.</span></div><div class="f"><span class="l">tests</span><span class="v">Handling</span></div></div><div class="row seeded"><div class="t">Banked corner<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A corner that helps the ship hold its line through it.</span></div><div class="f"><span class="l">tests</span><span class="v">Handling</span></div><div class="f"><span class="l">space</span><span class="v">a black hole on one side of the corner to bank against</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> The notes say not all corners need to be the same degree, and
+that soft bends can make straightaways more interesting — so <code>soft-bend</code> is a
+distinct type rather than a corner parameter, on the notes&#39; own framing.
+Curbs are named as a part of a corner but not what they do; the space
+equivalents of braking zone, apex and curb are &quot;may need&quot; — not yet said.</p>
+</div>
+</details>
+<details class="element" id="off-path-features" open>
+<summary><span class="t">Off-path features</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">What lives on a route: hazards that hurt or move you, pockets that pay</span></summary>
+<div class="body"><p>What lives on a route besides the road: hazards that hurt or move the ship,
+pockets that pay. Every route has a few properties — whether it is on the
+golden path, whether it carries a resource or another energy type — and may
+carry features from this table.</p>
+
+<details class="schema"><summary>Schema</summary><div class="scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What goes in it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>short slug</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>what it is called</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td><code>hazard</code> — hurts or moves you · <code>pocket</code> — pays · <code>energy</code> — charges something</td>
+</tr>
+<tr>
+<td><code>effect</code></td>
+<td>one or more of: <code>slows</code> · <code>speeds</code> · <code>damages</code> · <code>bounces</code> (off the track for a few seconds) · <code>pushes</code> (into another route of the sector, if you power into it) · <code>pays</code> · <code>charges</code></td>
+</tr>
+<tr>
+<td><code>does</code></td>
+<td>one plain sentence</td>
+</tr>
+<tr>
+<td><code>answer</code></td>
+<td>what on the ship answers it: <code>Shields</code>, <code>Handling</code>, <code>Nav</code>, a corner plan, an ability</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>stub</code> · <code>seeded</code> · <code>cut</code></td>
+</tr>
+</tbody></table>
+</div></details>
+<h3>Features</h3><div class="rows"><div class="row stub"><div class="t">Gravity well<span class="status stub">stub</span></div><div class="f"><span class="l">kind</span><span class="v">hazard</span></div></div><div class="row stub"><div class="t">Solar storm<span class="status stub">stub</span></div><div class="f"><span class="l">kind</span><span class="v">hazard</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> Two hazards named, gravity wells and solar storms, with no
+effect stated for either. The kinds of effect are stated generally — things
+that slow you, speed you up, bounce you off the track for a few seconds, or if
+you power into them push you to another split of the sector — and are the
+<code>effect</code> vocabulary above. Which hazard does which is not said. Whether a
+route is on the golden path and whether it has a resource are properties of
+the route, not features on it; they belong to whatever describes a route.</p>
+</div>
+</details>
+<details class="element" id="fixtures">
+<summary><span class="t">Fixtures</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Objects a player buys and places on the track</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Fixtures." and talk.</p></div>
+</details>
+<details class="element" id="track-augments" open>
+<summary><span class="t">Track augments</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">Routes or whole sectors a player adds, temporary or permanent</span></summary>
+<div class="body"><p>Things a player adds to the track itself: a new route through a sector, or a
+whole new sector. Permanent or temporary. Only players in the same heat see
+an augmented track. Round 7 called the route kind a <em>player split</em>; the
+owner&#39;s word is <em>augment</em>, and it covers both kinds.</p>
+<p>Where augments come from is not yet decided: the shop, or a component that
+grants one when upgraded far enough.</p>
+
+<details class="schema"><summary>Schema</summary><div class="scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What goes in it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>short slug</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>what it is called</td>
+</tr>
+<tr>
+<td><code>adds</code></td>
+<td><code>route</code> — a new way through an existing sector · <code>sector</code> — a new stretch with its own checkpoint</td>
+</tr>
+<tr>
+<td><code>does</code></td>
+<td>one plain sentence: what the added piece is like and why you would want it</td>
+</tr>
+<tr>
+<td><code>lasts</code></td>
+<td><code>heat</code> · <code>season</code> · either</td>
+</tr>
+<tr>
+<td><code>seen by</code></td>
+<td>who meets it: <code>same heat</code> unless said otherwise</td>
+</tr>
+<tr>
+<td><code>from</code></td>
+<td>where you get it: <code>shop</code> · <code>component</code> · not yet said</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>stub</code> · <code>seeded</code> · <code>cut</code></td>
+</tr>
+</tbody></table>
+</div></details>
+<h3>Augments</h3><div class="rows"><div class="row stub"><div class="t">Add a route<span class="status stub">stub</span></div><div class="f"><span class="l">adds</span><span class="v">route</span></div><div class="f"><span class="l">does</span><span class="v">A new way through a sector you choose, so the sector splits where it did not.</span></div><div class="f"><span class="l">lasts</span><span class="v">either</span></div><div class="f"><span class="l">seen by</span><span class="v">same heat</span></div></div><div class="row stub"><div class="t">Add a sector<span class="status stub">stub</span></div><div class="f"><span class="l">adds</span><span class="v">sector</span></div><div class="f"><span class="l">does</span><span class="v">A whole new sector spliced into the loop, with its own checkpoint.</span></div><div class="f"><span class="l">lasts</span><span class="v">either</span></div><div class="f"><span class="l">seen by</span><span class="v">same heat</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> Round 7 has two named route augments — a <em>pocket split</em> that
+goes wide through a pocket and a <em>cut split</em> that leaves the path and rejoins
+early. Neither is in these notes; they are left off this table until the owner
+names them again or cuts them.</p>
+</div>
+</details>
+<details class="element" id="track-growth">
+<summary><span class="t">Track growth</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">How the loop grows between phases</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Track growth." and talk.</p></div>
+</details>
+</section>
+<section class="area" id="area-money">
+<h2>Money &amp; points <span class="count">1/4 started</span></h2>
+<details class="element" id="collectors">
+<summary><span class="t">Collectors</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Equipment that opens a pool</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Collectors." and talk.</p></div>
+</details>
+<details class="element" id="pools">
+<summary><span class="t">Pools</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">The shared pots and what earns a share</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Pools." and talk.</p></div>
+</details>
+<details class="element" id="declarations">
+<summary><span class="t">Declarations</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Pre-heat bets: Long Line, Hold the Line, others</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Declarations." and talk.</p></div>
+</details>
+<details class="element" id="economy-flow" open>
+<summary><span class="t">Economy flow</span><span class="status partial">partial</span><span class="rows">10 rows</span><span class="w">Every income, every cost, every shop, and when each happens</span></summary>
+<div class="body"><p>Every income, every cost, every shop, and when each one happens. This is
+parameters rather than a catalogue: a short list, confirmed rather than
+invented.</p>
+
+<h3>Shops</h3><p>What can be bought, and where. From the notes so far.</p>
+<div class="rows"><div class="row seeded"><div class="t">components<span class="status seeded">seeded</span></div><div class="f"><span class="l">sells</span><span class="v">ship parts, from a random selection</span></div><div class="f"><span class="l">when</span><span class="v">after the frame is chosen; pit stops; lap ends</span></div></div><div class="row seeded"><div class="t">upgrades<span class="status seeded">seeded</span></div><div class="f"><span class="l">sells</span><span class="v">upgrades for a part already fitted</span></div><div class="f"><span class="l">when</span><span class="v">once the part is fitted</span></div></div><div class="row stub"><div class="t">capacity<span class="status stub">stub</span></div><div class="f"><span class="l">sells</span><span class="v">component slots</span></div><div class="f"><span class="l">when</span><span class="v">not said</span></div></div><div class="row stub"><div class="t">augments<span class="status stub">stub</span></div><div class="f"><span class="l">sells</span><span class="v">track augments</span></div><div class="f"><span class="l">when</span><span class="v">not said</span></div></div><div class="row stub"><div class="t">maintenance<span class="status stub">stub</span></div><div class="f"><span class="l">sells</span><span class="v">repair of damage taken during parts of the race</span></div><div class="f"><span class="l">when</span><span class="v">likely; not said</span></div></div></div>
+<h3>Income</h3><div class="rows"><div class="row seeded"><div class="t">purse<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">finish order in a heat</span></div><div class="f"><span class="l">when</span><span class="v">heat end</span></div></div><div class="row seeded"><div class="t">pools<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">time on path, time wide, damage dealt — shared, capped</span></div><div class="f"><span class="l">when</span><span class="v">each pit stop, per lap</span></div></div><div class="row seeded"><div class="t">interest<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">credits held through a pit stop, to a cap</span></div><div class="f"><span class="l">when</span><span class="v">pit stop</span></div></div><div class="row seeded"><div class="t">pacing-lap<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">your time on the pacing lap against the track&#39;s benchmarks</span></div><div class="f"><span class="l">when</span><span class="v">after the pacing lap</span></div></div><div class="row seeded"><div class="t">finish-slot<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">one extra component slot</span></div><div class="f"><span class="l">when</span><span class="v">every race you finish</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> The shops list is the notes&#39; &quot;shops (so far)&quot;: ship
+components, component capacity, track augments, and probably maintenance. The
+pacing-lap payout is against benchmarks for the track, not against other
+players. The +1 slot per finished race is a reward, so it is income here
+rather than a purchase.</p>
+</div>
+</details>
+</section>
+<section class="area" id="area-season">
+<h2>The season <span class="count">0/1 started</span></h2>
+<details class="element" id="season-structure">
+<summary><span class="t">Season structure</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Pacing lap, phases, heats, groups, the cut</span></summary>
+<div class="body"><p class="empty">Nothing dictated yet. Say "Season structure." and talk.</p></div>
+</details>
+</section>
+
+<section id="mechanics-notes" class="notes-section">
+<h2>Mechanics notes</h2>
+<div class="scroll"><p>Things said during dictation that change a <strong>mechanic</strong> rather than populate
+one. The framework is pinned to
+<a href="../rounds/round-07/sharpened.md">round 7</a>; it does not move because a
+catalogue entry needed it to. Anything here is a proposed change to the
+framework, dated, waiting on the owner to either fold it into a new framework
+pass or drop it.</p>
+<p>A row marked <strong>tension</strong> contradicts something round 7 says. A row marked
+<strong>adds</strong> is new and does not contradict anything.</p>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Kind</th>
+<th>What was said</th>
+<th>Touches</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>The ship has a limited number of component slots, and the slots are the budget. Four to start. Slots can be bought with credits or other resources, and every race you finish pays +1 slot.</td>
+<td>ship, economy</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>A starting frame, chosen before anything else, comes with an engine, shields and a crew (small human or small robot). Then the shop opens with a random selection.</td>
+<td>ship, board</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>Components have upgrades that appear once the component is fitted. An upgrade can grow to take more than one slot — an engine at level 3 occupies two.</td>
+<td>ship, shop</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>A pacing lap before the first real heat: two laps of the initial track with one pit stop, no opponents, paid by your time against the track&#39;s benchmarks. The pit stop and the end of lap 1 are purchase opportunities.</td>
+<td>season, economy</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>The course is set before a race and again at break points — pit stops and lap ends. Which route to take in each sector, given what your navigation has shown and what you have now seen. No change keeps the previous choice.</td>
+<td>board, pit stop, nav</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>tension</td>
+<td>&quot;Should players set slow-down or speed-up going into a turn, or is that automatic from components, nav and crew?&quot; Round 7&#39;s corner plan (Lift, Carry, Charge) is exactly a per-heat manual choice about this. The note questions whether it should exist.</td>
+<td>corner plan</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>tension</td>
+<td>Charged abilities may be placed on the course before the run: two charges, pick where each fires; a third is set and fires only if enough energy has been collected by then. Round 7 has abilities fire on their own when the crew judges the moment. These are different models of who decides.</td>
+<td>abilities, reaction</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>tension</td>
+<td>Vocabulary: the notes say a <strong>sector</strong> connects checkpoints and a sector has <strong>splits</strong>, which are the paths chosen. Round 6&#39;s owner notes said <strong>section</strong> for the stretch between checkpoints and that a section <em>splits into routes</em>. So &quot;split&quot; has moved from the fork to the path. The catalogue uses sector and route until the owner picks.</td>
+<td>track vocabulary</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>Some hazards, if you power into them, push the ship to another route of the sector. Round 7 has the swing doing this at a fork bend; this makes a hazard able to do it too.</td>
+<td>track, swing</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>Track augments can add a whole sector, not only a route. Permanent or temporary. Seen only by players in the same heat. Source undecided: shop, or a component upgraded far enough. Easier as a shop purchase at first.</td>
+<td>track augments, shop</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>Fixtures likewise: probably a credit purchase at first; maybe later granted by an upgraded component.</td>
+<td>fixtures, shop</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>Ship maintenance as a shop: repairing damage taken during parts of the race. Round 7 has crew repair costs; this extends the bill to the ship.</td>
+<td>economy</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td>Weapons and deployables are a component category. Round 7 has Rake as an ability and Mines as a fixture; this puts weapons on the ship as parts.</td>
+<td>ship parts, abilities, fixtures</td>
+</tr>
+</tbody></table>
+</div>
+</section>
+
+<footer>Rendered from <code>design/catalogue/</code> by <code>npm run mechanics-page</code>. The framework is <a href="round-07.html">round 7</a>.</footer>
+</div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+const css = getComputedStyle(document.documentElement);
+const v = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+mermaid.initialize({
+  startOnLoad: true,
+  securityLevel: 'strict',
+  // themeVariables are only consulted under the 'base' theme; without this
+  // line mermaid keeps its own palette and the diagram sits on the page
+  // rather than in it.
+  theme: 'base',
+  fontFamily: '"Source Serif 4", Georgia, serif',
+  themeVariables: {
+    background: v('--surface', '#fbf8f0'),
+    primaryColor: v('--chip', '#e9dcc0'),
+    primaryBorderColor: v('--rule', '#d6cdb6'),
+    primaryTextColor: v('--ink', '#17203a'),
+    lineColor: v('--ink-soft', '#4d5a7a'),
+    secondaryColor: v('--surface', '#fbf8f0'),
+    tertiaryColor: v('--ground', '#f4efe2'),
+  },
+});
+</script>
+</body>
 </html>

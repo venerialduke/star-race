@@ -102,7 +102,7 @@ export const pad = (n: number): string => String(n).padStart(2, '0');
 export const roundDir = (round: number): string =>
   join(ROUNDS_DIR, `round-${pad(round)}`);
 
-const escape = (text: string): string =>
+export const escape = (text: string): string =>
   text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -126,7 +126,7 @@ marked.use({
 });
 
 /** Markdown to HTML, with every heading pushed one level down so it nests under the page's own. */
-function renderMarkdown(source: string, demote = 1): string {
+export function renderMarkdown(source: string, demote = 1): string {
   const shifted = source.replace(
     /^(#{1,5}) /gm,
     (_, hashes: string) => `${'#'.repeat(hashes.length + demote)} `,
@@ -139,7 +139,7 @@ function renderMarkdown(source: string, demote = 1): string {
  * names the round directory itself. Treat anything that is not a readable file
  * as absent rather than throwing.
  */
-function readIfExists(path: string): string | undefined {
+export function readIfExists(path: string): string | undefined {
   if (!existsSync(path) || !statSync(path).isFile()) return undefined;
   return readFileSync(path, 'utf8');
 }
@@ -208,7 +208,7 @@ function scoreboard(data: RoundData): string {
 </table></div>`;
 }
 
-const STYLE = `
+export const STYLE = `
 :root {
   --ground: #f4efe2;
   --surface: #fbf8f0;
@@ -349,7 +349,7 @@ details .body > h2:first-child { margin-top: 0; }
 footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-soft); }
 `;
 
-const FONTS =
+export const FONTS =
   '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;700&display=swap">';
 
 /**
@@ -523,7 +523,7 @@ ${feedback === undefined ? '' : `<section id="owner-feedback"><h2>Your feedback 
 </div>`;
 }
 
-function wrapDocument(fragment: string): string {
+export function wrapDocument(fragment: string): string {
   return `<!doctype html>
 <html lang="en">
 <head>

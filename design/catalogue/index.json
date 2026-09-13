@@ -2,13 +2,26 @@
   "framework": {
     "round": 7,
     "title": "Fast Ships Swing Wide",
-    "file": "design/rounds/round-07/sharpened.md"
+    "file": "framework.md",
+    "origin": "design/rounds/round-07/sharpened.md"
   },
   "areas": [
-    { "id": "ship", "name": "The ship" },
-    { "id": "track", "name": "The track" },
-    { "id": "money", "name": "Money & points" },
-    { "id": "season", "name": "The season" }
+    {
+      "id": "ship",
+      "name": "The ship"
+    },
+    {
+      "id": "track",
+      "name": "The track"
+    },
+    {
+      "id": "money",
+      "name": "Money & points"
+    },
+    {
+      "id": "season",
+      "name": "The season"
+    }
   ],
   "elements": [
     {
@@ -17,7 +30,7 @@
       "area": "ship",
       "file": "frames.md",
       "shape": "catalogue",
-      "what": "Starting kits: the engine, shields and crew a ship begins with"
+      "what": "Starting kits: the engine, shields and crew a ship begins with — or nothing, if starting stock in the shop replaces them (open)"
     },
     {
       "id": "ship-parts",
@@ -49,7 +62,7 @@
       "area": "ship",
       "file": "crew-types.md",
       "shape": "catalogue",
-      "what": "Humanoid, robot, and whatever else"
+      "what": "What a crew is made of, and what endurance means — the five crews themselves are rows in ship parts"
     },
     {
       "id": "abilities",
@@ -113,7 +126,7 @@
       "area": "money",
       "file": "collectors.md",
       "shape": "catalogue",
-      "what": "Equipment that opens a pool"
+      "what": "Equipment that opens a pool, or fills a hold you cash in later"
     },
     {
       "id": "pools",

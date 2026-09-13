@@ -186,12 +186,13 @@ details.schema table { font-size: 12px; }
 <body>
 <div class="page">
 <header class="masthead">
-  <div class="eyebrow"><span>Star Race</span><span>Round 7</span><span>Mechanics &amp; catalogue</span></div>
+  <div class="eyebrow"><span>Star Race</span><span>After round 7</span><span>Mechanics &amp; catalogue</span></div>
   <h1>Fast Ships Swing Wide</h1>
-  <p class="headline">The mechanics at a glance, then every element under each one — 6 of 17 started. Rows are edited in <code>design/catalogue/</code>; this page is rendered from them.</p>
+  <p class="headline">The mechanics at a glance, then every element under each one — 7 of 17 started. Rows are edited in <code>design/catalogue/</code>; this page is rendered from them.</p>
 </header>
 <nav class="toc">
   <a href="#overview">Overview</a>
+  <a href="#framework">The framework</a>
   <a href="#tracker">Tracker</a>
   <a href="#area-ship">The ship</a>
   <a href="#area-track">The track</a>
@@ -350,8 +351,9 @@ details.schema table { font-size: 12px; }
   <div class="step">
     <span class="k">Start</span
     ><span class="d"
-      >pick a <b>frame</b> — engine, shields, crew in 3 of 4 slots · shop for the fourth ·
-      a <b>pacing lap</b> alone, paid against the track's par</span
+      >start with some components — a <b>frame</b>, or simply stock in your shop
+      (<i>open</i>) · 4 slots · a <b>pacing lap</b> alone, paid against the track's
+      par</span
     >
   </div>
   <div class="arrow">↓<small>once, then the loop</small></div>
@@ -375,21 +377,24 @@ details.schema table { font-size: 12px; }
     <span class="k">Pit stop</span
     ><span class="d"
       >all restart level · <b>clock keeps running</b> · tracking bar shows who leads ·
-      small buys</span
+      small buys · pool share paid · re-plan the route <b>if Nav 3</b></span
     >
   </div>
   <div class="arrow">↓<small>lap 2 = run again, same 3 ships</small></div>
   <div class="step pay">
     <span class="k">Payout</span
     ><span class="d"
-      ><b>credits</b> ← purse + pools &nbsp;·&nbsp; <b>points</b> ← finish order +
-      margin</span
+      ><b>credits</b> ← purse + pools + salvage &nbsp;·&nbsp; <b>points</b> ← finish order
+      + margin &nbsp;·&nbsp; <b>+1 slot</b> for finishing</span
     >
   </div>
   <div class="arrow">↓</div>
   <div class="step">
     <span class="k">Between heats</span
-    ><span class="d">shop, or hold for interest · new group of three</span>
+    ><span class="d"
+      >shop &amp; <b>inventory</b> — buy, hold, fit, remove, sell · hold credits for
+      interest · new group of three</span
+    >
   </div>
   <div class="arrow">↓<small>every few heats</small></div>
   <div class="step">
@@ -432,7 +437,7 @@ details.schema table { font-size: 12px; }
     <rect class="n" x="234" y="76" width="80" height="26" rx="4" />
     <text x="274" y="93" text-anchor="middle">abilities</text>
     <rect class="n" x="234" y="140" width="80" height="26" rx="4" />
-    <text x="274" y="157" text-anchor="middle">crew wear</text>
+    <text x="274" y="157" text-anchor="middle">wear</text>
     <!-- edges -->
     <path class="e" d="M68,21 L110,21" />
     <path class="e hi" d="M148,34 L148,74" />
@@ -446,7 +451,7 @@ details.schema table { font-size: 12px; }
     <path class="e" d="M148,102 L148,138" />
     <text class="s" x="153" y="123">Charge ⇒</text>
     <path class="e" d="M184,153 L232,153" />
-    <text class="s" x="208" y="146" text-anchor="middle">if humanoid</text>
+    <text class="s" x="208" y="146" text-anchor="middle">crew &amp; ship</text>
     <path class="e" d="M274,138 L274,104" />
     <text class="s" x="279" y="123">lowers</text>
   </svg>
@@ -455,27 +460,36 @@ details.schema table { font-size: 12px; }
       <span class="k">Corner plan</span
       ><span class="d"
         ><b>Lift</b> brake, no swing · <b>Carry</b> take the swing · <b>Charge</b> keep
-        burning, widest swing, gravity</span
+        burning, widest swing, gravity on crew <b>and ship</b></span
       >
     </div>
     <div class="box">
       <span class="k">Three layers</span
       ><span class="d"
-        >Shields absorb, regen, deflect above half → Hull → Crew, who also time the
-        abilities</span
+        >Shields absorb, regen, deflect above half → Hull → Crew · a shield may also
+        <b>deflect a hazard</b> or <b>keep what hits it</b>, to sell</span
       >
     </div>
-    <div class="box">
-      <span class="k">Nav</span
+    <div class="box hi">
+      <span class="k">Nav gates the route</span
       ><span class="d"
-        >lights splits ahead · follows a goal · flies alone when the crew is out</span
+        ><b>1</b> choose at more splits · <b>2</b> see the unseen, plan the whole heat ·
+        <b>3</b> re-plan at a pit stop</span
       >
     </div>
     <div class="box">
       <span class="k">Crew</span
       ><span class="d"
-        ><b>humanoid</b> reacts, gets lucky, wears · <b>robot</b> tougher, ignores
-        gravity, slower</span
+        >five kinds, graded by <b>endurance</b> · scientists · engineers · mercenaries ·
+        androids · nanites</span
+      >
+    </div>
+    <div class="box wide">
+      <span class="k">Slots are the budget</span
+      ><span class="d"
+        >4 to start, +1 per race finished, more for credits · six categories, and a
+        category may repeat · <b>upgrades</b> deepen a component and often cost another
+        slot at L3 — where most <b>abilities</b> arrive</span
       >
     </div>
   </div>
@@ -502,11 +516,24 @@ details.schema table { font-size: 12px; }
     </div>
     <div class="box">
       <span class="k">Wide</span
-      ><span class="d">slower · hazards that hurt · pockets that pay</span>
+      ><span class="d"
+        >slower · hazards that hurt — power into one and it may shove you to another split
+        · pockets that pay</span
+      >
     </div>
     <div class="box">
       <span class="k">Fixtures</span
-      ><span class="d">objects you own on a sector — in every heat you race</span>
+      ><span class="d"
+        >objects you own on a sector, shown to your heat · or dropped <b>mid-race</b> by
+        an ability, seen by nobody</span
+      >
+    </div>
+    <div class="box wide">
+      <span class="k">Black holes</span
+      ><span class="d"
+        >terrain as well as hazard: a corner can be <b>caused by</b> one · the right
+        engine reads it as an opening and takes no damage</span
+      >
     </div>
     <div class="box">
       <span class="k">Augments</span
@@ -527,6 +554,41 @@ details.schema table { font-size: 12px; }
   </div>
 </div>
 
+<h2>How ships reach each other</h2>
+<div class="card">
+  <div class="grid2">
+    <div class="box wide hi">
+      <span class="k">Still no contact</span
+      ><span class="d"
+        >ships never touch · everything below reaches a rival through the <b>track</b>,
+        the <b>economy</b> or the <b>shop</b></span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Push them off course</span
+      ><span class="d"
+        >gravity mines · tractor beam (ships <i>and</i> fixtures) · a boost's black hole ·
+        the swing is no longer the only way off the path</span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Hurt them</span
+      ><span class="d">missiles, short to long range · a deflected hazard</span>
+    </div>
+    <div class="box">
+      <span class="k">Take their shot</span
+      ><span class="d"
+        >a full shield can <b>keep</b> the weapon that hit it — their fire, your
+        salvage</span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Shape what they fly</span
+      ><span class="d">fixtures and augments you own sit in your heat's track</span>
+    </div>
+  </div>
+</div>
+
 <h2>Money &amp; points</h2>
 <div class="card">
   <div class="grid2">
@@ -537,17 +599,36 @@ details.schema table { font-size: 12px; }
     <div class="box">
       <span class="k">Pools</span
       ><span class="d"
-        >solar · dark matter · bounty — shared, thin as more draw,
+        >bounty by damage · solar <i>(a pool still? open)</i> — shared, thin as more draw,
         <b>capped under the purse</b></span
       >
     </div>
     <div class="box">
-      <span class="k">Collectors</span
-      ><span class="d">equipment that opens a pool for you</span>
+      <span class="k">Dark matter</span
+      ><span class="d"
+        ><b>inventory, not a pool</b>: collected in the race, feeds a boost, cashed in
+        with a L3 collector</span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Salvage</span
+      ><span class="d"
+        >weapons and fixtures your shields caught, sold when the race ends</span
+      >
     </div>
     <div class="box">
       <span class="k">Interest &amp; bills</span
-      ><span class="d">held credits earn, to a cap · hurt crew costs</span>
+      ><span class="d"
+        >held credits earn, to a cap · hurt crew costs · the ship has a maintenance
+        bill</span
+      >
+    </div>
+    <div class="box wide">
+      <span class="k">Spending</span
+      ><span class="d"
+        >components · their upgrades · more <b>slots</b> · fixtures and augments ·
+        repairs</span
+      >
     </div>
     <div class="box wide">
       <span class="k">Points</span
@@ -594,6 +675,363 @@ details.schema table { font-size: 12px; }
 
 </section>
 
+<section id="framework" class="framework">
+<h2>The framework</h2>
+<p class="caption">The pinned framework: round 7 with every later dictation worked in. Edited at <code>design/catalogue/framework.md</code>. Round 7 itself is unchanged — rounds are the record, this is the living document.</p>
+<p><strong>This is the pinned framework.</strong> It is round 7&#39;s design with every later
+dictation worked in: each <code>supersedes</code> and <code>adds</code> row in <code>mechanics-notes.md</code>
+is folded into the prose below, and each <code>open</code> row appears in <strong>Open calls</strong>
+at the end rather than being decided quietly.</p>
+<p><a href="../rounds/round-07/sharpened.md">Round 7</a> stays on disk exactly as it was —
+rounds are append-only and are the record of how we got here. Where this
+document and round 7 disagree, <strong>this document wins</strong>, and the disagreement is
+listed in &quot;What changed from round 7&quot;. Where this document and the catalogue
+tables disagree, the tables win and this document is stale: the tables are the
+dictated record.</p>
+<h3>The game in brief</h3>
+<p>A season is a run of phases; a phase is several heats. A <strong>heat</strong> is one group
+of three ships racing two laps, the same three ships both laps. The track is a
+loop of <strong>checkpoints</strong>; the stretch between two checkpoints is a <strong>sector</strong>,
+and a sector may offer several <strong>splits</strong> — paths through it that all end at
+the same next checkpoint. Some checkpoints are <strong>pit stops</strong>: the race pauses,
+every ship restarts together, and the player makes a few choices. There is
+always a pit stop at the end of a lap, and no run between pit stops is longer
+than about thirty seconds. The clock never resets; total time across every
+sector decides the heat.</p>
+<p>A ship is a set of <strong>components</strong> filling a limited number of <strong>slots</strong>. The
+player does not drive. Between heats they buy, fit and plan; during a heat they
+watch a tracking bar and, at pit stops, change their mind.</p>
+<h3>The loop</h3>
+<pre class="mermaid">flowchart TD
+  S[&quot;Start of season&lt;br/&gt;starting components · pacing lap alone, paid against par&quot;] --&gt; B
+  B[&quot;The board&lt;br/&gt;fit slots · corner plan · nav goal · place fixtures · declare&quot;] --&gt; R1
+  R1[&quot;Lap 1&lt;br/&gt;the ship flies itself · the swing at every bend&quot;] --&gt; P
+  P[&quot;Pit stop&lt;br/&gt;all restart level · clock keeps running · pool share paid · small buys&lt;br/&gt;re-plan the route if Nav 3&quot;] --&gt; R2
+  R2[&quot;Lap 2&lt;br/&gt;same three ships&quot;] --&gt; Pay
+  Pay[&quot;Payout&lt;br/&gt;credits: purse + pools + salvage · points: finish order + margin · +1 slot&quot;] --&gt; Shop
+  Shop[&quot;Between heats&lt;br/&gt;shop and inventory · hold for interest · new group of three&quot;] --&gt; B
+  Shop -. &quot;every few heats&quot; .-&gt; Phase
+  Phase[&quot;Phase end&lt;br/&gt;the cut, then the track grows&quot;] --&gt; Shop</pre><h3>The ship</h3>
+<p><strong>Slots are the budget.</strong> A ship starts with four and gains one for every race
+it finishes; more can be bought with credits. Components come in six
+categories — <strong>engines</strong>, <strong>shields and defensive systems</strong>, <strong>crew</strong>,
+<strong>navigation</strong>, <strong>weapons and deployables</strong>, <strong>collection</strong> — and a category
+may be fitted more than once. Two shields is a build, not a mistake: the
+collector shield&#39;s storage scales with the ship&#39;s <em>total</em> shield capacity.</p>
+<p><strong>Upgrades are where a component becomes itself.</strong> A fitted component offers
+upgrades in the shop, and a component that reaches level 3 often grows to take
+a second or third slot. Most abilities arrive this way: at level 3 an engine
+grants a boost, or the three-bend chain; at level 3 a collector shield starts
+keeping what hits it. So the late build is a few deep components rather than
+many shallow ones — with four starting slots, one maxed part is most of a ship.</p>
+<p><strong>Thrust, Handling, Shields, Hull, Nav, charge and reaction are stats, not
+parts.</strong> Components move them. Reaction is still not bought: it comes from the
+crew and falls with speed and hard acceleration.</p>
+<p><strong>The shop is an inventory, not a moment.</strong> Components are purchased, held in
+the shop unfitted, added to the ship, removed from it, and sold. Slots are the
+on-ship budget; the shop is the off-ship store.</p>
+<h3>Speed, the swing and the corner plan</h3>
+<p>On a straight the ship accelerates at the rate Thrust gives, toward the top
+speed Thrust gives. Every bend has a holding speed set by Handling: the fastest
+it can be taken while staying on the path. The <strong>corner plan</strong> says what the
+ship does about the difference — <strong>Lift</strong> brakes to the holding speed and takes
+no swing, <strong>Carry</strong> enters at the speed it has and takes what comes, <strong>Charge</strong>
+keeps accelerating for the most speed out, the widest swing and gravity on the
+crew.</p>
+<p><strong>The swing</strong> is a seeded overshoot at every bend, its spread growing steeply
+with speed carried over the holding speed. A small swing keeps the ship on the
+path; a big one throws it wide for the rest of the sector, slower and among the
+hazards. At a bend where a sector splits, a big enough swing carries the ship
+into a split it did not plan.</p>
+<p>Three things now bend that rule. An <strong>ability can suspend the swing</strong> — the
+handling engine at level 3 takes the next three bends perfectly at top speed,
+and pays extra speed for each bend reached within three seconds of the last. A
+<strong>hazard powered into</strong> can push the ship into another split of the sector. And
+a <strong>weapon can push a ship off course</strong> on any stretch of track, bend or not.
+The swing is still the price of speed; it is no longer the only way to leave
+the path.</p>
+<p><strong>Gravity</strong> is hard acceleration, and it acts on the crew <em>and</em> on the ship.
+Inertia dampeners reduce both.</p>
+<h3>Navigation and the route</h3>
+<p>Navigation is the gate on the route, and it grades in levels rather than in
+kinds:</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Nav</th>
+<th>What it buys</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>You may select your direction at more splits.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Splits and sectors you have not seen — new growth, or an opponent&#39;s augment — are revealed, and you may set a direction on every split before the heat starts.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>You may re-select split directions at any lap completion or pit stop. Takes a second slot.</td>
+</tr>
+</tbody></table></div>
+<p>Round 7&#39;s clear / dim / dark grading of a split survives as the thing Nav is
+seeing through: a better system turns dark splits dim and dim splits clear.
+What is new is that <strong>changing your plan mid-heat is a Nav 3 privilege</strong>, not
+something every ship can do at a pit stop. Nav also takes a goal from the
+board — lap time, collection or safety — and the better it is, the more it
+bends the corner plan bend by bend toward that goal. When the crew is out, Nav
+flies the ship alone, and a cheap one drifts wide at every bend.</p>
+<h3>Crew</h3>
+<p>Crew are components, in five kinds, graded by <strong>endurance</strong> — how long they
+last under gravity — and each carrying one other thing:</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Crew</th>
+<th>Endurance</th>
+<th>And</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human scientists</td>
+<td>weak</td>
+<td>upgrades cost less</td>
+</tr>
+<tr>
+<td>Engineers</td>
+<td>regular</td>
+<td>shields and abilities recharge faster</td>
+</tr>
+<tr>
+<td>Mercenaries</td>
+<td>—</td>
+<td>weapons do more damage and have more range</td>
+</tr>
+<tr>
+<td>Androids</td>
+<td>very strong</td>
+<td>navigation systems work better</td>
+</tr>
+<tr>
+<td>Nanites</td>
+<td>strong</td>
+<td>component expansion costs less</td>
+</tr>
+</tbody></table></div>
+<p>A worn crew acts slowly and then not at all; coasting recovers them and a pit
+stop recovers a little more. Hurt crew cost credits to heal, replace or repair,
+and the ship itself now has a maintenance bill alongside them.</p>
+<h3>Damage, and what a shield can do</h3>
+<p>Shields take a hit first and regenerate, faster when coasting; above half they
+deflect, costing damage but not speed. Hull is underneath, and gone, the ship
+is out. Beyond absorbing, a shield can now do two other things depending on
+what is fitted: <strong>deflect a hazard</strong> into a nearby ship or another hazard, by
+chance, or <strong>capture</strong> the weapon or moving fixture that hits it at full
+shields — and captured fixtures sell for credits when the race ends.</p>
+<h3>The track</h3>
+<p>Checkpoints joined by sectors; a sector is a straight and bends, and some
+sectors split. Down the middle runs the <strong>golden path</strong>, a bright ribbon where
+every ship is faster and abilities charge. Wide is slower, with hazards that
+hurt and pockets that pay.</p>
+<p><strong>Black holes are terrain as well as hazard.</strong> A corner can be caused by, or
+sit near, a black hole — so a black hole shapes the track&#39;s geometry, not just
+its danger. A ship built for them reads such a corner as an opportunity and
+takes no damage from it at all.</p>
+<p>The track starts the same for everyone and <strong>grows between phases</strong>: sealed
+junctions open and new sectors are spliced in from the season seed, the added
+sectors holding the darkest splits. As the loop grows, more checkpoints become
+pit stops, so no run gets longer than about thirty seconds.</p>
+<h3>What players put on the track</h3>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Who sees it</th>
+<th>When it lands</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Fixture</strong> — an object you own on a sector (beacon, slick, mine, relay)</td>
+<td>all three ships in your heat, before the start</td>
+<td>bought between heats, placed on the board</td>
+</tr>
+<tr>
+<td><strong>Fixture from an ability</strong> — the dark matter engine&#39;s boost leaves a small black hole</td>
+<td>nobody, until it bites</td>
+<td>mid-race, wherever the boost fired</td>
+</tr>
+<tr>
+<td><strong>Augment</strong> — a split, or a whole sector, that you add</td>
+<td>only players in the same heat</td>
+<td>bought; one heat, or all season</td>
+</tr>
+<tr>
+<td><strong>Deployable weapon</strong> — gravity mines, placed or pre-placed</td>
+<td>not stated</td>
+<td>during the race, or set before it</td>
+</tr>
+</tbody></table></div>
+<p>The ability-made fixture is the odd one: it is placed while racing, it is not
+announced, and it discriminates by build — it throws off only ships without a
+dark matter engine.</p>
+<h3>Money</h3>
+<p>Credits are the money. Points are the season standing and are never spent.</p>
+<p><strong>Income:</strong> the <strong>purse</strong> by finish order at the heat&#39;s end, the biggest sum in
+the heat; <strong>pools</strong>, shared and capped under the purse, paying their lap&#39;s
+share at each pit stop; <strong>interest</strong> on credits held through a pit stop, to a
+cap; the <strong>pacing lap</strong>, paid against the track&#39;s benchmarks rather than
+against anyone; <strong>+1 slot</strong> for every race finished; <strong>dark matter</strong> turned in
+for credits at a pit stop or lap start, with a level 3 collector; and
+<strong>salvage</strong> — captured fixtures sold when the race ends.</p>
+<p><strong>Costs:</strong> components, their upgrades, more slots, fixtures and augments, crew
+healing, and ship maintenance.</p>
+<p>Dark matter is no longer a pool. It is <strong>inventory</strong>: collected in the race,
+spent recharging a dark matter engine&#39;s boost, or cashed in if the collector is
+deep enough. That leaves the pool system thinner than round 7 drew it — bounty
+by damage dealt is untouched, and whether solar is still a pool is an open
+call below.</p>
+<h3>Points, declarations and the cut</h3>
+<p>A heat scores once, by finish order on total time, plus a margin bonus for a
+ship that finished close behind, so a close third is worth about twice a beaten
+one. <strong>Declarations</strong> are bets made before the heat: the <strong>Long Line</strong> takes
+the wide route at every split — win the heat with it and the bonus doubles with
+extra credits, finish last and you lose points; <strong>Hold the Line</strong> is its
+opposite, never leaving the path, void and costly if you swing wide once. At
+the end of a phase, everyone below a set points line is out, however many that
+is.</p>
+<h3>How one player&#39;s choices reach another</h3>
+<p>Ships still do not touch. Everything below is interaction through the track,
+the economy or the shop — which is what the brief asked for, and there is now
+considerably more of it than round 7 had:</p>
+<pre class="mermaid">flowchart LR
+  Me[&quot;My build&quot;] --&gt;|fixtures and augments I own| Track[&quot;The track we share&quot;]
+  Me --&gt;|weapons: missiles, mines, tractor beam| You[&quot;Your race&quot;]
+  Me --&gt;|boost leaves a black hole| Track
+  Track --&gt;|what I must survive| You
+  You --&gt;|your weapons become my salvage| Me
+  You --&gt;|drawing from the same pool| Pools[&quot;Shared pools&quot;]
+  Pools --&gt;|thinner shares| Me
+  You --&gt;|what I see you fit| Counter[&quot;What I buy next&quot;]</pre><h3>What changed from round 7</h3>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Round 7 said</th>
+<th>It now says</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A ship is six parts, one of each</td>
+<td>A frame plus slotted components in six categories; a category may repeat</td>
+<td>Slots are the budget; stats are what components move</td>
+</tr>
+<tr>
+<td>Section, route</td>
+<td>Sector, split</td>
+<td>Vocabulary fixed by dictation</td>
+</tr>
+<tr>
+<td>Abilities fire on their own when the crew judges</td>
+<td>Abilities exist and arrive from upgrade levels; <strong>who fires them is open</strong></td>
+<td>The catalogue commits to abilities; the trigger does not</td>
+</tr>
+<tr>
+<td>The loop opens at the shop</td>
+<td>It opens with starting components and a pacing lap</td>
+<td>The pacing lap is the first sight of the track and the first credits</td>
+</tr>
+<tr>
+<td>Owned routes, two kinds</td>
+<td>Augments may add a split <strong>or a whole sector</strong></td>
+<td>Dictated; the two named kinds are held off until named again</td>
+</tr>
+<tr>
+<td>Fixtures are bought pre-heat and shown to all three</td>
+<td>Also created mid-race by an ability, unseen and build-specific</td>
+<td>The boost&#39;s black hole</td>
+</tr>
+<tr>
+<td>Collectors open pools; dark matter pays by time off path</td>
+<td>Dark matter is inventory, cashed in at a level 3 collector</td>
+<td>Dictated as a collected resource with two sinks</td>
+</tr>
+<tr>
+<td>The corner plan is the only lever on the swing</td>
+<td>An ability can suspend it; hazards and weapons can displace a ship</td>
+<td>Three dictated exceptions</td>
+</tr>
+<tr>
+<td>Gravity wears the crew</td>
+<td>Gravity acts on crew and ship</td>
+<td>Inertia dampeners name both</td>
+</tr>
+<tr>
+<td>Humanoid or robot</td>
+<td>Five crew, graded by endurance, each with a second effect</td>
+<td>Dictated</td>
+</tr>
+<tr>
+<td>Weapons hit &quot;the nearest rival&quot;</td>
+<td>Weapons have range bands, and some displace rather than damage</td>
+<td>Dictated</td>
+</tr>
+<tr>
+<td>Shields absorb, deflect above half</td>
+<td>Also deflect hazards, and capture and sell what hits them</td>
+<td>Dictated</td>
+</tr>
+<tr>
+<td>The route is set before the heat and at break points</td>
+<td>Re-planning is a Nav 3 privilege</td>
+<td>Dictated</td>
+</tr>
+<tr>
+<td>Nothing shapes the track&#39;s geometry</td>
+<td>Black holes cause corners</td>
+<td>Dictated</td>
+</tr>
+<tr>
+<td>The shop is a moment between heats</td>
+<td>The shop is an inventory: hold, fit, remove, sell</td>
+<td>Dictated</td>
+</tr>
+</tbody></table></div>
+<h3>Open calls</h3>
+<p>These are the owner&#39;s, and nothing above resolves them.</p>
+<ol>
+<li><strong>Do frames exist?</strong> Either a frame is a named collection of components —
+which needs a spread of plain engines, shields and nav systems before it
+means anything — or players simply start with some components in their shop
+and choose what to deploy. The second is simpler and would retire element 1
+and change how a season opens. The owner leans to the second but has not
+called it.</li>
+<li><strong>Who fires an ability?</strong> Round 7 had the crew judge the moment. A later
+note had the player place where each charge fires before the run. The
+catalogue now has several abilities and says nothing about the trigger.</li>
+<li><strong>Is solar still a pool?</strong> The solar ion collector was dictated as a buff —
+speed and handling on the path, shields and recharge at level 3 — with no
+mention of collecting. Either solar stopped being a pool, or the collecting
+went without saying. With dark matter now inventory, this decides whether
+the pool system is two pools or one.</li>
+<li><strong>Is the corner plan manual?</strong> The owner asked whether slowing into a turn
+should just be automatic from components, nav and crew. The corner plan
+stands until they decide — but the handling engine&#39;s three-bend ability is
+now a second lever on the same thing.</li>
+<li><strong>Where do fixtures and augments come from?</strong> The shop, or a component
+upgraded far enough. Both, now: the shop sells them, and one ability makes
+one.</li>
+<li><strong>Does the cut ever fall between heats</strong>, rather than only at a phase end?
+Raised in round 6, left open in round 7, untouched since.</li>
+</ol>
+<h3>What the catalogue still wants</h3>
+<p>A few <strong>plain</strong> components — an ordinary engine, an ordinary shield, an
+ordinary nav system. Every component dictated so far has a hook, and nothing is
+merely competent, which makes a starting selection hard to picture and makes
+the frames question harder to answer than it needs to be.</p>
+
+</section>
+
 <section id="tracker" class="tracker">
 <h2>Tracker</h2>
 <div class="scroll"><table>
@@ -612,7 +1050,7 @@ details.schema table { font-size: 12px; }
 <td>1</td>
 <td><a href="#frames">Frames</a></td>
 <td>The ship</td>
-<td>Starting kits: the engine, shields and crew a ship begins with</td>
+<td>Starting kits: the engine, shields and crew a ship begins with — or nothing, if starting stock in the shop replaces them (open)</td>
 <td>catalogue</td>
 <td>untouched</td>
 <td>0</td>
@@ -623,8 +1061,8 @@ details.schema table { font-size: 12px; }
 <td>The ship</td>
 <td>Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection</td>
 <td>catalogue</td>
-<td>untouched</td>
-<td>0</td>
+<td>seeded</td>
+<td>18</td>
 </tr>
 <tr>
 <td>3</td>
@@ -648,7 +1086,7 @@ details.schema table { font-size: 12px; }
 <td>5</td>
 <td><a href="#crew-types">Crew types</a></td>
 <td>The ship</td>
-<td>Humanoid, robot, and whatever else</td>
+<td>What a crew is made of, and what endurance means — the five crews themselves are rows in ship parts</td>
 <td>catalogue</td>
 <td>untouched</td>
 <td>0</td>
@@ -660,7 +1098,7 @@ details.schema table { font-size: 12px; }
 <td>Charged moves, if components have them: boost, teleport, others — unresolved</td>
 <td>catalogue</td>
 <td>partial</td>
-<td>2 (2 stub)</td>
+<td>4 (1 stub)</td>
 </tr>
 <tr>
 <td>7</td>
@@ -687,7 +1125,7 @@ details.schema table { font-size: 12px; }
 <td>What lives on a split: hazards that hurt or move you, pockets that pay</td>
 <td>catalogue</td>
 <td>partial</td>
-<td>2 (2 stub)</td>
+<td>3 (2 stub)</td>
 </tr>
 <tr>
 <td>10</td>
@@ -720,7 +1158,7 @@ details.schema table { font-size: 12px; }
 <td>13</td>
 <td><a href="#collectors">Collectors</a></td>
 <td>Money &amp; points</td>
-<td>Equipment that opens a pool</td>
+<td>Equipment that opens a pool, or fills a hold you cash in later</td>
 <td>catalogue</td>
 <td>untouched</td>
 <td>0</td>
@@ -750,7 +1188,7 @@ details.schema table { font-size: 12px; }
 <td>Every income, every cost, every shop, and when each happens</td>
 <td>parameters</td>
 <td>partial</td>
-<td>10 (3 stub)</td>
+<td>12 (3 stub)</td>
 </tr>
 <tr>
 <td>17</td>
@@ -767,9 +1205,9 @@ details.schema table { font-size: 12px; }
 </section>
 
 <section class="area" id="area-ship">
-<h2>The ship <span class="count">1/7 started</span></h2>
+<h2>The ship <span class="count">2/7 started</span></h2>
 <details class="element" id="frames">
-<summary><span class="t">Frames</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Starting kits: the engine, shields and crew a ship begins with</span></summary>
+<summary><span class="t">Frames</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Starting kits: the engine, shields and crew a ship begins with — or nothing, if starting stock in the shop replaces them (open)</span></summary>
 <div class="body"><p>The starting kit. Before anything else, the player picks a frame, and a frame
 comes with an engine, shields, and a crew already fitted. The ship starts with
 four slots, so after choosing a frame there is one slot left and the first
@@ -824,8 +1262,8 @@ them. The choice of crew inside the frame may be the whole difference between
 frames, or frames may differ in the engine and shields too; not said.</p>
 </div>
 </details>
-<details class="element" id="ship-parts">
-<summary><span class="t">Ship parts</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection</span></summary>
+<details class="element" id="ship-parts" open>
+<summary><span class="t">Ship parts</span><span class="status seeded">seeded</span><span class="rows">18 rows</span><span class="w">Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection</span></summary>
 <div class="body"><p>Components you install. A ship has a limited number of <strong>slots</strong>, and the
 slots are the budget: you decide what to prioritise. A part moves the ship&#39;s
 stats and may carry a downside; it is bought with credits and takes a slot.
@@ -895,13 +1333,68 @@ is still not bought; it comes from speed and crew.</p>
 <p>Arrows, never numbers. <code>↑</code> is some, <code>↑↑</code> is a lot, <code>↑↑↑</code> is the reason to buy
 it. The build stage turns arrows into values.</p>
 </div></details>
-<h3>Parts</h3><p class="empty">No rows yet.</p>
+<h3>Parts</h3><div class="rows"><div class="row seeded"><div class="t">Speed-focused engine<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">engine</span></div><div class="f"><span class="l">does</span><span class="v">Moderate acceleration and low handling.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Thrust↑ Handling↓</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> accelerates harder again. <strong>L3</strong> harder again, and grants a <strong>boost</strong> ability that carries no gravity cost while it runs — neither crew nor ship feel it.</span></div></div><div class="row seeded"><div class="t">Handling-focused engine<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">engine</span></div><div class="f"><span class="l">does</span><span class="v">Moderate handling and low acceleration.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Handling↑ Thrust↓</code></span></div><div class="f"><span class="l">slots</span><span class="v">1, 2 at L3</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> improves handling, and accelerates a little better. <strong>L3</strong> takes a second slot, improves handling again, and grants an ability: the next three bends are taken perfectly at top speed, and if a bend is reached within three seconds of the last, extra speed is gained — then again on the third bend if it too comes within three seconds.</span></div></div><div class="row seeded"><div class="t">Balanced engine<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">engine</span></div><div class="f"><span class="l">does</span><span class="v">Moderate acceleration and moderate handling.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Thrust↑ Handling↑</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> improves both a little. <strong>L3</strong> improves both again and adds basic <strong>inertia dampeners</strong>, which reduce what gravity does to the crew and to the ship.</span></div></div><div class="row seeded"><div class="t">General shields<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">shields</span></div><div class="f"><span class="l">does</span><span class="v">General defence, in three levels.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Shields↑</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong>, <strong>L3</strong> more shielding.</span></div></div><div class="row seeded"><div class="t">Deflector shields<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">shields</span></div><div class="f"><span class="l">does</span><span class="v">A chance to deflect a hazard away from the ship and into a nearby ship or another hazard.</span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v">Higher levels raise the chance.</span></div></div><div class="row seeded"><div class="t">Collector shield<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">shields</span></div><div class="f"><span class="l">does</span><span class="v">A weaker shield than the plain one, which doubles as a dark matter collector.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Shields↑ charge↓</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> shields a little better but recharges slowly, and collects dark matter — less than a level 1 dark matter collector. <strong>L3</strong> collects better, and adds an ability: a weapon or moving fixture that hits the ship at full shields is <strong>collected</strong>, and collected fixtures sell for credits at the end of the race. Storage capacity scales with the ship&#39;s total shield capacity, so more shields fitted means more room.</span></div><div class="f"><span class="l">pairs with</span><span class="v">dark matter engine, a second shield</span></div></div><div class="row seeded"><div class="t">Dark matter engine<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">engine</span></div><div class="f"><span class="l">does</span><span class="v">Low acceleration and low handling, but drastically better speed and handling entering and leaving corners caused by or near a black hole, and no damage from black holes at all.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Thrust↓ Handling↓</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> accelerates slightly better and adds a <strong>boost</strong> ability. The boost leaves a small black hole behind it as a fixture, which throws ships without a dark matter engine a little off course. <strong>L3</strong> recharges the boost faster while you are collecting dark matter.</span></div><div class="f"><span class="l">pairs with</span><span class="v">dark matter collector</span></div></div><div class="row seeded"><div class="t">Navigation system<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">navigation</span></div><div class="f"><span class="l">does</span><span class="v">Lets you select your direction at more splits.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Nav↑</code></span></div><div class="f"><span class="l">slots</span><span class="v">1, 2 at L3</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> reveals splits and sectors you have not seen — as the track grows, or as opponents add to it — and lets you set a direction on every split before the heat starts. <strong>L3</strong> takes a second slot and lets you re-select split directions at any lap completion or pit stop.</span></div></div><div class="row seeded"><div class="t">Dark matter collector<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">collection</span></div><div class="f"><span class="l">does</span><span class="v">Collects dark matter.</span></div><div class="f"><span class="l">slots</span><span class="v">1, 2 at L3</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> collects more. <strong>L3</strong> collects more again, takes a second slot, and lets you turn dark matter in for credits at any pit stop or lap start.</span></div><div class="f"><span class="l">pairs with</span><span class="v">dark matter engine</span></div></div><div class="row seeded"><div class="t">Solar ion collector<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">collection</span></div><div class="f"><span class="l">does</span><span class="v">Improves speed and handling while the ship is on the golden path.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Thrust↑ Handling↑</code> on path</span></div><div class="f"><span class="l">slots</span><span class="v">1, 2 at L3</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> improves both again. <strong>L3</strong> also raises shields and ability recharge, and takes a second slot.</span></div></div><div class="row seeded"><div class="t">Human scientists<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">crew</span></div><div class="f"><span class="l">does</span><span class="v">Weak endurance, and upgrades cost less.</span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div></div><div class="row seeded"><div class="t">Engineers<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">crew</span></div><div class="f"><span class="l">does</span><span class="v">Regular endurance; shields and abilities recharge faster.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Shields↑ charge↑</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div></div><div class="row seeded"><div class="t">Mercenaries<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">crew</span></div><div class="f"><span class="l">does</span><span class="v">Weapons systems do more damage and have more range.</span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">pairs with</span><span class="v">weapons</span></div></div><div class="row seeded"><div class="t">Androids<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">crew</span></div><div class="f"><span class="l">does</span><span class="v">Very strong endurance, and navigation systems work better.</span></div><div class="f"><span class="l">moves</span><span class="v"><code>Nav↑</code></span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">pairs with</span><span class="v">navigation system</span></div></div><div class="row seeded"><div class="t">Nanites<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">crew</span></div><div class="f"><span class="l">does</span><span class="v">Strong endurance, and component expansion costs less.</span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div></div><div class="row seeded"><div class="t">Missiles<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">weapons</span></div><div class="f"><span class="l">does</span><span class="v">One missile per lap, short range.</span></div><div class="f"><span class="l">slots</span><span class="v">1, 2 at L2, 3 at L3</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> two missiles a lap at medium range, and takes a second slot. <strong>L3</strong> takes a third slot: three missiles at long range that recharge at each pit stop and lap finish.</span></div><div class="f"><span class="l">pairs with</span><span class="v">mercenaries</span></div></div><div class="row seeded"><div class="t">Gravity bombs<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">weapons</span></div><div class="f"><span class="l">does</span><span class="v">Deploys gravity mines over a small stretch of track; a mine sends a ship slightly off course.</span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> lets you pre-select where the mines are deployed. <strong>L3</strong> gives three mine placements, set before the heat.</span></div></div><div class="row seeded"><div class="t">Tractor beam<span class="status seeded">seeded</span></div><div class="f"><span class="l">category</span><span class="v">weapons</span></div><div class="f"><span class="l">does</span><span class="v">Pushes a nearby ship or fixture slightly off course.</span></div><div class="f"><span class="l">slots</span><span class="v">1</span></div><div class="f"><span class="l">upgrades</span><span class="v"><strong>L2</strong> widens the range.</span></div></div></div>
 <h3>Notes</h3><p><strong>2026-09-13.</strong> Six categories named: engines; shields and defensive systems;
 crew; navigation systems; weapons and deployables systems; collection systems.
 Crew is a category here, so crew types may end up as rows in this table with
 <code>category: crew</code> rather than a table of their own — decide when dictating
 crew. Collectors likewise (<code>category: collection</code>). The open item in the notes
 is the one this table is for: an initial set of options for each category.</p>
+<p><strong>2026-09-13, engines and the first shields.</strong> Three engines dictated as a
+triad — speed, handling, balanced — each with three levels, and two shields.
+What was said and what was not:</p>
+<ul>
+<li><strong>Levels are the upgrade path.</strong> Every engine was dictated level by level,
+so <code>does</code> holds level 1 and <code>upgrades</code> holds levels 2 and 3. The handling
+engine is the first part to grow a slot: one slot until level 3, two after.</li>
+<li><strong>Names are the dictated descriptions</strong>, not shop names. &quot;Speed focused&quot;,
+&quot;handling focused&quot;, &quot;balanced&quot; and &quot;general shields&quot; are what was said;
+flavour names can replace them later without changing the rows.</li>
+<li><strong>Nothing was said about cost, pairings or what a part is bad with</strong>, so
+those four columns are blank across all five rows.</li>
+<li><strong>General shields is the thinnest row</strong>: &quot;level 1, 2 and 3, general
+defence&quot;. It has no downside, no cost and nothing distinguishing it beyond
+being the plain option. Worth another sentence when convenient.</li>
+<li><strong>Deflector shields moves no stat that was named.</strong> Its whole effect is the
+deflection chance, so <code>moves</code> is left blank rather than guessed.</li>
+<li>Two engine abilities arrive at level 3 — a boost, and the three-bend
+chain — and one engine grants inertia dampeners. All three are flagged in
+<code>mechanics-notes.md</code>, since where abilities come from is an open question.</li>
+</ul>
+<p><strong>2026-09-13, navigation, collection, crew, weapons and a fourth engine.</strong>
+Eleven more rows, and four of the six categories now have options. What was
+said and what was not:</p>
+<ul>
+<li><strong>Crew was dictated as parts</strong>, five of them, with <code>category: crew</code>. That
+answers the question left open in the note above: crew are rows here, not a
+table of their own. <code>crew-types.md</code> is still listed as element 5 in the
+tracker — it may end up holding what endurance <em>means</em> rather than a list of
+crews, or being cut.</li>
+<li><strong>Endurance is the crew&#39;s stat</strong> and is graded weak → very strong across the
+five. It is not one of the things <code>moves</code> knows about, so it stays in <code>does</code>
+as a word until <code>ship-stats.md</code> gives it a home.</li>
+<li><strong>Three crew have no arrows</strong> because what they change is not a ship stat:
+scientists and nanites move prices, mercenaries move weapon damage and
+range.</li>
+<li><strong>Slot growth is now common.</strong> Four parts grow: navigation, both collectors
+and the missiles, which climb 1 → 2 → 3. <code>slots</code> carries the level it grows
+at.</li>
+<li><strong>Two things were said without a level attached.</strong> The dark matter engine&#39;s
+boost &quot;leaves a small black hole behind&quot; — recorded against the boost, which
+arrives at level 2, though it was said while describing level 3. And the
+solar ion collector&#39;s &quot;it takes 2 slots&quot; follows the level 3 sentence, read
+the same way as the other parts that grow at level 3. Both are worth a
+confirming word.</li>
+<li><strong>Cost, pairings and fights are still blank</strong> except where a part named
+another part: the dark matter engine and its collector, missiles and
+mercenaries, androids and the navigation system.</li>
+</ul>
+<p><strong>2026-09-13, the collector shield, and what the table still wants.</strong> One more
+shields row, and a standing to-do: <strong>more basic engines, shields and
+navigation systems are wanted</strong> — plain ones, the kind a player starts with.
+Every component so far has a hook; nothing is yet merely competent. This is
+what the frames question below hangs on: a frame only means something if there
+is a spread of ordinary parts for it to be a selection from.</p>
 </div>
 </details>
 <details class="element" id="corner-plans">
@@ -913,19 +1406,19 @@ is the one this table is for: an initial set of options for each category.</p>
 <div class="body"><p class="empty">Nothing dictated yet. Say "Nav goals." and talk.</p></div>
 </details>
 <details class="element" id="crew-types">
-<summary><span class="t">Crew types</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Humanoid, robot, and whatever else</span></summary>
+<summary><span class="t">Crew types</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">What a crew is made of, and what endurance means — the five crews themselves are rows in ship parts</span></summary>
 <div class="body"><p class="empty">Nothing dictated yet. Say "Crew types." and talk.</p></div>
 </details>
 <details class="element" id="abilities" open>
-<summary><span class="t">Abilities</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">Charged moves, if components have them: boost, teleport, others — unresolved</span></summary>
-<div class="body"><p><strong>Unresolved whether these exist.</strong> The owner&#39;s notes say it is still open
-whether some components have abilities that charge up during a race. Round 7
-asserted them and had them fire on their own when the crew judged the moment;
-that is no longer a settled mechanic. If they do exist, the notes&#39; model is:
-the player picks <em>where on the course</em> each charge is spent, before the run —
-two charges placed, a third set that fires only if enough energy has been
-collected by then. This table is the list of what an ability could be, held
-until the question is decided.</p>
+<summary><span class="t">Abilities</span><span class="status partial">partial</span><span class="rows">4 rows</span><span class="w">Charged moves, if components have them: boost, teleport, others — unresolved</span></summary>
+<div class="body"><p><strong>They exist; what is unresolved is who fires them.</strong> Dictating components
+settled the first half of the question: abilities are granted by a component&#39;s
+upgrade path, usually at level 3 — an engine grants a boost, another grants
+three perfect bends, a collector shield starts keeping what hits it. What is
+still open is the trigger. Round 7 had the crew fire them when it judged the
+moment; a later note had the player place where each charge is spent before
+the run — two charges placed, a third that fires only if enough energy has
+been collected by then. Nothing has decided between those.</p>
 
 <details class="schema"><summary>Schema</summary><div class="scroll"><table>
 <thead>
@@ -956,7 +1449,7 @@ until the question is decided.</p>
 </tr>
 <tr>
 <td><code>from</code></td>
-<td>which component category grants it, if said: <code>engine</code>, <code>weapons</code>, <code>collection</code>, <code>navigation</code></td>
+<td>which component category grants it, if said: <code>engine</code>, <code>shields</code>, <code>weapons</code>, <code>collection</code>, <code>navigation</code> — and the level it arrives at</td>
 </tr>
 <tr>
 <td><code>status</code></td>
@@ -964,11 +1457,19 @@ until the question is decided.</p>
 </tr>
 </tbody></table>
 </div></details>
-<h3>Abilities</h3><div class="rows"><div class="row stub"><div class="t">Boost<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">A burst of speed at a spot you pick.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a straight</span></div></div><div class="row stub"><div class="t">Teleport<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">Jump to a different split of the sector you are in.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a split</span></div></div></div>
+<h3>Abilities</h3><div class="rows"><div class="row seeded"><div class="t">Boost<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A burst of speed. The speed engine&#39;s version costs no gravity while it runs; the dark matter engine&#39;s leaves a small black hole behind it, which throws ships without a dark matter engine off course.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a straight</span></div><div class="f"><span class="l">from</span><span class="v">engine — speed engine L3, dark matter engine L2</span></div></div><div class="row seeded"><div class="t">Three perfect bends<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">The next three bends are taken perfectly at top speed, and a bend reached within three seconds of the last pays extra speed — again on the third if it too comes in time.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a run of bends close together</span></div><div class="f"><span class="l">from</span><span class="v">engine — handling engine L3</span></div></div><div class="row seeded"><div class="t">Capture<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A weapon or moving fixture that hits the ship at full shields is kept, and sells for credits when the race ends.</span></div><div class="f"><span class="l">spends</span><span class="v">nothing said; storage scales with total shield capacity</span></div><div class="f"><span class="l">wants</span><span class="v">a rival who shoots at you</span></div><div class="f"><span class="l">from</span><span class="v">shields — collector shield L3</span></div></div><div class="row stub"><div class="t">Teleport<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">Jump to a different split of the sector you are in.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a split</span></div></div></div>
 <h3>Notes</h3><p><strong>2026-09-13.</strong> Round 7 names four example abilities — Brace, Rake, Burn,
 Scoop — as examples, not a fixed set. They are not in these notes and are left
 off this table until the owner names them. Boost and Teleport are the two the
 notes name, as examples of what placing a charge could do.</p>
+<p><strong>2026-09-13, from dictating components.</strong> Three abilities arrived attached to
+parts rather than named on their own, so they are rows here and in
+<code>ship-parts.md</code> both — the part says which component grants it, this table
+says what it does. &quot;Three perfect bends&quot; and &quot;Capture&quot; are descriptions, not
+dictated names: the owner named the effect, not the ability. Boost is one row
+though two engines grant it, because what differs is the engine, not the move.
+Note that the dark matter engine&#39;s boost creates a <strong>fixture</strong> mid-race, which
+is the first ability that changes the track.</p>
 </div>
 </details>
 <details class="element" id="ship-stats">
@@ -1031,7 +1532,7 @@ equivalents of braking zone, apex and curb are &quot;may need&quot; — not yet 
 </div>
 </details>
 <details class="element" id="off-path-features" open>
-<summary><span class="t">Off-path features</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">What lives on a split: hazards that hurt or move you, pockets that pay</span></summary>
+<summary><span class="t">Off-path features</span><span class="status partial">partial</span><span class="rows">3 rows</span><span class="w">What lives on a split: hazards that hurt or move you, pockets that pay</span></summary>
 <div class="body"><p>What lives on a split besides the road: hazards that hurt or move the ship,
 pockets that pay. Every split has a few properties — whether it is on the
 golden path, whether it carries a resource or another energy type — and may
@@ -1074,7 +1575,7 @@ carry features from this table.</p>
 </tr>
 </tbody></table>
 </div></details>
-<h3>Features</h3><div class="rows"><div class="row stub"><div class="t">Gravity well<span class="status stub">stub</span></div><div class="f"><span class="l">kind</span><span class="v">hazard</span></div></div><div class="row stub"><div class="t">Solar storm<span class="status stub">stub</span></div><div class="f"><span class="l">kind</span><span class="v">hazard</span></div></div></div>
+<h3>Features</h3><div class="rows"><div class="row stub"><div class="t">Gravity well<span class="status stub">stub</span></div><div class="f"><span class="l">kind</span><span class="v">hazard</span></div></div><div class="row stub"><div class="t">Solar storm<span class="status stub">stub</span></div><div class="f"><span class="l">kind</span><span class="v">hazard</span></div></div><div class="row seeded"><div class="t">Black hole<span class="status seeded">seeded</span></div><div class="f"><span class="l">kind</span><span class="v">hazard</span></div><div class="f"><span class="l">effect</span><span class="v"><code>damages</code> · <code>bounces</code></span></div><div class="f"><span class="l">does</span><span class="v">Terrain as much as hazard: a corner can be caused by, or sit near, a black hole. A ship built for them takes such a corner far faster and takes no damage from it at all.</span></div><div class="f"><span class="l">answer</span><span class="v">a dark matter engine</span></div></div></div>
 <h3>Notes</h3><p><strong>2026-09-13.</strong> Two hazards named, gravity wells and solar storms, with no
 effect stated for either. The kinds of effect are stated generally — things
 that slow you, speed you up, bounce you off the track for a few seconds, or if
@@ -1082,6 +1583,14 @@ you power into them push you to another split of the sector — and are the
 <code>effect</code> vocabulary above. Which hazard does which is not said. Whether a
 split is on the golden path and whether it has a resource are properties of
 the split, not features on it; they belong to whatever describes a split.</p>
+<p><strong>2026-09-13, from dictating the dark matter engine.</strong> Black holes arrived
+sideways, as the thing that engine is built for, so the row above is what the
+engine&#39;s description implies rather than a feature dictated on its own terms.
+What is new about it is that a hazard can <strong>shape the track</strong> — &quot;corners
+caused by or near a black hole&quot; — where every other feature sits on a split
+that exists without it. A small one can also be created mid-race, by that
+engine&#39;s boost, which makes it the only feature a player can put down while
+racing.</p>
 </div>
 </details>
 <details class="element" id="fixtures">
@@ -1153,7 +1662,7 @@ names them again or cuts them.</p>
 <section class="area" id="area-money">
 <h2>Money &amp; points <span class="count">1/4 started</span></h2>
 <details class="element" id="collectors">
-<summary><span class="t">Collectors</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Equipment that opens a pool</span></summary>
+<summary><span class="t">Collectors</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Equipment that opens a pool, or fills a hold you cash in later</span></summary>
 <div class="body"><p class="empty">Nothing dictated yet. Say "Collectors." and talk.</p></div>
 </details>
 <details class="element" id="pools">
@@ -1165,15 +1674,22 @@ names them again or cuts them.</p>
 <div class="body"><p class="empty">Nothing dictated yet. Say "Declarations." and talk.</p></div>
 </details>
 <details class="element" id="economy-flow" open>
-<summary><span class="t">Economy flow</span><span class="status partial">partial</span><span class="rows">10 rows</span><span class="w">Every income, every cost, every shop, and when each happens</span></summary>
+<summary><span class="t">Economy flow</span><span class="status partial">partial</span><span class="rows">12 rows</span><span class="w">Every income, every cost, every shop, and when each happens</span></summary>
 <div class="body"><p>Every income, every cost, every shop, and when each one happens. This is
 parameters rather than a catalogue: a short list, confirmed rather than
 invented.</p>
 
 <h3>Shops</h3><p>What can be bought, and where. From the notes so far.</p>
 <div class="rows"><div class="row seeded"><div class="t">components<span class="status seeded">seeded</span></div><div class="f"><span class="l">sells</span><span class="v">ship parts, from a random selection</span></div><div class="f"><span class="l">when</span><span class="v">after the frame is chosen; pit stops; lap ends</span></div></div><div class="row seeded"><div class="t">upgrades<span class="status seeded">seeded</span></div><div class="f"><span class="l">sells</span><span class="v">upgrades for a part already fitted</span></div><div class="f"><span class="l">when</span><span class="v">once the part is fitted</span></div></div><div class="row stub"><div class="t">capacity<span class="status stub">stub</span></div><div class="f"><span class="l">sells</span><span class="v">component slots</span></div><div class="f"><span class="l">when</span><span class="v">not said</span></div></div><div class="row stub"><div class="t">augments<span class="status stub">stub</span></div><div class="f"><span class="l">sells</span><span class="v">track augments</span></div><div class="f"><span class="l">when</span><span class="v">not said</span></div></div><div class="row stub"><div class="t">maintenance<span class="status stub">stub</span></div><div class="f"><span class="l">sells</span><span class="v">repair of damage taken during parts of the race</span></div><div class="f"><span class="l">when</span><span class="v">likely; not said</span></div></div></div>
-<h3>Income</h3><div class="rows"><div class="row seeded"><div class="t">purse<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">finish order in a heat</span></div><div class="f"><span class="l">when</span><span class="v">heat end</span></div></div><div class="row seeded"><div class="t">pools<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">time on path, time wide, damage dealt — shared, capped</span></div><div class="f"><span class="l">when</span><span class="v">each pit stop, per lap</span></div></div><div class="row seeded"><div class="t">interest<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">credits held through a pit stop, to a cap</span></div><div class="f"><span class="l">when</span><span class="v">pit stop</span></div></div><div class="row seeded"><div class="t">pacing-lap<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">your time on the pacing lap against the track&#39;s benchmarks</span></div><div class="f"><span class="l">when</span><span class="v">after the pacing lap</span></div></div><div class="row seeded"><div class="t">finish-slot<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">one extra component slot</span></div><div class="f"><span class="l">when</span><span class="v">every race you finish</span></div></div></div>
-<h3>Notes</h3><p><strong>2026-09-13.</strong> The shops list is the notes&#39; &quot;shops (so far)&quot;: ship
+<h3>Income</h3><div class="rows"><div class="row seeded"><div class="t">purse<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">finish order in a heat</span></div><div class="f"><span class="l">when</span><span class="v">heat end</span></div></div><div class="row seeded"><div class="t">pools<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">time on path, time wide, damage dealt — shared, capped</span></div><div class="f"><span class="l">when</span><span class="v">each pit stop, per lap</span></div></div><div class="row seeded"><div class="t">interest<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">credits held through a pit stop, to a cap</span></div><div class="f"><span class="l">when</span><span class="v">pit stop</span></div></div><div class="row seeded"><div class="t">pacing-lap<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">your time on the pacing lap against the track&#39;s benchmarks</span></div><div class="f"><span class="l">when</span><span class="v">after the pacing lap</span></div></div><div class="row seeded"><div class="t">finish-slot<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">one extra component slot</span></div><div class="f"><span class="l">when</span><span class="v">every race you finish</span></div></div><div class="row seeded"><div class="t">dark-matter<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">dark matter turned in for credits, with a level 3 collector</span></div><div class="f"><span class="l">when</span><span class="v">any pit stop or lap start</span></div></div><div class="row seeded"><div class="t">salvage<span class="status seeded">seeded</span></div><div class="f"><span class="l">pays for</span><span class="v">weapons and moving fixtures a full shield caught, sold</span></div><div class="f"><span class="l">when</span><span class="v">race end</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13, from dictating components.</strong> Two incomes arrived attached to
+parts. Dark matter is no longer one of round 7&#39;s shared pools: it is collected
+in the race and held, it feeds a dark matter engine&#39;s boost, and only a level 3
+collector can turn it into credits. Salvage is new money entirely — a
+collector shield that is hit at full shields keeps the weapon or moving
+fixture, and the haul sells when the race ends. Both make a rival&#39;s aggression
+into someone&#39;s income.</p>
+<p><strong>2026-09-13.</strong> The shops list is the notes&#39; &quot;shops (so far)&quot;: ship
 components, component capacity, track augments, and probably maintenance. The
 pacing-lap payout is against benchmarks for the track, not against other
 players. The +1 slot per finished race is a reward, so it is income here
@@ -1202,11 +1718,17 @@ also fall between heats was raised in round 6&#39;s notes and left open in round
 <section id="mechanics-notes" class="notes-section">
 <h2>Mechanics notes</h2>
 <div class="scroll"><p>Things said during dictation that change a <strong>mechanic</strong> rather than populate
-one. The framework is pinned to
-<a href="../rounds/round-07/sharpened.md">round 7</a>; it does not move because a
-catalogue entry needed it to. This file is the record of where the owner&#39;s
-later notes and round 7 differ, so that when the framework is next rewritten,
-nothing is lost and nothing stale survives.</p>
+one. The framework does not move because a catalogue entry needed it to: a
+note lands here first, and the framework is rewritten only when the owner asks
+for a pass.</p>
+<p><strong>Reconciled 2026-09-13.</strong> That pass has now run once. Every <code>supersedes</code> and
+<code>adds</code> row below is worked into <a href="framework.md"><code>framework.md</code></a>, which is the
+pinned framework from here on; <a href="../rounds/round-07/sharpened.md">round 7</a> is
+unchanged on disk, because rounds are append-only and are the record of how we
+got here. The <code>open</code> rows were <strong>not</strong> resolved — they are carried into the
+framework&#39;s &quot;Open calls&quot; section, still waiting on the owner. Nothing below is
+deleted or edited: this table stays the history, and new notes append to it as
+before.</p>
 <p>Three kinds of row. <strong>Supersedes</strong> — the note plainly replaces something round
 7 or the catalogue said; the catalogue has been changed to match and the old
 version is recorded here, not left standing. <strong>Adds</strong> — new, contradicts
@@ -1300,11 +1822,101 @@ changed on it.</p>
 <td>Where <strong>track augments and fixtures come from</strong> — the shop, or a component that grants one when upgraded far enough.</td>
 <td>Not decided in round 7 either. The notes lean shop-first.</td>
 </tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>Abilities come from a component&#39;s third upgrade level.</strong> Dictating engines named two: the speed engine&#39;s boost, and the handling engine&#39;s three-bend chain.</td>
+<td>Bears on the abilities row above, which is still open. This says <em>where</em> an ability comes from — an upgrade path, not a component as bought — but not who fires it or when. The open row stands.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>An ability can suspend the swing</strong>: the handling engine at level 3 takes the next three bends perfectly at top speed, and pays extra speed for each bend reached within three seconds of the last.</td>
+<td>Round 7 makes the swing the price of speed at every bend, and the corner plan the only lever on it. A charged ability that removes the swing outright, and rewards bends taken in quick succession, is a new kind of lever on the core mechanic.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>Gravity acts on the ship, not only the crew.</strong> The balanced engine&#39;s level-3 inertia dampeners &quot;decrease the impact of gravity on crew and ship&quot;.</td>
+<td>Round 7 had gravity as a crew effect: hard acceleration wears a humanoid crew and a robot ignores it. What gravity costs the ship is new and not yet said.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td><strong>Hazards can be deflected.</strong> Deflector shields have a chance to throw a hazard into a nearby ship or into another hazard, and the chance rises with level.</td>
+<td>The ledger closed this in round 3: &quot;shields deflect objects — rejected: nothing to deflect without collisions; two shield modes is one too many.&quot; It is back, now aimed at ships and hazards rather than at nothing. It does not break &quot;ships do not touch&quot; — round 7&#39;s Rake already reaches a rival — but it is a second channel for one ship to damage another, and the ledger entry is superseded rather than still standing.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td><strong>Re-planning your route at a break point is a Navigation level 3 privilege</strong>, not something every ship can do. Level 1 lets you select at more splits; level 2 sets a direction on every split before the heat; level 3 re-selects at any lap completion or pit stop.</td>
+<td>Supersedes the earlier note above that &quot;the course is set before a race and again at break points&quot;, which read as available to everyone. Nav is now the gate on all three: how many splits you may choose at, whether you may plan the whole heat, and whether you may change your mind mid-heat.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td><strong>Dark matter is collected and held, then turned in for credits</strong> — and only a level-3 collector can turn it in, at a pit stop or lap start.</td>
+<td>Round 7: &quot;Collectors open a pool... Pools pay their lap&#39;s share at each pit stop&quot;, dark matter paid by time off the path. Dark matter is now inventory with two sinks — credits at level 3, and recharging the dark matter engine&#39;s boost — rather than an automatic share. Whether the other two pools still pay automatically is untouched.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>Black holes are track features that bend the track.</strong> Corners are &quot;caused by or near&quot; a black hole, and a ship can be immune to black hole damage entirely.</td>
+<td>Round 7&#39;s track is checkpoints, sectors, splits, bends and hazards; no hazard shapes the track&#39;s geometry. A black hole that creates a corner is both terrain and hazard, and the dark matter engine reads it as terrain while others read it as danger. Off-path features will need it.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td><strong>A fixture can be created during a race by an ability</strong>, unannounced, and it discriminates by build: the dark matter engine&#39;s boost leaves a small black hole that throws off only ships without a dark matter engine.</td>
+<td>Round 7: &quot;Fixtures are bought and placed before the heat, shown to all three ships before the start.&quot; Neither half survives here — it is placed mid-race and nobody sees it coming. Also the first concrete answer to the open row above on where fixtures come from: a component, not the shop.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>Weapons push ships off course away from bends, and have range.</strong> Gravity mines and the tractor beam displace a ship on any stretch of track; missiles come in short, medium and long range. The tractor beam also pushes a <strong>fixture</strong> off course.</td>
+<td>Round 7 has one way to leave the golden path: the swing at a bend, priced by the corner plan. Displacement by a weapon is a second way, and it is not the victim&#39;s choice. Round 7&#39;s weapon targeting was &quot;the nearest rival&quot; with no range concept. A fixture that can be shoved is new — fixtures were fixed to a sector.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>Endurance is a crew stat</strong>, dictated per crew type: weak (scientists), regular (engineers), strong (nanites), very strong (androids). Crew also carry economic discounts — scientists cut upgrade costs, nanites cut component-expansion costs.</td>
+<td>Round 7 had crew wear under gravity, humanoid versus robot, and a repair bill. &quot;Endurance&quot; names that resistance as a stat and grades it across five crew rather than two. Ship stats will need the word. The two discounts are different sinks — upgrading a fitted part versus expanding capacity — and which is which matters to the shop.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>open</td>
+<td>Whether the <strong>solar ion collector still opens the solar pool</strong>. As dictated it is a buff — speed and handling on the golden path, shields and recharge at level 3 — and collecting is not mentioned.</td>
+<td>Round 7 made Solar Vane a collector that opened the solar pool by time on the path. The dark matter collector was dictated as collecting; this one was not. Either solar is no longer a pool, or the collecting went without saying.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>open</td>
+<td><strong>Frames may not be a thing.</strong> Either a frame is just a collection of components — engine, shield, nav, crew — which needs a few more basic components before it means anything, or the simpler version: a player starts with some components already in their <strong>shop</strong> and chooses which to deploy. The owner leans to the second, &quot;probably easier&quot;, but did not call it.</td>
+<td>Round 7 and the earlier note above open the season with a starting frame, then the shop, then the pacing lap. The second option deletes the frame stage: the season opens at the shop with stock already in it. Nothing has been changed — <code>frames.md</code> (element 1) and <code>season-structure.md</code> still say frame first. This is the one call that would retire a catalogue element.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>The shop is a place components live, not just a place they are sold.</strong> The verbs named: purchase, hold in the shop, add to the ship, remove from the ship, sell for parts.</td>
+<td>Round 7&#39;s shop is a moment between heats where credits become parts. Holding unfitted components, and moving them on and off the ship, makes it an inventory the player keeps across heats — with slots as the on-ship budget and the shop as the off-ship store. Selling components back is a new way out of a build.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>A shield can capture incoming weapons and fixtures and sell them.</strong> At full shields the collector shield takes the weapon or moving fixture that hit it; the haul sells for credits when the race ends.</td>
+<td>Round 7&#39;s shields absorb, deflect above half, and regenerate. Capturing the thing that hit you is new, and it makes a weapon-heavy field into someone else&#39;s income. It also implies a fixture can be in motion — which the tractor beam and the boost&#39;s black hole already suggested.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>adds</td>
+<td><strong>A stat can be the sum of several fitted components</strong>: collected-fixture storage scales with the ship&#39;s <em>total</em> shield capacity, and fitting more than one shield raises it.</td>
+<td>The first stat in the catalogue that reads across parts rather than from one. It also confirms plainly that a category can be fitted more than once — two shields is a build, not a mistake — which the slot budget allowed but nothing had yet used on purpose.</td>
+</tr>
 </tbody></table>
 </div>
 </section>
 
-<footer>Rendered from <code>design/catalogue/</code> by <code>npm run mechanics-page</code>. The framework is <a href="round-07.html">round 7</a>.</footer>
+<footer>Rendered from <code>design/catalogue/</code> by <code>npm run mechanics-page</code>. The framework is <a href="#framework"><code>framework.md</code></a>, reconciled from <a href="round-07.html">round 7</a>.</footer>
 </div>
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';

@@ -49,7 +49,10 @@ interface Index {
   readonly framework: {
     readonly round: number;
     readonly title: string;
+    /** The pinned framework, relative to the catalogue. A living document. */
     readonly file: string;
+    /** The round it was reconciled from, kept as the link to the record. */
+    readonly origin?: string;
   };
   readonly areas: readonly Area[];
   readonly elements: readonly Element[];
@@ -267,11 +270,18 @@ function elementBlock(c: Counted): string {
 </details>`;
 }
 
+/** Markdown tables scroll sideways rather than squeezing on a phone. */
+const scrollTables = (html: string): string =>
+  html
+    .replace(/<table>/g, '<div class="scroll"><table>')
+    .replace(/<\/table>/g, '</table></div>');
+
 export function renderMechanics(): string {
   const index = JSON.parse(
     readFileSync(join(CATALOGUE_DIR, 'index.json'), 'utf8'),
   ) as Index;
   const overview = readIfExists(join(CATALOGUE_DIR, 'overview.html')) ?? '';
+  const framework = readIfExists(join(CATALOGUE_DIR, index.framework.file));
   const notes = readIfExists(join(CATALOGUE_DIR, 'mechanics-notes.md')) ?? '';
   const counted = index.elements.map((e) =>
     count(e, readIfExists(join(CATALOGUE_DIR, e.file))),
@@ -300,13 +310,13 @@ ${FONTS}
 <style>${STYLE}${PAGE_STYLE}</style>
 <div class="page">
 <header class="masthead">
-  <div class="eyebrow"><span>Star Race</span><span>Round ${index.framework.round}</span><span>Mechanics &amp; catalogue</span></div>
+  <div class="eyebrow"><span>Star Race</span><span>After round ${index.framework.round}</span><span>Mechanics &amp; catalogue</span></div>
   <h1>${escape(index.framework.title)}</h1>
   <p class="headline">The mechanics at a glance, then every element under each one — ${seeded} of ${counted.length} started. Rows are edited in <code>design/catalogue/</code>; this page is rendered from them.</p>
 </header>
 <nav class="toc">
   <a href="#overview">Overview</a>
-  <a href="#tracker">Tracker</a>
+${framework === undefined ? '' : '  <a href="#framework">The framework</a>\n'}  <a href="#tracker">Tracker</a>
 ${index.areas.map((a) => `  <a href="#area-${escape(a.id)}">${escape(a.name)}</a>`).join('\n')}
   <a href="#mechanics-notes">Notes</a>
   <a href="round-${String(index.framework.round).padStart(2, '0')}.html">Round ${index.framework.round}</a>
@@ -315,6 +325,16 @@ ${index.areas.map((a) => `  <a href="#area-${escape(a.id)}">${escape(a.name)}</a
 <section id="overview">
 ${overview}
 </section>
+
+${
+  framework === undefined
+    ? ''
+    : `<section id="framework" class="framework">
+<h2>The framework</h2>
+<p class="caption">The pinned framework: round ${index.framework.round} with every later dictation worked in. Edited at <code>${CATALOGUE_DIR}/${escape(index.framework.file)}</code>. Round ${index.framework.round} itself is unchanged — rounds are the record, this is the living document.</p>
+${scrollTables(renderMarkdown(framework.replace(/^# .*\n/, ''), 1))}
+</section>`
+}
 
 <section id="tracker" class="tracker">
 <h2>Tracker</h2>
@@ -329,7 +349,7 @@ ${sections}
 <div class="scroll">${renderMarkdown(notes.replace(/^# .*\n/, ''), 1)}</div>
 </section>
 
-<footer>Rendered from <code>${CATALOGUE_DIR}/</code> by <code>npm run mechanics-page</code>. The framework is <a href="round-${String(index.framework.round).padStart(2, '0')}.html">round ${index.framework.round}</a>.</footer>
+<footer>Rendered from <code>${CATALOGUE_DIR}/</code> by <code>npm run mechanics-page</code>. The framework is <a href="#framework"><code>${escape(index.framework.file)}</code></a>, reconciled from <a href="round-${String(index.framework.round).padStart(2, '0')}.html">round ${index.framework.round}</a>.</footer>
 </div>`;
 
   mkdirSync(PAGES_DIR, { recursive: true });

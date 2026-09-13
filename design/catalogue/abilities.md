@@ -1,10 +1,13 @@
 # Abilities
 
-Charged moves. Golden-path time charges the ship; an ability spends charge.
-Round 7 has them fire on their own when the crew judges the moment. The
-newest notes float a different model — see `mechanics-notes.md` — where the
-player picks _where on the course_ a charge is spent, before the run. Either
-way, this table is the list of what an ability can be.
+**Unresolved whether these exist.** The owner's notes say it is still open
+whether some components have abilities that charge up during a race. Round 7
+asserted them and had them fire on their own when the crew judged the moment;
+that is no longer a settled mechanic. If they do exist, the notes' model is:
+the player picks _where on the course_ each charge is spent, before the run —
+two charges placed, a third set that fires only if enough energy has been
+collected by then. This table is the list of what an ability could be, held
+until the question is decided.
 
 ## Schema
 
@@ -23,7 +26,7 @@ way, this table is the list of what an ability can be.
 | id       | name     | does                                                | spends | wants      | from | status |
 | -------- | -------- | --------------------------------------------------- | ------ | ---------- | ---- | ------ |
 | boost    | Boost    | A burst of speed at a spot you pick.                | charge | a straight |      | stub   |
-| teleport | Teleport | Jump to a different route of the sector you are in. | charge | a split    |      | stub   |
+| teleport | Teleport | Jump to a different split of the sector you are in. | charge | a split    |      | stub   |
 
 ## Notes
 

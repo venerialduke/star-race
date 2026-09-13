@@ -6,11 +6,14 @@ stats and may carry a downside; it is bought with credits and takes a slot.
 Parts have **upgrades**, which appear in the shop once the part is fitted and
 which can grow to take more than one slot.
 
-Against [round 7](../rounds/round-07/sharpened.md), the stats a part can move
-are **Thrust** (acceleration and top speed), **Handling** (holding speed at a
-bend), **Nav** (how much of a split is visible, how well the ship follows a
-goal), **Shields** and **Hull**. Reaction time is not bought; it comes from
-speed and crew.
+**This replaces round 7's ship model.** Round 7 said a ship _is_ six parts —
+Thrust, Handling, Navigation, Hull, Shields, Crew — one of each. The notes
+supersede that: a ship is a **frame** plus whatever fills its **slots**, and
+components come in six **categories** — engines, shields and defensive
+systems, crew, navigation, weapons and deployables, collection. Thrust,
+Handling, Hull and Shields are now **stats** that components move, not parts
+you own one of; a build might carry two engines and no weapon. Reaction time
+is still not bought; it comes from speed and crew.
 
 ## Schema
 

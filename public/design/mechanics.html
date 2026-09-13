@@ -188,7 +188,7 @@ details.schema table { font-size: 12px; }
 <header class="masthead">
   <div class="eyebrow"><span>Star Race</span><span>Round 7</span><span>Mechanics &amp; catalogue</span></div>
   <h1>Fast Ships Swing Wide</h1>
-  <p class="headline">The mechanics at a glance, then every element under each one — 5 of 17 started. Rows are edited in <code>design/catalogue/</code>; this page is rendered from them.</p>
+  <p class="headline">The mechanics at a glance, then every element under each one — 6 of 17 started. Rows are edited in <code>design/catalogue/</code>; this page is rendered from them.</p>
 </header>
 <nav class="toc">
   <a href="#overview">Overview</a>
@@ -204,388 +204,393 @@ details.schema table { font-size: 12px; }
 <section id="overview">
 <!-- The one-page graphic. Hand-authored; the sections below it on the page are rendered from the catalogue files. Only the CSS that is specific to the graphic lives here — palette and fonts come from the page. -->
 <style>
-      /* the loop */
-      .loop {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 0;
-      }
-      .step {
-        background: var(--surface);
-        border: 1px solid var(--rule);
-        border-radius: 6px;
-        padding: 8px 10px;
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 2px 10px;
-        align-items: baseline;
-      }
-      .step .k {
-        font-weight: 700;
-        font-size: 13px;
-        letter-spacing: 0.02em;
-      }
-      .step .d {
-        color: var(--ink-soft);
-        font-size: 12.5px;
-        grid-column: 2;
-      }
-      .step .d b {
-        color: var(--ink);
-        font-weight: 600;
-      }
-      .arrow {
-        text-align: center;
-        color: var(--accent);
-        font:
-          700 13px/1 'JetBrains Mono',
-          monospace;
-        padding: 3px 0;
-      }
-      .arrow small {
-        color: var(--ink-soft);
-        font-weight: 400;
-        font-size: 10.5px;
-        margin-left: 6px;
-      }
-      .step.pay {
-        border-color: var(--accent);
-      }
+  /* the loop */
+  .loop {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 10px;
+    align-items: baseline;
+  }
+  .step .k {
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+  .step .d {
+    color: var(--ink-soft);
+    font-size: 12.5px;
+    grid-column: 2;
+  }
+  .step .d b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .arrow {
+    text-align: center;
+    color: var(--accent);
+    font:
+      700 13px/1 'JetBrains Mono',
+      monospace;
+    padding: 3px 0;
+  }
+  .arrow small {
+    color: var(--ink-soft);
+    font-weight: 400;
+    font-size: 10.5px;
+    margin-left: 6px;
+  }
+  .step.pay {
+    border-color: var(--accent);
+  }
 
-      /* groups */
-      .card {
-        background: var(--surface);
-        border: 1px solid var(--rule);
-        border-radius: 6px;
-        padding: 10px 10px 8px;
-      }
-      .grid2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-      }
-      .box {
-        border: 1px solid var(--rule);
-        border-radius: 4px;
-        padding: 6px 7px;
-        background: var(--ground);
-      }
-      .box .k {
-        font-size: 12.5px;
-        font-weight: 700;
-        display: block;
-        margin-bottom: 1px;
-      }
-      .box .d {
-        font-size: 11.5px;
-        color: var(--ink-soft);
-        line-height: 1.3;
-      }
-      .box.wide {
-        grid-column: 1 / -1;
-      }
-      .box.hi {
-        border-color: var(--accent);
-      }
-      .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        margin-top: 8px;
-      }
-      .chip {
-        font:
-          600 10px/1 'JetBrains Mono',
-          monospace;
-        color: var(--accent-ink);
-        border: 1px dashed var(--accent);
-        border-radius: 3px;
-        padding: 3px 5px;
-      }
-      .chip::before {
-        content: '◇ ';
-      }
+  /* groups */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 10px 10px 8px;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .box {
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 6px 7px;
+    background: var(--ground);
+  }
+  .box .k {
+    font-size: 12.5px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 1px;
+  }
+  .box .d {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    line-height: 1.3;
+  }
+  .box.wide {
+    grid-column: 1 / -1;
+  }
+  .box.hi {
+    border-color: var(--accent);
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .chip {
+    font:
+      600 10px/1 'JetBrains Mono',
+      monospace;
+    color: var(--accent-ink);
+    border: 1px dashed var(--accent);
+    border-radius: 3px;
+    padding: 3px 5px;
+  }
+  .chip::before {
+    content: '◇ ';
+  }
 
-      /* svg graph */
-      svg {
-        display: block;
-        width: 100%;
-        height: auto;
-        margin: 2px 0 6px;
-      }
-      svg text {
-        font:
-          600 11px 'Chakra Petch',
-          system-ui,
-          sans-serif;
-        fill: var(--ink);
-      }
-      svg text.s {
-        font:
-          400 9.5px 'Source Serif 4',
-          serif;
-        fill: var(--ink-soft);
-      }
-      svg .n {
-        fill: var(--chip);
-        stroke: var(--rule);
-      }
-      svg .n.hi {
-        stroke: var(--accent);
-        stroke-width: 1.5;
-      }
-      svg .e {
-        stroke: var(--ink-soft);
-        fill: none;
-        stroke-width: 1.3;
-        marker-end: url(#m);
-      }
-      svg .e.hi {
-        stroke: var(--accent);
-      }
+  /* svg graph */
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 2px 0 6px;
+  }
+  svg text {
+    font:
+      600 11px 'Chakra Petch',
+      system-ui,
+      sans-serif;
+    fill: var(--ink);
+  }
+  svg text.s {
+    font:
+      400 9.5px 'Source Serif 4',
+      serif;
+    fill: var(--ink-soft);
+  }
+  svg .n {
+    fill: var(--chip);
+    stroke: var(--rule);
+  }
+  svg .n.hi {
+    stroke: var(--accent);
+    stroke-width: 1.5;
+  }
+  svg .e {
+    stroke: var(--ink-soft);
+    fill: none;
+    stroke-width: 1.3;
+    marker-end: url(#m);
+  }
+  svg .e.hi {
+    stroke: var(--accent);
+  }
 </style>
 
-    <h2>The loop</h2>
-    <div class="loop">
-      <div class="step">
-        <span class="k">Board</span
-        ><span class="d"
-          >fit parts · set a <b>corner plan</b> · pick a <b>nav goal</b> · place fixtures
-          · <b>declare</b> a line or don't</span
-        >
-      </div>
-      <div class="arrow">↓</div>
-      <div class="step">
-        <span class="k">Run</span
-        ><span class="d"
-          >ship flies itself · ≤30 s · <b>swings at every bend</b> · abilities fire on
-          their own</span
-        >
-      </div>
-      <div class="arrow">↓</div>
-      <div class="step">
-        <span class="k">Pit stop</span
-        ><span class="d"
-          >all restart level · <b>clock keeps running</b> · tracking bar shows who leads ·
-          small buys</span
-        >
-      </div>
-      <div class="arrow">↓<small>lap 2 = run again, same 3 ships</small></div>
-      <div class="step pay">
-        <span class="k">Payout</span
-        ><span class="d"
-          ><b>credits</b> ← purse + pools &nbsp;·&nbsp; <b>points</b> ← finish order +
-          margin</span
-        >
-      </div>
-      <div class="arrow">↓</div>
-      <div class="step">
-        <span class="k">Between heats</span
-        ><span class="d">shop, or hold for interest · new group of three</span>
-      </div>
-      <div class="arrow">↓<small>every few heats</small></div>
-      <div class="step">
-        <span class="k">Phase end</span
-        ><span class="d"
-          ><b>the cut</b> — below the line is out · then the <b>track grows</b></span
-        >
-      </div>
-    </div>
+<h2>The loop</h2>
+<div class="loop">
+  <div class="step">
+    <span class="k">Start</span
+    ><span class="d"
+      >pick a <b>frame</b> — engine, shields, crew in 3 of 4 slots · shop for the fourth ·
+      a <b>pacing lap</b> alone, paid against the track's par</span
+    >
+  </div>
+  <div class="arrow">↓<small>once, then the loop</small></div>
+  <div class="step">
+    <span class="k">Board</span
+    ><span class="d"
+      >fill your <b>slots</b> · set a <b>corner plan</b> · pick a <b>nav goal</b> · place
+      fixtures · <b>declare</b> a line or don't</span
+    >
+  </div>
+  <div class="arrow">↓</div>
+  <div class="step">
+    <span class="k">Run</span
+    ><span class="d"
+      >ship flies itself · ≤30 s · <b>swings at every bend</b> · charged abilities, if the
+      build has them, fire where they were set</span
+    >
+  </div>
+  <div class="arrow">↓</div>
+  <div class="step">
+    <span class="k">Pit stop</span
+    ><span class="d"
+      >all restart level · <b>clock keeps running</b> · tracking bar shows who leads ·
+      small buys</span
+    >
+  </div>
+  <div class="arrow">↓<small>lap 2 = run again, same 3 ships</small></div>
+  <div class="step pay">
+    <span class="k">Payout</span
+    ><span class="d"
+      ><b>credits</b> ← purse + pools &nbsp;·&nbsp; <b>points</b> ← finish order +
+      margin</span
+    >
+  </div>
+  <div class="arrow">↓</div>
+  <div class="step">
+    <span class="k">Between heats</span
+    ><span class="d">shop, or hold for interest · new group of three</span>
+  </div>
+  <div class="arrow">↓<small>every few heats</small></div>
+  <div class="step">
+    <span class="k">Phase end</span
+    ><span class="d"
+      ><b>the cut</b> — below the line is out · then the <b>track grows</b></span
+    >
+  </div>
+</div>
 
-    <h2>The ship</h2>
-    <div class="card">
-      <svg viewBox="0 0 350 178" aria-label="How the ship's stats feed each other">
-        <defs>
-          <marker
-            id="m"
-            viewBox="0 0 8 8"
-            refX="7"
-            refY="4"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto"
-          >
-            <path d="M0,0 L8,4 L0,8 z" fill="var(--ink-soft)" />
-          </marker>
-        </defs>
-        <!-- nodes -->
-        <rect class="n" x="4" y="8" width="64" height="26" rx="4" />
-        <text x="36" y="25" text-anchor="middle">Thrust</text>
-        <rect class="n" x="4" y="76" width="64" height="26" rx="4" />
-        <text x="36" y="93" text-anchor="middle">Handling</text>
-        <rect class="n hi" x="112" y="8" width="72" height="26" rx="4" />
-        <text x="148" y="25" text-anchor="middle">speed</text>
-        <rect class="n hi" x="112" y="76" width="72" height="26" rx="4" />
-        <text x="148" y="93" text-anchor="middle">the swing</text>
-        <rect class="n" x="112" y="140" width="72" height="26" rx="4" />
-        <text x="148" y="157" text-anchor="middle">gravity</text>
-        <rect class="n" x="234" y="8" width="80" height="26" rx="4" />
-        <text x="274" y="25" text-anchor="middle">reaction</text>
-        <rect class="n" x="234" y="76" width="80" height="26" rx="4" />
-        <text x="274" y="93" text-anchor="middle">abilities</text>
-        <rect class="n" x="234" y="140" width="80" height="26" rx="4" />
-        <text x="274" y="157" text-anchor="middle">crew wear</text>
-        <!-- edges -->
-        <path class="e" d="M68,21 L110,21" />
-        <path class="e hi" d="M148,34 L148,74" />
-        <text class="s" x="153" y="58">more speed →</text>
-        <path class="e" d="M68,89 L110,89" />
-        <text class="s" x="89" y="82" text-anchor="middle">caps it</text>
-        <path class="e" d="M184,21 L232,21" />
-        <text class="s" x="208" y="14" text-anchor="middle">fast ⇒ low</text>
-        <path class="e" d="M274,34 L274,74" />
-        <text class="s" x="279" y="58">times them</text>
-        <path class="e" d="M148,102 L148,138" />
-        <text class="s" x="153" y="123">Charge ⇒</text>
-        <path class="e" d="M184,153 L232,153" />
-        <text class="s" x="208" y="146" text-anchor="middle">if humanoid</text>
-        <path class="e" d="M274,138 L274,104" />
-        <text class="s" x="279" y="123">lowers</text>
-      </svg>
-      <div class="grid2">
-        <div class="box hi">
-          <span class="k">Corner plan</span
-          ><span class="d"
-            ><b>Lift</b> brake, no swing · <b>Carry</b> take the swing ·
-            <b>Charge</b> keep burning, widest swing, gravity</span
-          >
-        </div>
-        <div class="box">
-          <span class="k">Three layers</span
-          ><span class="d"
-            >Shields absorb, regen, deflect above half → Hull → Crew, who also time the
-            abilities</span
-          >
-        </div>
-        <div class="box">
-          <span class="k">Nav</span
-          ><span class="d"
-            >lights splits ahead · follows a goal · flies alone when the crew is out</span
-          >
-        </div>
-        <div class="box">
-          <span class="k">Crew</span
-          ><span class="d"
-            ><b>humanoid</b> reacts, gets lucky, wears · <b>robot</b> tougher, ignores
-            gravity, slower</span
-          >
-        </div>
-      </div>
-      <div class="chips">
-        <span class="chip">parts</span><span class="chip">corner plans</span
-        ><span class="chip">nav goals</span><span class="chip">crew types</span
-        ><span class="chip">abilities</span><span class="chip">stats</span>
-      </div>
+<h2>The ship</h2>
+<div class="card">
+  <svg viewBox="0 0 350 178" aria-label="How the ship's stats feed each other">
+    <defs>
+      <marker
+        id="m"
+        viewBox="0 0 8 8"
+        refX="7"
+        refY="4"
+        markerWidth="6"
+        markerHeight="6"
+        orient="auto"
+      >
+        <path d="M0,0 L8,4 L0,8 z" fill="var(--ink-soft)" />
+      </marker>
+    </defs>
+    <!-- nodes -->
+    <rect class="n" x="4" y="8" width="64" height="26" rx="4" />
+    <text x="36" y="25" text-anchor="middle">Thrust</text>
+    <rect class="n" x="4" y="76" width="64" height="26" rx="4" />
+    <text x="36" y="93" text-anchor="middle">Handling</text>
+    <rect class="n hi" x="112" y="8" width="72" height="26" rx="4" />
+    <text x="148" y="25" text-anchor="middle">speed</text>
+    <rect class="n hi" x="112" y="76" width="72" height="26" rx="4" />
+    <text x="148" y="93" text-anchor="middle">the swing</text>
+    <rect class="n" x="112" y="140" width="72" height="26" rx="4" />
+    <text x="148" y="157" text-anchor="middle">gravity</text>
+    <rect class="n" x="234" y="8" width="80" height="26" rx="4" />
+    <text x="274" y="25" text-anchor="middle">reaction</text>
+    <rect class="n" x="234" y="76" width="80" height="26" rx="4" />
+    <text x="274" y="93" text-anchor="middle">abilities</text>
+    <rect class="n" x="234" y="140" width="80" height="26" rx="4" />
+    <text x="274" y="157" text-anchor="middle">crew wear</text>
+    <!-- edges -->
+    <path class="e" d="M68,21 L110,21" />
+    <path class="e hi" d="M148,34 L148,74" />
+    <text class="s" x="153" y="58">more speed →</text>
+    <path class="e" d="M68,89 L110,89" />
+    <text class="s" x="89" y="82" text-anchor="middle">caps it</text>
+    <path class="e" d="M184,21 L232,21" />
+    <text class="s" x="208" y="14" text-anchor="middle">fast ⇒ low</text>
+    <path class="e" d="M274,34 L274,74" />
+    <text class="s" x="279" y="58">times them</text>
+    <path class="e" d="M148,102 L148,138" />
+    <text class="s" x="153" y="123">Charge ⇒</text>
+    <path class="e" d="M184,153 L232,153" />
+    <text class="s" x="208" y="146" text-anchor="middle">if humanoid</text>
+    <path class="e" d="M274,138 L274,104" />
+    <text class="s" x="279" y="123">lowers</text>
+  </svg>
+  <div class="grid2">
+    <div class="box hi">
+      <span class="k">Corner plan</span
+      ><span class="d"
+        ><b>Lift</b> brake, no swing · <b>Carry</b> take the swing · <b>Charge</b> keep
+        burning, widest swing, gravity</span
+      >
     </div>
-
-    <h2>The track</h2>
-    <div class="card">
-      <div class="grid2">
-        <div class="box wide">
-          <span class="k">checkpoint → section → checkpoint</span
-          ><span class="d"
-            >a section may <b>split</b> into routes; every route ends at the same next
-            checkpoint · some checkpoints are <b>pit stops</b></span
-          >
-        </div>
-        <div class="box hi">
-          <span class="k">Golden path</span
-          ><span class="d">the bright middle: faster, charges abilities</span>
-        </div>
-        <div class="box">
-          <span class="k">Wide</span
-          ><span class="d">slower · hazards that hurt · pockets that pay</span>
-        </div>
-        <div class="box">
-          <span class="k">Fixtures</span
-          ><span class="d">objects you own on a section — in every heat you race</span>
-        </div>
-        <div class="box">
-          <span class="k">Splits</span
-          ><span class="d">routes you own, spliced in — one heat, or all season</span>
-        </div>
-        <div class="box wide">
-          <span class="k">Growth</span
-          ><span class="d"
-            >same start for all · grows between phases · more pit stops as it grows so a
-            run stays ≤30 s</span
-          >
-        </div>
-      </div>
-      <div class="chips">
-        <span class="chip">section types</span><span class="chip">off-path features</span
-        ><span class="chip">fixtures</span><span class="chip">player splits</span
-        ><span class="chip">growth</span>
-      </div>
+    <div class="box">
+      <span class="k">Three layers</span
+      ><span class="d"
+        >Shields absorb, regen, deflect above half → Hull → Crew, who also time the
+        abilities</span
+      >
     </div>
-
-    <h2>Money &amp; points</h2>
-    <div class="card">
-      <div class="grid2">
-        <div class="box hi">
-          <span class="k">Purse</span
-          ><span class="d"
-            >by finish order · the biggest sum · winning must pay best</span
-          >
-        </div>
-        <div class="box">
-          <span class="k">Pools</span
-          ><span class="d"
-            >solar · dark matter · bounty — shared, thin as more draw,
-            <b>capped under the purse</b></span
-          >
-        </div>
-        <div class="box">
-          <span class="k">Collectors</span
-          ><span class="d">equipment that opens a pool for you</span>
-        </div>
-        <div class="box">
-          <span class="k">Interest &amp; bills</span
-          ><span class="d">held credits earn, to a cap · hurt crew costs</span>
-        </div>
-        <div class="box wide">
-          <span class="k">Points</span
-          ><span class="d"
-            >finish order + <b>margin</b> — a close loss is worth about twice a beaten one
-            · never spent · the cut line reads them</span
-          >
-        </div>
-        <div class="box wide">
-          <span class="k">Declarations</span
-          ><span class="d"
-            >bet before the heat: <b>Long Line</b> wide at every split ·
-            <b>Hold the Line</b> never leave the path · win big, lose points</span
-          >
-        </div>
-      </div>
-      <div class="chips">
-        <span class="chip">collectors</span><span class="chip">pools</span
-        ><span class="chip">declarations</span><span class="chip">economy flow</span>
-      </div>
+    <div class="box">
+      <span class="k">Nav</span
+      ><span class="d"
+        >lights splits ahead · follows a goal · flies alone when the crew is out</span
+      >
     </div>
-
-    <h2>The season</h2>
-    <div class="card">
-      <div class="grid2">
-        <div class="box">
-          <span class="k">Heat</span
-          ><span class="d">2 laps · same 3 ships · scores once</span>
-        </div>
-        <div class="box">
-          <span class="k">Phase</span
-          ><span class="d">several heats · groups redrawn each heat</span>
-        </div>
-        <div class="box wide">
-          <span class="k">The cut</span
-          ><span class="d"
-            >at phase end, everyone below a set points line is out — however many that
-            is</span
-          >
-        </div>
-      </div>
-      <div class="chips"><span class="chip">season structure</span></div>
+    <div class="box">
+      <span class="k">Crew</span
+      ><span class="d"
+        ><b>humanoid</b> reacts, gets lucky, wears · <b>robot</b> tougher, ignores
+        gravity, slower</span
+      >
     </div>
+  </div>
+  <div class="chips">
+    <span class="chip">parts</span><span class="chip">corner plans</span
+    ><span class="chip">nav goals</span><span class="chip">crew types</span
+    ><span class="chip">abilities</span><span class="chip">stats</span>
+  </div>
+</div>
 
+<h2>The track</h2>
+<div class="card">
+  <div class="grid2">
+    <div class="box wide">
+      <span class="k">checkpoint → sector → checkpoint</span
+      ><span class="d"
+        >a sector may offer several <b>splits</b> — the paths through it — and every split
+        ends at the same next checkpoint · some checkpoints are <b>pit stops</b></span
+      >
+    </div>
+    <div class="box hi">
+      <span class="k">Golden path</span
+      ><span class="d">the bright middle: faster, charges abilities</span>
+    </div>
+    <div class="box">
+      <span class="k">Wide</span
+      ><span class="d">slower · hazards that hurt · pockets that pay</span>
+    </div>
+    <div class="box">
+      <span class="k">Fixtures</span
+      ><span class="d">objects you own on a sector — in every heat you race</span>
+    </div>
+    <div class="box">
+      <span class="k">Augments</span
+      ><span class="d">a split or a whole sector you add — one heat, or all season</span>
+    </div>
+    <div class="box wide">
+      <span class="k">Growth</span
+      ><span class="d"
+        >same start for all · grows between phases · more pit stops as it grows so a run
+        stays ≤30 s</span
+      >
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip">split anatomy</span><span class="chip">off-path features</span
+    ><span class="chip">fixtures</span><span class="chip">player splits</span
+    ><span class="chip">growth</span>
+  </div>
+</div>
+
+<h2>Money &amp; points</h2>
+<div class="card">
+  <div class="grid2">
+    <div class="box hi">
+      <span class="k">Purse</span
+      ><span class="d">by finish order · the biggest sum · winning must pay best</span>
+    </div>
+    <div class="box">
+      <span class="k">Pools</span
+      ><span class="d"
+        >solar · dark matter · bounty — shared, thin as more draw,
+        <b>capped under the purse</b></span
+      >
+    </div>
+    <div class="box">
+      <span class="k">Collectors</span
+      ><span class="d">equipment that opens a pool for you</span>
+    </div>
+    <div class="box">
+      <span class="k">Interest &amp; bills</span
+      ><span class="d">held credits earn, to a cap · hurt crew costs</span>
+    </div>
+    <div class="box wide">
+      <span class="k">Points</span
+      ><span class="d"
+        >finish order + <b>margin</b> — a close loss is worth about twice a beaten one ·
+        never spent · the cut line reads them</span
+      >
+    </div>
+    <div class="box wide">
+      <span class="k">Declarations</span
+      ><span class="d"
+        >bet before the heat: <b>Long Line</b> wide at every split ·
+        <b>Hold the Line</b> never leave the path · win big, lose points</span
+      >
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip">collectors</span><span class="chip">pools</span
+    ><span class="chip">declarations</span><span class="chip">economy flow</span>
+  </div>
+</div>
+
+<h2>The season</h2>
+<div class="card">
+  <div class="grid2">
+    <div class="box">
+      <span class="k">Heat</span
+      ><span class="d">2 laps · same 3 ships · scores once</span>
+    </div>
+    <div class="box">
+      <span class="k">Phase</span
+      ><span class="d">several heats · groups redrawn each heat</span>
+    </div>
+    <div class="box wide">
+      <span class="k">The cut</span
+      ><span class="d"
+        >at phase end, everyone below a set points line is out — however many that
+        is</span
+      >
+    </div>
+  </div>
+  <div class="chips"><span class="chip">season structure</span></div>
+</div>
 
 </section>
 
@@ -616,7 +621,7 @@ details.schema table { font-size: 12px; }
 <td>2</td>
 <td><a href="#ship-parts">Ship parts</a></td>
 <td>The ship</td>
-<td>Components you install: engines, shields, crew, navigation, weapons and deployables, collection</td>
+<td>Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection</td>
 <td>catalogue</td>
 <td>untouched</td>
 <td>0</td>
@@ -652,7 +657,7 @@ details.schema table { font-size: 12px; }
 <td>6</td>
 <td><a href="#abilities">Abilities</a></td>
 <td>The ship</td>
-<td>Charged moves: Brace, Rake, Burn, Scoop, boost, teleport, others</td>
+<td>Charged moves, if components have them: boost, teleport, others — unresolved</td>
 <td>catalogue</td>
 <td>partial</td>
 <td>2 (2 stub)</td>
@@ -668,9 +673,9 @@ details.schema table { font-size: 12px; }
 </tr>
 <tr>
 <td>8</td>
-<td><a href="#section-types">Section types</a></td>
+<td><a href="#split-anatomy">Split anatomy</a></td>
 <td>The track</td>
-<td>The building blocks a route is made of: straights, corners, bends, banking</td>
+<td>The pieces a split is made of: straights, corners, bends, banking</td>
 <td>catalogue</td>
 <td>seeded</td>
 <td>4</td>
@@ -679,7 +684,7 @@ details.schema table { font-size: 12px; }
 <td>9</td>
 <td><a href="#off-path-features">Off-path features</a></td>
 <td>The track</td>
-<td>What lives on a route: hazards that hurt or move you, pockets that pay</td>
+<td>What lives on a split: hazards that hurt or move you, pockets that pay</td>
 <td>catalogue</td>
 <td>partial</td>
 <td>2 (2 stub)</td>
@@ -697,7 +702,7 @@ details.schema table { font-size: 12px; }
 <td>11</td>
 <td><a href="#track-augments">Track augments</a></td>
 <td>The track</td>
-<td>Routes or whole sectors a player adds, temporary or permanent</td>
+<td>Splits or whole sectors a player adds, temporary or permanent</td>
 <td>catalogue</td>
 <td>partial</td>
 <td>2 (2 stub)</td>
@@ -753,8 +758,8 @@ details.schema table { font-size: 12px; }
 <td>The season</td>
 <td>Pacing lap, phases, heats, groups, the cut</td>
 <td>parameters</td>
-<td>untouched</td>
-<td>0</td>
+<td>seeded</td>
+<td>5</td>
 </tr>
 </tbody></table>
 </div>
@@ -820,17 +825,20 @@ frames, or frames may differ in the engine and shields too; not said.</p>
 </div>
 </details>
 <details class="element" id="ship-parts">
-<summary><span class="t">Ship parts</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Components you install: engines, shields, crew, navigation, weapons and deployables, collection</span></summary>
+<summary><span class="t">Ship parts</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection</span></summary>
 <div class="body"><p>Components you install. A ship has a limited number of <strong>slots</strong>, and the
 slots are the budget: you decide what to prioritise. A part moves the ship&#39;s
 stats and may carry a downside; it is bought with credits and takes a slot.
 Parts have <strong>upgrades</strong>, which appear in the shop once the part is fitted and
 which can grow to take more than one slot.</p>
-<p>Against <a href="../rounds/round-07/sharpened.md">round 7</a>, the stats a part can move
-are <strong>Thrust</strong> (acceleration and top speed), <strong>Handling</strong> (holding speed at a
-bend), <strong>Nav</strong> (how much of a split is visible, how well the ship follows a
-goal), <strong>Shields</strong> and <strong>Hull</strong>. Reaction time is not bought; it comes from
-speed and crew.</p>
+<p><strong>This replaces round 7&#39;s ship model.</strong> Round 7 said a ship <em>is</em> six parts —
+Thrust, Handling, Navigation, Hull, Shields, Crew — one of each. The notes
+supersede that: a ship is a <strong>frame</strong> plus whatever fills its <strong>slots</strong>, and
+components come in six <strong>categories</strong> — engines, shields and defensive
+systems, crew, navigation, weapons and deployables, collection. Thrust,
+Handling, Hull and Shields are now <strong>stats</strong> that components move, not parts
+you own one of; a build might carry two engines and no weapon. Reaction time
+is still not bought; it comes from speed and crew.</p>
 
 <details class="schema"><summary>Schema</summary><div class="scroll"><table>
 <thead>
@@ -909,12 +917,15 @@ is the one this table is for: an initial set of options for each category.</p>
 <div class="body"><p class="empty">Nothing dictated yet. Say "Crew types." and talk.</p></div>
 </details>
 <details class="element" id="abilities" open>
-<summary><span class="t">Abilities</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">Charged moves: Brace, Rake, Burn, Scoop, boost, teleport, others</span></summary>
-<div class="body"><p>Charged moves. Golden-path time charges the ship; an ability spends charge.
-Round 7 has them fire on their own when the crew judges the moment. The
-newest notes float a different model — see <code>mechanics-notes.md</code> — where the
-player picks <em>where on the course</em> a charge is spent, before the run. Either
-way, this table is the list of what an ability can be.</p>
+<summary><span class="t">Abilities</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">Charged moves, if components have them: boost, teleport, others — unresolved</span></summary>
+<div class="body"><p><strong>Unresolved whether these exist.</strong> The owner&#39;s notes say it is still open
+whether some components have abilities that charge up during a race. Round 7
+asserted them and had them fire on their own when the crew judged the moment;
+that is no longer a settled mechanic. If they do exist, the notes&#39; model is:
+the player picks <em>where on the course</em> each charge is spent, before the run —
+two charges placed, a third set that fires only if enough energy has been
+collected by then. This table is the list of what an ability could be, held
+until the question is decided.</p>
 
 <details class="schema"><summary>Schema</summary><div class="scroll"><table>
 <thead>
@@ -953,7 +964,7 @@ way, this table is the list of what an ability can be.</p>
 </tr>
 </tbody></table>
 </div></details>
-<h3>Abilities</h3><div class="rows"><div class="row stub"><div class="t">Boost<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">A burst of speed at a spot you pick.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a straight</span></div></div><div class="row stub"><div class="t">Teleport<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">Jump to a different route of the sector you are in.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a split</span></div></div></div>
+<h3>Abilities</h3><div class="rows"><div class="row stub"><div class="t">Boost<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">A burst of speed at a spot you pick.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a straight</span></div></div><div class="row stub"><div class="t">Teleport<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">Jump to a different split of the sector you are in.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a split</span></div></div></div>
 <h3>Notes</h3><p><strong>2026-09-13.</strong> Round 7 names four example abilities — Brace, Rake, Burn,
 Scoop — as examples, not a fixed set. They are not in these notes and are left
 off this table until the owner names them. Boost and Teleport are the two the
@@ -967,11 +978,12 @@ notes name, as examples of what placing a charge could do.</p>
 </section>
 <section class="area" id="area-track">
 <h2>The track <span class="count">3/5 started</span></h2>
-<details class="element" id="section-types" open>
-<summary><span class="t">Section types</span><span class="status seeded">seeded</span><span class="rows">4 rows</span><span class="w">The building blocks a route is made of: straights, corners, bends, banking</span></summary>
-<div class="body"><p>The building blocks a route through a sector is made of. A route is a chain
-of these; where the chain differs between routes, that is what makes one
-route faster, safer, or richer than another.</p>
+<details class="element" id="split-anatomy" open>
+<summary><span class="t">Split anatomy</span><span class="status seeded">seeded</span><span class="rows">4 rows</span><span class="w">The pieces a split is made of: straights, corners, bends, banking</span></summary>
+<div class="body"><p>The pieces a split is made of. A <strong>sector</strong> is the stretch between two
+checkpoints; a <strong>split</strong> is one path through it, and a sector may offer
+several. A split is a chain of these pieces, and where the chain differs
+between splits is what makes one faster, safer, or richer than another.</p>
 
 <details class="schema"><summary>Schema</summary><div class="scroll"><table>
 <thead>
@@ -1019,9 +1031,9 @@ equivalents of braking zone, apex and curb are &quot;may need&quot; — not yet 
 </div>
 </details>
 <details class="element" id="off-path-features" open>
-<summary><span class="t">Off-path features</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">What lives on a route: hazards that hurt or move you, pockets that pay</span></summary>
-<div class="body"><p>What lives on a route besides the road: hazards that hurt or move the ship,
-pockets that pay. Every route has a few properties — whether it is on the
+<summary><span class="t">Off-path features</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">What lives on a split: hazards that hurt or move you, pockets that pay</span></summary>
+<div class="body"><p>What lives on a split besides the road: hazards that hurt or move the ship,
+pockets that pay. Every split has a few properties — whether it is on the
 golden path, whether it carries a resource or another energy type — and may
 carry features from this table.</p>
 
@@ -1046,7 +1058,7 @@ carry features from this table.</p>
 </tr>
 <tr>
 <td><code>effect</code></td>
-<td>one or more of: <code>slows</code> · <code>speeds</code> · <code>damages</code> · <code>bounces</code> (off the track for a few seconds) · <code>pushes</code> (into another route of the sector, if you power into it) · <code>pays</code> · <code>charges</code></td>
+<td>one or more of: <code>slows</code> · <code>speeds</code> · <code>damages</code> · <code>bounces</code> (off the track for a few seconds) · <code>pushes</code> (into another split of the sector, if you power into it) · <code>pays</code> · <code>charges</code></td>
 </tr>
 <tr>
 <td><code>does</code></td>
@@ -1068,8 +1080,8 @@ effect stated for either. The kinds of effect are stated generally — things
 that slow you, speed you up, bounce you off the track for a few seconds, or if
 you power into them push you to another split of the sector — and are the
 <code>effect</code> vocabulary above. Which hazard does which is not said. Whether a
-route is on the golden path and whether it has a resource are properties of
-the route, not features on it; they belong to whatever describes a route.</p>
+split is on the golden path and whether it has a resource are properties of
+the split, not features on it; they belong to whatever describes a split.</p>
 </div>
 </details>
 <details class="element" id="fixtures">
@@ -1077,10 +1089,10 @@ the route, not features on it; they belong to whatever describes a route.</p>
 <div class="body"><p class="empty">Nothing dictated yet. Say "Fixtures." and talk.</p></div>
 </details>
 <details class="element" id="track-augments" open>
-<summary><span class="t">Track augments</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">Routes or whole sectors a player adds, temporary or permanent</span></summary>
-<div class="body"><p>Things a player adds to the track itself: a new route through a sector, or a
+<summary><span class="t">Track augments</span><span class="status partial">partial</span><span class="rows">2 rows</span><span class="w">Splits or whole sectors a player adds, temporary or permanent</span></summary>
+<div class="body"><p>Things a player adds to the track itself: a new split through a sector, or a
 whole new sector. Permanent or temporary. Only players in the same heat see
-an augmented track. Round 7 called the route kind a <em>player split</em>; the
+an augmented track. Round 7 called the split kind a <em>player split</em> and its paths <em>routes</em>; the
 owner&#39;s word is <em>augment</em>, and it covers both kinds.</p>
 <p>Where augments come from is not yet decided: the shop, or a component that
 grants one when upgraded far enough.</p>
@@ -1102,7 +1114,7 @@ grants one when upgraded far enough.</p>
 </tr>
 <tr>
 <td><code>adds</code></td>
-<td><code>route</code> — a new way through an existing sector · <code>sector</code> — a new stretch with its own checkpoint</td>
+<td><code>split</code> — a new path through an existing sector · <code>sector</code> — a new stretch with its own checkpoint</td>
 </tr>
 <tr>
 <td><code>does</code></td>
@@ -1126,8 +1138,8 @@ grants one when upgraded far enough.</p>
 </tr>
 </tbody></table>
 </div></details>
-<h3>Augments</h3><div class="rows"><div class="row stub"><div class="t">Add a route<span class="status stub">stub</span></div><div class="f"><span class="l">adds</span><span class="v">route</span></div><div class="f"><span class="l">does</span><span class="v">A new way through a sector you choose, so the sector splits where it did not.</span></div><div class="f"><span class="l">lasts</span><span class="v">either</span></div><div class="f"><span class="l">seen by</span><span class="v">same heat</span></div></div><div class="row stub"><div class="t">Add a sector<span class="status stub">stub</span></div><div class="f"><span class="l">adds</span><span class="v">sector</span></div><div class="f"><span class="l">does</span><span class="v">A whole new sector spliced into the loop, with its own checkpoint.</span></div><div class="f"><span class="l">lasts</span><span class="v">either</span></div><div class="f"><span class="l">seen by</span><span class="v">same heat</span></div></div></div>
-<h3>Notes</h3><p><strong>2026-09-13.</strong> Round 7 has two named route augments — a <em>pocket split</em> that
+<h3>Augments</h3><div class="rows"><div class="row stub"><div class="t">Add a split<span class="status stub">stub</span></div><div class="f"><span class="l">adds</span><span class="v">split</span></div><div class="f"><span class="l">does</span><span class="v">A new path through a sector you choose, where there was not one.</span></div><div class="f"><span class="l">lasts</span><span class="v">either</span></div><div class="f"><span class="l">seen by</span><span class="v">same heat</span></div></div><div class="row stub"><div class="t">Add a sector<span class="status stub">stub</span></div><div class="f"><span class="l">adds</span><span class="v">sector</span></div><div class="f"><span class="l">does</span><span class="v">A whole new sector spliced into the loop, with its own checkpoint.</span></div><div class="f"><span class="l">lasts</span><span class="v">either</span></div><div class="f"><span class="l">seen by</span><span class="v">same heat</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> Round 7 has two named split augments — a <em>pocket split</em> that
 goes wide through a pocket and a <em>cut split</em> that leaves the path and rejoins
 early. Neither is in these notes; they are left off this table until the owner
 names them again or cuts them.</p>
@@ -1170,10 +1182,20 @@ rather than a purchase.</p>
 </details>
 </section>
 <section class="area" id="area-season">
-<h2>The season <span class="count">0/1 started</span></h2>
-<details class="element" id="season-structure">
-<summary><span class="t">Season structure</span><span class="status untouched">untouched</span><span class="rows">0 rows</span><span class="w">Pacing lap, phases, heats, groups, the cut</span></summary>
-<div class="body"><p class="empty">Nothing dictated yet. Say "Season structure." and talk.</p></div>
+<h2>The season <span class="count">1/1 started</span></h2>
+<details class="element" id="season-structure" open>
+<summary><span class="t">Season structure</span><span class="status seeded">seeded</span><span class="rows">5 rows</span><span class="w">Pacing lap, phases, heats, groups, the cut</span></summary>
+<div class="body"><p>The shape of a season from the first choice to the last cut. Parameters,
+confirmed rather than invented: what round 7 said, plus what the notes added
+or changed.</p>
+
+<h3>Stages</h3><div class="rows"><div class="row seeded"><div class="t">frame<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Frame</span></div><div class="f"><span class="l">what happens</span><span class="v">Pick a starting frame: an engine, shields and a crew in three of four slots. The shop opens with a random selection to fill the fourth.</span></div><div class="f"><span class="l">from</span><span class="v">notes</span></div></div><div class="row seeded"><div class="t">pacing-lap<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Pacing lap</span></div><div class="f"><span class="l">what happens</span><span class="v">Two laps of the initial track with one pit stop, no opponents. Paid by your time against the track&#39;s benchmarks, not against anyone. The pit stop and the end of lap one are purchase opportunities.</span></div><div class="f"><span class="l">from</span><span class="v">notes</span></div></div><div class="row seeded"><div class="t">heat<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Heat</span></div><div class="f"><span class="l">what happens</span><span class="v">Two laps against the same three ships, a pit stop at the end of each lap. Scores once, by total time and margin.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div><div class="row seeded"><div class="t">phase<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">Phase</span></div><div class="f"><span class="l">what happens</span><span class="v">Several heats. Groups redrawn between heats. The track grows at the end.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div><div class="row seeded"><div class="t">cut<span class="status seeded">seeded</span></div><div class="f"><span class="l">stage</span><span class="v">The cut</span></div><div class="f"><span class="l">what happens</span><span class="v">At the end of a phase, everyone below a set points line is out, however many that is.</span></div><div class="f"><span class="l">from</span><span class="v">round 7</span></div></div></div>
+<h3>Notes</h3><p><strong>2026-09-13.</strong> The frame choice and the pacing lap are new: round 7&#39;s loop
+began at the shop before the first heat. The pacing lap is the first time a
+player sees the track and the first credits they earn. Whether the cut could
+also fall between heats was raised in round 6&#39;s notes and left open in round
+7; nothing here decides it.</p>
+</div>
 </details>
 </section>
 
@@ -1182,97 +1204,101 @@ rather than a purchase.</p>
 <div class="scroll"><p>Things said during dictation that change a <strong>mechanic</strong> rather than populate
 one. The framework is pinned to
 <a href="../rounds/round-07/sharpened.md">round 7</a>; it does not move because a
-catalogue entry needed it to. Anything here is a proposed change to the
-framework, dated, waiting on the owner to either fold it into a new framework
-pass or drop it.</p>
-<p>A row marked <strong>tension</strong> contradicts something round 7 says. A row marked
-<strong>adds</strong> is new and does not contradict anything.</p>
+catalogue entry needed it to. This file is the record of where the owner&#39;s
+later notes and round 7 differ, so that when the framework is next rewritten,
+nothing is lost and nothing stale survives.</p>
+<p>Three kinds of row. <strong>Supersedes</strong> — the note plainly replaces something round
+7 or the catalogue said; the catalogue has been changed to match and the old
+version is recorded here, not left standing. <strong>Adds</strong> — new, contradicts
+nothing. <strong>Open</strong> — the owner has marked it a question, or the note and round
+7 genuinely disagree and the notes do not say which way; nothing has been
+changed on it.</p>
 <table>
 <thead>
 <tr>
 <th>Date</th>
 <th>Kind</th>
-<th>What was said</th>
-<th>Touches</th>
+<th>What the notes say</th>
+<th>What it replaced or touches</th>
 </tr>
 </thead>
 <tbody><tr>
 <td>2026-09-13</td>
-<td>adds</td>
-<td>The ship has a limited number of component slots, and the slots are the budget. Four to start. Slots can be bought with credits or other resources, and every race you finish pays +1 slot.</td>
-<td>ship, economy</td>
+<td>supersedes</td>
+<td>A ship is a <strong>frame plus slotted components</strong> in six categories: engines, shields and defensive, crew, navigation, weapons and deployables, collection. Slots are the budget; four to start.</td>
+<td>Round 7: &quot;a ship is six parts — Thrust, Handling, Navigation, Hull, Shields, Crew,&quot; one of each. Thrust, Handling, Hull and Shields are now stats that components move. <code>ship-parts.md</code> rewritten to match.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td>Vocabulary: a <strong>sector</strong> is the stretch between checkpoints; a <strong>split</strong> is one path through it, and a sector may offer several.</td>
+<td>Round 6&#39;s owner notes and round 7: <em>section</em> for the stretch, <em>route</em> for the path, and &quot;a section splits.&quot; The catalogue now says sector and split everywhere; <code>section-types.md</code> is <code>split-anatomy.md</code>.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td>Abilities are <strong>unresolved</strong> — &quot;still unresolved whether some components have abilities that charge up.&quot; If they exist, the player places where each charge fires before the run; a third fires only if energy allows.</td>
+<td>Round 7 asserted abilities and had them fire on their own when the crew judged the moment. That is no longer settled. <code>abilities.md</code> holds the candidates, marked unresolved. The overview no longer says they fire alone.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td>A <strong>starting frame</strong> chosen first — engine, shields, crew — then the shop, then a <strong>pacing lap</strong>: two laps alone with one pit stop, paid against the track&#39;s benchmarks.</td>
+<td>Round 7&#39;s loop began &quot;between heats: spend credits in the shop.&quot; The season now opens with frame → shop → pacing lap → first heat. <code>season-structure.md</code> seeded with the new opening.</td>
+</tr>
+<tr>
+<td>2026-09-13</td>
+<td>supersedes</td>
+<td>Track augments add a <strong>split or a whole sector</strong>, permanent or temporary; seen only by players in the same heat.</td>
+<td>Round 7 had only owned <em>routes</em> (two kinds, pocket and cut). Adding a sector is new; the two named kinds are not in the notes and are held off the table until named again or cut.</td>
 </tr>
 <tr>
 <td>2026-09-13</td>
 <td>adds</td>
-<td>A starting frame, chosen before anything else, comes with an engine, shields and a crew (small human or small robot). Then the shop opens with a random selection.</td>
-<td>ship, board</td>
+<td>Components have <strong>upgrades</strong> that appear once fitted, and an upgrade can grow to take more than one slot — an engine at level 3 occupies two.</td>
+<td>Nothing in round 7. Shop and ship.</td>
 </tr>
 <tr>
 <td>2026-09-13</td>
 <td>adds</td>
-<td>Components have upgrades that appear once the component is fitted. An upgrade can grow to take more than one slot — an engine at level 3 occupies two.</td>
-<td>ship, shop</td>
+<td>Slots can be bought with credits or other resources, and <strong>every race you finish pays +1 slot</strong>.</td>
+<td>Nothing in round 7. Economy.</td>
 </tr>
 <tr>
 <td>2026-09-13</td>
 <td>adds</td>
-<td>A pacing lap before the first real heat: two laps of the initial track with one pit stop, no opponents, paid by your time against the track&#39;s benchmarks. The pit stop and the end of lap 1 are purchase opportunities.</td>
-<td>season, economy</td>
+<td>The course is set before a race <strong>and again at break points</strong> — pit stops and lap ends: which split to take in each sector, given what your nav has shown and what you have now seen. No change keeps the previous choice.</td>
+<td>Round 7&#39;s pit stop let you change the corner plan, swap an ability, patch the crew, buy a one-lap fixture. Re-planning the route is added to that list.</td>
 </tr>
 <tr>
 <td>2026-09-13</td>
 <td>adds</td>
-<td>The course is set before a race and again at break points — pit stops and lap ends. Which route to take in each sector, given what your navigation has shown and what you have now seen. No change keeps the previous choice.</td>
-<td>board, pit stop, nav</td>
-</tr>
-<tr>
-<td>2026-09-13</td>
-<td>tension</td>
-<td>&quot;Should players set slow-down or speed-up going into a turn, or is that automatic from components, nav and crew?&quot; Round 7&#39;s corner plan (Lift, Carry, Charge) is exactly a per-heat manual choice about this. The note questions whether it should exist.</td>
-<td>corner plan</td>
-</tr>
-<tr>
-<td>2026-09-13</td>
-<td>tension</td>
-<td>Charged abilities may be placed on the course before the run: two charges, pick where each fires; a third is set and fires only if enough energy has been collected by then. Round 7 has abilities fire on their own when the crew judges the moment. These are different models of who decides.</td>
-<td>abilities, reaction</td>
-</tr>
-<tr>
-<td>2026-09-13</td>
-<td>tension</td>
-<td>Vocabulary: the notes say a <strong>sector</strong> connects checkpoints and a sector has <strong>splits</strong>, which are the paths chosen. Round 6&#39;s owner notes said <strong>section</strong> for the stretch between checkpoints and that a section <em>splits into routes</em>. So &quot;split&quot; has moved from the fork to the path. The catalogue uses sector and route until the owner picks.</td>
-<td>track vocabulary</td>
+<td>Some hazards, if you <strong>power into them, push the ship to another split</strong> of the sector.</td>
+<td>Round 7 had only the swing doing this, at a fork bend. A hazard can now do it too.</td>
 </tr>
 <tr>
 <td>2026-09-13</td>
 <td>adds</td>
-<td>Some hazards, if you power into them, push the ship to another route of the sector. Round 7 has the swing doing this at a fork bend; this makes a hazard able to do it too.</td>
-<td>track, swing</td>
+<td><strong>Ship maintenance</strong> as a shop: repairing damage taken during parts of the race.</td>
+<td>Round 7 had crew repair costs only. The bill extends to the ship.</td>
 </tr>
 <tr>
 <td>2026-09-13</td>
 <td>adds</td>
-<td>Track augments can add a whole sector, not only a route. Permanent or temporary. Seen only by players in the same heat. Source undecided: shop, or a component upgraded far enough. Easier as a shop purchase at first.</td>
-<td>track augments, shop</td>
+<td>Fixtures and augments are probably <strong>credit purchases at first</strong>; maybe later granted by a component upgraded far enough.</td>
+<td>Round 7: fixtures bought with credits. Consistent; the component route is a later option.</td>
 </tr>
 <tr>
 <td>2026-09-13</td>
-<td>adds</td>
-<td>Fixtures likewise: probably a credit purchase at first; maybe later granted by an upgraded component.</td>
-<td>fixtures, shop</td>
+<td>open</td>
+<td>&quot;Should players be able to set slow-down or speed-up going into a turn? That could just be automatic based on components, nav and crew.&quot;</td>
+<td>Round 7&#39;s <strong>corner plan</strong> — Lift, Carry, Charge — is exactly a manual per-heat choice about this. The owner marked it an open question; the corner plan stands until they decide.</td>
 </tr>
 <tr>
 <td>2026-09-13</td>
-<td>adds</td>
-<td>Ship maintenance as a shop: repairing damage taken during parts of the race. Round 7 has crew repair costs; this extends the bill to the ship.</td>
-<td>economy</td>
-</tr>
-<tr>
-<td>2026-09-13</td>
-<td>adds</td>
-<td>Weapons and deployables are a component category. Round 7 has Rake as an ability and Mines as a fixture; this puts weapons on the ship as parts.</td>
-<td>ship parts, abilities, fixtures</td>
+<td>open</td>
+<td>Where <strong>track augments and fixtures come from</strong> — the shop, or a component that grants one when upgraded far enough.</td>
+<td>Not decided in round 7 either. The notes lean shop-first.</td>
 </tr>
 </tbody></table>
 </div>

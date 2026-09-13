@@ -1,9 +1,11 @@
 // The controls and the readouts. One thumb, bottom of the screen.
 
 import type { CornerPlan, RaceState } from '../sim/race';
+import { TRACKS, type Track } from '../sim/track';
 import { TICK_HZ } from '../sim/tuning';
 
 export interface Settings {
+  track: Track;
   plan: CornerPlan;
   thrust: number;
   handling: number;
@@ -30,7 +32,13 @@ export function mountControls(
   onChange: () => void,
   onRestart: () => void,
 ): Controls {
-  const settings: Settings = { plan: 'carry', thrust: 1, handling: 1, seed: 'kestrel' };
+  const settings: Settings = {
+    track: TRACKS[0] as Track,
+    plan: 'carry',
+    thrust: 1,
+    handling: 1,
+    seed: 'kestrel',
+  };
 
   const element = document.createElement('div');
   element.className = 'panel';
@@ -42,6 +50,12 @@ export function mountControls(
       <div class="r"><b id="r-lap">—</b><span>last lap</span></div>
     </div>
     <div id="r-state" class="state">on the path</div>
+    <div class="tracks" role="group" aria-label="Track">
+      ${TRACKS.map(
+        (t, i) =>
+          `<button type="button" data-track="${i}" class="track"><b>${t.name}</b><span>${t.shape}</span></button>`,
+      ).join('')}
+    </div>
     <div class="plans" role="group" aria-label="Corner plan">
       ${PLANS.map(
         (p) => `<button type="button" data-plan="${p.id}" class="plan">
@@ -79,6 +93,23 @@ export function mountControls(
     });
   }
   paintPlans();
+
+  const trackButtons = Array.from(
+    element.querySelectorAll<HTMLButtonElement>('[data-track]'),
+  );
+  const paintTracks = (): void => {
+    for (const button of trackButtons) {
+      button.classList.toggle('on', TRACKS[Number(button.dataset['track'])] === settings.track);
+    }
+  };
+  for (const button of trackButtons) {
+    button.addEventListener('click', () => {
+      settings.track = TRACKS[Number(button.dataset['track'])] as Track;
+      paintTracks();
+      onRestart();
+    });
+  }
+  paintTracks();
 
   const thrust = byId<HTMLInputElement>('s-thrust');
   const handling = byId<HTMLInputElement>('s-handling');

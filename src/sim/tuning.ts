@@ -44,14 +44,31 @@ export const CHARGE_EXCESS_BONUS = 0.18;
 /** Half the width of the golden path. Beyond this the ship is wide. */
 export const PATH_HALF_WIDTH = 9;
 
-/** What a ship keeps of its speed while it is off the golden path. */
-export const WIDE_SPEED_PENALTY = 0.7;
+// Being wide costs more the further out you are. A ship that clips the edge
+// barely pays; one thrown right out crawls back. A flat penalty was the first
+// version and it let Thrust dominate — any speed was worth any swing.
+
+/** What a ship keeps of its speed the moment it crosses the edge of the path. */
+export const WIDE_SPEED_AT_EDGE = 0.94;
+
+/** How much more it loses per track unit beyond the edge. */
+export const WIDE_SPEED_PER_UNIT = 0.028;
+
+/** However far out it ends up, it keeps at least this much. */
+export const WIDE_SPEED_FLOOR = 0.42;
 
 /** How fast the swing opens up through the bend, as a fraction closed per tick. */
 export const SWING_RISE = 0.09;
 
-/** How fast a wide ship pulls back to the line per tick, at Handling 1.0. */
-export const RECOVER_PER_HANDLING = 0.022;
+/**
+ * How hard a wide ship hauls itself back, as a fraction of its offset per tick
+ * at Handling 1.0. Proportional, so it comes back fast at first and fights the
+ * last few units — which is what being out of shape looks like.
+ */
+export const RECOVER_PER_HANDLING = 0.013;
+
+/** The slowest it ever closes, so the last sliver of offset does not linger. */
+export const RECOVER_FLOOR = 0.02;
 
 /** Lift brakes to a shade under the holding speed, to be sure of it. */
 export const LIFT_MARGIN = 0.97;

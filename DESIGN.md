@@ -10,8 +10,8 @@ beside it. This file is narrower on purpose: it says what is built, with the
 exact rules, and grows one stage at a time.
 
 **This is a clean-slate build.** The 2026 vertical slice (one track, three
-stages, six parts, four hazards) is finished and is tagged `slice-v1` in git.
-None of its code carries over. Its _engineering_ conventions do: a pure
+stages, six parts, four hazards) is finished; its last commit is `543ac1e` and
+its code sits in `legacy/`. None of it carries over. Its _engineering_ conventions do: a pure
 deterministic simulation, a fixed integer tick, one tuning file, a seeded RNG.
 They were the part that worked.
 
@@ -55,9 +55,9 @@ consumes it.
 
 ## What is built
 
-**S1 — the swing.** One ship, one authored loop, no opponents and no economy.
-The ship flies; the player picks the corner plan and moves two sliders; the
-swing is visible. Everything below describes S1 exactly.
+**S1 — the swing.** One ship, three authored loops, no opponents and no
+economy. The ship flies; the player picks the track and the corner plan and
+moves two sliders; the swing is visible. Everything below describes S1 exactly.
 
 ## The track
 
@@ -71,6 +71,20 @@ A track is a closed **loop** walked out from an ordered list of **pieces**:
 Walking the pieces produces the **centreline** — the golden path — as a
 polyline, and fixes where every bend starts and ends. Geometry is level data,
 not tuning: the shape of a track is content.
+
+Three tracks are built, and they exist to ask whether one strategy wins
+everywhere. They do not:
+
+| Track | Length | Bends | What wins on it |
+| --- | --- | --- | --- |
+| **Kestrel Loop** | 1408 | mixed, tightest r42 | balanced build, Charge — 28.0s |
+| **Meridian Run** | 2370 | open, tightest r62 | reckless build, Carry — 39.3s |
+| **Cinder Coil** | 688 | tight, tightest r26 | nimble build, Charge — 16.9s |
+
+A loop is authored as a **half** that turns through 180°, walked twice: the
+second copy is the first rotated half a turn, so the circuit closes exactly and
+a track is half as much to write. `loopFromHalf` refuses a half that does not
+sweep 180°.
 
 **Checkpoints** divide the loop into **sectors**. A sector is the stretch from
 one checkpoint to the next. In S1 they exist to be timed and shown; splits
@@ -125,9 +139,22 @@ units of lateral offset. Through the bend the offset grows toward the drawn
 swing; on the straight after it, the ship pulls back toward the path at a rate
 set by Handling.
 
-**Wide** is a state, not a number. A ship whose offset exceeds `PATH_HALF_WIDTH`
-has left the golden path, and while it is off the path it moves at
-`WIDE_SPEED_PENALTY` of its speed. That is the cost: not damage, time.
+**Wide** is where the cost lands. A ship whose offset exceeds
+`PATH_HALF_WIDTH` has left the golden path, and what it keeps of its speed
+falls the further out it is:
+
+```
+over = |offset| - PATH_HALF_WIDTH
+keep = max(WIDE_SPEED_FLOOR, WIDE_SPEED_AT_EDGE - over * WIDE_SPEED_PER_UNIT)
+```
+
+Clipping the edge barely costs anything; being thrown right out is expensive.
+A flat penalty was the first version, and it made Thrust strictly dominant —
+any speed was worth any swing, because the worst case cost the same as the
+mildest. Scaling it is what prices the gamble.
+
+The ship hauls itself back proportionally — fast at first, fighting the last
+few units — at a rate set by Handling.
 
 **Charge** adds `CHARGE_EXCESS_BONUS` to the excess before the draw, because it
 is still accelerating when the bend arrives. **Lift** brakes to the holding
@@ -135,12 +162,17 @@ speed and draws nothing.
 
 ## What the player sees
 
-The loop from above, the golden path as a bright ribbon, the ship on it, and
-the ship's lateral offset drawn as the thing it is — a ship pushed off the
-line. Speed, the current sector, lap time, and the last bend's swing. Three
-buttons for the corner plan; two sliders for Thrust and Handling; a seed box,
-because the same seed must produce the same race and being able to prove it by
-eye is the point.
+The loop from above, the golden path as a bright ribbon with its two edges
+drawn — the lines the ship is thrown across, so crossing one reads as an event.
+The ship trails a wake, which is what speed looks like from above, and its
+lateral offset is drawn as the thing it is: a ship pushed off the line, tethered
+back to where it should be. The last few bends leave marks where they threw it,
+fading as they fall behind.
+
+Speed, the current sector, lap time, and the last bend's swing. Three buttons
+for the track, three for the corner plan, two sliders for Thrust and Handling,
+and a seed box — because the same seed must produce the same race, and being
+able to prove that by eye is the point.
 
 ## Tuning
 

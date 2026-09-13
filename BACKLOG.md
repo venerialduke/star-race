@@ -27,28 +27,36 @@ canvas rendering, and the controls.
 Done when: the Pages URL shows the ship flying the loop, and the same seed
 replays identically.
 
-### S1.2 Make the swing feel like something
+### S1.2 Make the swing feel like something — **done**
 
-The first pass is arithmetic; this is the pass where it becomes a moment.
-Candidates: the ship visibly fighting back to the line rather than lerping, the
-golden path reading as a surface rather than a stripe, and the numbers moved
-until a Charge lap is a real gamble.
+The pass where the arithmetic became a moment, and where the two findings from
+S1.1 were answered.
 
-Two findings from S1.1, measured over 40 seeded laps each, that this item
-should answer:
+**The wide penalty now scales with how far out the ship is thrown.** Clipping
+the edge costs almost nothing; being thrown right out is expensive. That is
+what fixed Thrust dominance: under the old flat penalty the worst swing cost
+the same as the mildest, so speed was always worth it. On the Kestrel Loop a
+reckless build now laps 30.4s against a balanced build's 28.0s, where before it
+lapped 23.95s against 28.63s.
 
-- **Thrust dominates.** A reckless build — Thrust 1.6, Handling 0.6 — laps in
-  23.95s on Charge against a balanced build's 28.63s, because the flat
-  `WIDE_SPEED_PENALTY` never costs enough to price the speed it buys. Likely
-  fix: the penalty should scale with how far off the path the ship is, so a
-  big swing hurts more than a small one rather than the same.
-- **A slow enough ship has no corner decision.** At Thrust 0.8 and Handling
-  1.5 the ship never exceeds any holding speed, so all three plans lap
-  identically at 34.52s and the corner plan is inert. That is arguably correct,
-  but it means a whole corner of the build space has nothing to play.
+**Three tracks, and no strategy wins on all of them** — which was the second
+finding's real answer. A ship slow enough for every bend has no corner
+decision, so the fix was a track whose bends are tight enough to ask one:
 
-Done when: three laps in a row make you want to try the other corner plan, and
-no single slider position is simply the answer.
+| Track | Length | Best build and plan | Lap |
+| --- | --- | --- | --- |
+| Kestrel Loop | 1408 | balanced, Charge | 28.0s |
+| Meridian Run | 2370 | reckless, Carry | 39.3s |
+| Cinder Coil | 688 | nimble, Charge | 16.9s |
+
+30 seeded laps per cell. Balance is close enough for now, not settled: the
+nimble build is still inert on the Kestrel Loop, where nothing it meets is
+tight enough to swing it.
+
+**Feel.** A wake behind the ship, the golden path's two edges drawn so crossing
+one is an event, marks where the last few bends threw it, and recovery that is
+proportional rather than linear — quick at first, fighting the last few units
+back to the line.
 
 ### S1.3 Sector times and a par
 

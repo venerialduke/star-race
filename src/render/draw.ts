@@ -4,6 +4,12 @@ import type { RaceState } from '../sim/race';
 import { normalOf, sampleAt, type Track, type Vec } from '../sim/track';
 import { PATH_HALF_WIDTH } from '../sim/tuning';
 
+/** How many recent positions the wake keeps. Structural: the length of a line. */
+const TRAIL = 46;
+
+/** How many past bends keep a mark on the track. */
+const MARKS = 5;
+
 const INK = '#e8eeff';
 const DEEP = '#0b1428';
 const PATH = '#ffd166';
@@ -76,10 +82,13 @@ export function drawRace(
     ctx.stroke();
   };
 
-  // The space either side of the path, then the golden path itself.
+  // The space either side of the path, then the path, then its two edges —
+  // the lines the ship is thrown across, so crossing one reads as an event.
   ribbon(PATH_HALF_WIDTH * 6 * view.scale, OFF_PATH);
   ribbon(PATH_HALF_WIDTH * 2 * view.scale, PATH_EDGE);
-  ribbon(Math.max(1.5, PATH_HALF_WIDTH * 0.5 * view.scale), PATH);
+  ribbon(Math.max(1.5, PATH_HALF_WIDTH * 0.4 * view.scale), PATH);
+  edge(ctx, view, track, PATH_HALF_WIDTH);
+  edge(ctx, view, track, -PATH_HALF_WIDTH);
 
   // Checkpoints.
   ctx.lineWidth = Math.max(1, view.scale);
@@ -93,6 +102,42 @@ export function drawRace(
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // Where the last few bends threw it, fading as they fall behind.
+  const marks = state.swings.slice(-MARKS);
+  marks.forEach((swing, i) => {
+    if (swing.swing <= 0.5) return;
+    const age = (i + 1) / marks.length;
+    const at = sampleAt(track, swing.bendStart);
+    const n = normalOf(at);
+    const out = -at.turn * Math.min(swing.swing, PATH_HALF_WIDTH * 3);
+    const mark = project(view, { x: at.pos.x + n.x * out, y: at.pos.y + n.y * out });
+    ctx.beginPath();
+    ctx.arc(mark.x, mark.y, Math.max(2, view.scale * 1.8), 0, Math.PI * 2);
+    ctx.fillStyle = swing.wentWide
+      ? `rgba(255,122,107,${0.15 + age * 0.55})`
+      : `rgba(255,209,102,${0.1 + age * 0.3})`;
+    ctx.fill();
+  });
+
+  // The wake: where the ship has just been, which is what speed looks like.
+  if (state.trail.length > 1) {
+    ctx.beginPath();
+    state.trail.slice(-TRAIL).forEach((point, i) => {
+      const at = sampleAt(track, point.distance);
+      const n = normalOf(at);
+      const p = project(view, {
+        x: at.pos.x + n.x * point.offset,
+        y: at.pos.y + n.y * point.offset,
+      });
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.strokeStyle = state.wide ? 'rgba(255,122,107,0.35)' : 'rgba(126,224,255,0.35)';
+    ctx.lineWidth = Math.max(1.5, view.scale * 2);
+    ctx.lineCap = 'round';
     ctx.stroke();
   }
 
@@ -130,16 +175,30 @@ export function drawRace(
   ctx.fill();
   ctx.restore();
 
-  // Where the last bend threw it, left as a mark.
-  const last = state.swings[state.swings.length - 1];
-  if (last !== undefined && last.swing > 0.5) {
-    const s = sampleAt(track, last.bendStart);
-    const mark = project(view, s.pos);
-    ctx.beginPath();
-    ctx.arc(mark.x, mark.y, Math.max(3, view.scale * 2.5), 0, Math.PI * 2);
-    ctx.fillStyle = last.wentWide ? 'rgba(255,122,107,0.8)' : 'rgba(255,209,102,0.55)';
-    ctx.fill();
-  }
-
+  // The track's name, quietly, so three tracks are tellable apart.
+  ctx.fillStyle = 'rgba(232,238,255,0.35)';
+  ctx.font = '600 12px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${track.name} · ${track.shape}`, 12, 20);
   ctx.fillStyle = INK;
+}
+
+/** One edge of the golden path, offset from the centreline. */
+function edge(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  track: Track,
+  offset: number,
+): void {
+  ctx.beginPath();
+  track.samples.forEach((s, i) => {
+    const n = normalOf(s);
+    const p = project(view, { x: s.pos.x + n.x * offset, y: s.pos.y + n.y * offset });
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.closePath();
+  ctx.lineWidth = Math.max(1, view.scale * 0.6);
+  ctx.strokeStyle = 'rgba(255, 209, 102, 0.45)';
+  ctx.stroke();
 }

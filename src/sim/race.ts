@@ -20,6 +20,7 @@ import {
   CHARGE_EXCESS_BONUS,
   LIFT_MARGIN,
   PATH_HALF_WIDTH,
+  RECOVER_FLOOR,
   RECOVER_PER_HANDLING,
   SPEED_PER_THRUST,
   STAT_MAX,
@@ -27,7 +28,9 @@ import {
   SWING_EXPONENT,
   SWING_RISE,
   SWING_SPREAD,
-  WIDE_SPEED_PENALTY,
+  WIDE_SPEED_AT_EDGE,
+  WIDE_SPEED_FLOOR,
+  WIDE_SPEED_PER_UNIT,
 } from './tuning';
 
 /** What the ship does about the gap between its speed and a bend's holding speed. */
@@ -54,6 +57,12 @@ export interface SwingEvent {
   readonly wentWide: boolean;
 }
 
+/** One position the ship held, kept so the renderer can draw a wake. */
+export interface TrailPoint {
+  readonly distance: number;
+  readonly offset: number;
+}
+
 export interface RaceState {
   readonly tick: number;
   readonly distance: number;
@@ -72,6 +81,8 @@ export interface RaceState {
   readonly inBend: Bend | undefined;
   /** Where the current swing is pulling the ship. */
   readonly swingTarget: number;
+  /** Recent positions, oldest first. Bounded, so a long race stays cheap. */
+  readonly trail: readonly TrailPoint[];
 }
 
 export interface RaceConfig {
@@ -100,8 +111,12 @@ export function startRace(): RaceState {
     swings: [],
     inBend: undefined,
     swingTarget: 0,
+    trail: [],
   };
 }
+
+/** How many positions the wake remembers. Structural: the size of a buffer. */
+const TRAIL_LENGTH = 60;
 
 /** How far it takes to slow from `from` to `to`. */
 function brakingDistance(from: number, to: number): number {
@@ -185,14 +200,18 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   if (onBend) {
     offset += (swingTarget - offset) * SWING_RISE;
   } else {
-    const pull = RECOVER_PER_HANDLING * handling;
+    const pull = Math.max(RECOVER_FLOOR, Math.abs(offset) * RECOVER_PER_HANDLING * handling);
     offset = Math.abs(offset) <= pull ? 0 : offset - Math.sign(offset) * pull;
   }
-  const wide = Math.abs(offset) > PATH_HALF_WIDTH;
+  const over = Math.abs(offset) - PATH_HALF_WIDTH;
+  const wide = over > 0;
 
-  // 4. Move. Being off the golden path costs time, not damage.
-  const effective = wide ? speed * WIDE_SPEED_PENALTY : speed;
-  const distance = state.distance + effective;
+  // 4. Move. Being off the golden path costs time, not damage — and the
+  // further out the ship is thrown, the more of its speed it loses.
+  const keep = wide
+    ? Math.max(WIDE_SPEED_FLOOR, WIDE_SPEED_AT_EDGE - over * WIDE_SPEED_PER_UNIT)
+    : 1;
+  const distance = state.distance + speed * keep;
 
   // 5. Checkpoints and laps.
   const tick = state.tick + 1;
@@ -216,6 +235,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     swings,
     inBend,
     swingTarget,
+    trail: [...state.trail, { distance, offset }].slice(-TRAIL_LENGTH),
   };
 }
 

@@ -84,6 +84,39 @@
         color: var(--warn);
         font-weight: 700;
       }
+      .tracks {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 7px;
+      }
+      .track {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        padding: 6px 4px;
+        border: 1px solid var(--rule);
+        border-radius: 7px;
+        background: #0e1730;
+        color: var(--soft);
+        font: inherit;
+        cursor: pointer;
+      }
+      .track b {
+        font-size: 12px;
+        color: var(--ink);
+      }
+      .track span {
+        font-size: 9.5px;
+        line-height: 1.2;
+      }
+      .track.on {
+        border-color: var(--gold);
+        background: #1b2a4d;
+      }
+      .track.on b {
+        color: var(--gold);
+      }
       .plans {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -112,7 +145,6 @@
       }
       .plan.on {
         border-color: var(--gold);
-        background: #1b2away;
         background: #1b2a4d;
       }
       .plan.on b {

@@ -55,11 +55,12 @@ consumes it.
 
 ## What is built
 
-**S1 — the swing**, and **S2 — the heat**. Three ships fly one of three
-authored loops for two laps, with a pit stop between them. The player picks the
-track, the corner plan and two stats; the rivals are bots that read the track
-and choose for themselves. No economy yet, and no components: the stats are
-still sliders.
+**S1 — the swing**, **S2 — the heat**, and **S3 — the ship and the shop**.
+Three ships fly one of three authored loops for two laps, with a pit stop
+between them. The player fits components into slots on a board between heats,
+picks the track and the corner plan, and races; the rivals are bots that read
+the track and choose for themselves. The stats are no longer sliders — they are
+what a build adds up to. There is a starting budget but no income yet.
 
 ## The track
 
@@ -180,9 +181,11 @@ The **tracking bar** is the thing that says who is winning: a lane per ship with
 its place, how far round the lap it is, and what it is giving away on total
 time. At a pit stop and at the finish it shows totals instead of gaps.
 
-Three buttons for the track, three for the corner plan, two sliders for Thrust
-and Handling, and a seed box — because the same seed must produce the same
-heat, and being able to prove that by eye is the point.
+Between heats the panel is **the board**: credits, slots used, what the build
+adds up to, what is fitted, what is on the shelf, and the shop. Three buttons
+for the track, three for the corner plan, and a seed box — because the same
+seed must produce the same heat, and being able to prove that by eye is the
+point.
 
 ## The heat
 

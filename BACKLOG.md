@@ -103,21 +103,42 @@ Lift never wins a heat on any track. That is honest — it is the safe plan, and
 safety is currently worth nothing because there is no damage and nothing to
 protect. It should become a real choice when run health arrives.
 
-## S3 — the ship, and the shop
+## S3 — the ship, and the shop — **done**
 
-**S3 is done when:** the player starts with a budget and a stocked shop, fits
+**S3 was done when:** the player starts with a budget and a stocked shop, fits
 components into four slots, and a fitted build visibly changes how the ship
-takes bends.
+takes bends. All four items are merged.
 
-- **S3.1 Stats and components.** `ship.ts`: the stats in `DESIGN.md`, and
-  `resolveBuild(components) → stats`. Start with the plain end of
-  `design/catalogue/ship-parts.md`: one engine of each kind, one shield, one
-  nav, one crew.
-- **S3.2 Slots and the shop as an inventory.** Buy, hold unfitted, fit, remove,
-  sell. Four slots to start, +1 for finishing a race.
-- **S3.3 Upgrades.** Levels on a fitted component, and a level 3 that takes a
-  second slot.
-- **S3.4 The board.** The pre-heat screen: fit, set the corner plan, start.
+- **S3.1 Stats and components.** `src/sim/ship.ts` holds the components and
+  `resolveBuild(fitted) → stats`. The catalogue's arrows become numbers here,
+  which is what the build stage is for.
+- **S3.2 Slots and the shop as an inventory.** `src/sim/garage.ts`: buy, hold
+  unfitted, fit, remove, sell, upgrade. Four slots to start, +1 for finishing.
+- **S3.3 Upgrades.** Three levels per component, and a level 3 that takes a
+  second slot — refused unless the slot is free.
+- **S3.4 The board.** The panel between heats: credits, slots, what the build
+  adds up to, and the shop.
+
+**Only three of the catalogue's eighteen components are stocked**, and the
+board says why the rest are not: shields need damage, navigation needs splits,
+weapons need something to hit, collection needs an economy. The catalogue is
+ahead of the simulation, which is the right way round — but it means S3 is a
+shop with three engines in it, and it will not feel like a build until S4 and
+S6 give the other categories something to do.
+
+**What the numbers say.** 30 seeded heats per build, best corner plan, against
+two bots that build for the track:
+
+| Build (affordable at the start) | Kestrel | Meridian | Cinder |
+| --- | --- | --- | --- |
+| 2× balanced — 1.08/1.00 | **77%** | 7% | 33% |
+| 2× speed + balanced — 1.43/0.69 | 30% | **73%** | 27% |
+| 2× handling + balanced — 0.85/1.35 | 0% | 0% | **67%** |
+
+Three tracks, three different right answers, none of them dominant. The first
+pass had handling builds losing everywhere, because the base ship was slow
+enough that spending on Handling left nothing to go with; `BASE_THRUST` went
+from 0.70 to 0.78 and the handling engine's thrust penalty halved.
 
 ## S4 — the route
 

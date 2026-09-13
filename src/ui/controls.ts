@@ -11,15 +11,15 @@ import { SHIP_COLOURS } from '../render/draw';
 export interface Settings {
   track: Track;
   plan: CornerPlan;
-  thrust: number;
-  handling: number;
   seed: string;
 }
 
 export interface Controls {
   readonly element: HTMLElement;
   readonly settings: Settings;
-  update(field: FieldState, track: Track): void;
+  /** Where the board mounts: the panel owns the layout, the board owns its own markup. */
+  readonly boardSlot: HTMLElement;
+  update(field: FieldState | undefined, track: Track): void;
 }
 
 const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
@@ -37,12 +37,11 @@ export function mountControls(
   parent: HTMLElement,
   onGo: () => void,
   onRestart: () => void,
+  onRace: () => void,
 ): Controls {
   const settings: Settings = {
     track: TRACKS[0] as Track,
     plan: 'carry',
-    thrust: 1,
-    handling: 1,
     seed: 'kestrel',
   };
 
@@ -63,15 +62,11 @@ export function mountControls(
           <b>${p.label}</b><span>${p.hint}</span></button>`,
       ).join('')}
     </div>
-    <div class="sliders">
-      <label>Thrust <input id="s-thrust" type="range" min="0.5" max="1.6" step="0.01" value="1" />
-        <output id="o-thrust">1.00</output></label>
-      <label>Handling <input id="s-handling" type="range" min="0.5" max="1.6" step="0.01" value="1" />
-        <output id="o-handling">1.00</output></label>
-    </div>
+    <div id="board-slot"></div>
     <div class="seedrow">
       <label>Seed <input id="s-seed" type="text" value="kestrel" spellcheck="false" /></label>
       <button type="button" id="b-go" class="go" hidden>Go</button>
+      <button type="button" id="b-race" class="go">Race</button>
       <button type="button" id="b-restart">New heat</button>
     </div>`;
   parent.appendChild(element);
@@ -108,17 +103,6 @@ export function mountControls(
   paintTracks();
   paintPlans();
 
-  const bind = (id: string, out: string, key: 'thrust' | 'handling'): void => {
-    const input = byId<HTMLInputElement>(id);
-    const output = byId<HTMLOutputElement>(out);
-    input.addEventListener('input', () => {
-      settings[key] = Number(input.value);
-      output.textContent = settings[key].toFixed(2);
-    });
-  };
-  bind('s-thrust', 'o-thrust', 'thrust');
-  bind('s-handling', 'o-handling', 'handling');
-
   const seed = byId<HTMLInputElement>('s-seed');
   seed.addEventListener('change', () => {
     settings.seed = seed.value;
@@ -127,6 +111,9 @@ export function mountControls(
   byId<HTMLButtonElement>('b-restart').addEventListener('click', onRestart);
   const go = byId<HTMLButtonElement>('b-go');
   go.addEventListener('click', onGo);
+  const race = byId<HTMLButtonElement>('b-race');
+  race.addEventListener('click', onRace);
+  const boardSlot = byId<HTMLElement>('board-slot');
 
   const bar = byId<HTMLElement>('bar');
   const rState = byId<HTMLElement>('r-state');
@@ -134,7 +121,20 @@ export function mountControls(
   return {
     element,
     settings,
+    boardSlot,
     update(field, track) {
+      // No heat yet: the board is the whole screen.
+      if (field === undefined) {
+        bar.innerHTML = '';
+        boardSlot.hidden = false;
+        race.hidden = false;
+        go.hidden = true;
+        rState.textContent = 'Fit the ship, set the plan, then Race.';
+        rState.className = 'state';
+        return;
+      }
+      boardSlot.hidden = true;
+      race.hidden = field.phase !== 'done';
       const rows = standings(field);
       const leader = rows[0];
       bar.innerHTML = rows
@@ -167,12 +167,13 @@ export function mountControls(
         rState.textContent = `Pit stop — everyone restarts level, the clock keeps running. Change the plan, then Go.`;
         rState.className = 'state pit';
       } else if (field.phase === 'done') {
-        rState.textContent =
+        const result =
           mine === undefined
             ? 'Heat over.'
             : mine.place === 1
               ? `Won the heat — ${seconds(mine.ship.totalTicks)} on total time.`
               : `P${mine.place} of ${rows.length} — ${seconds(mine.ticks - (leader?.ticks ?? 0))} off the win.`;
+        rState.textContent = `${result} +1 slot. Race again to spend it.`;
         rState.className = 'state done';
       } else if (me?.state.wide === true) {
         rState.textContent = 'WIDE — off the golden path, losing time';

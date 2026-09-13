@@ -73,6 +73,25 @@ export const RECOVER_FLOOR = 0.02;
 /** Lift brakes to a shade under the holding speed, to be sure of it. */
 export const LIFT_MARGIN = 0.97;
 
+// The ship, before anything is fitted. An empty hull still flies, slowly.
+
+export const BASE_THRUST = 0.78;
+export const BASE_HANDLING = 0.7;
+
+// The garage.
+
+/** Credits a player opens a season with. There is no other income yet. */
+export const STARTING_CREDITS = 100;
+
+/** Slots a ship starts with. */
+export const SLOTS_AT_START = 4;
+
+/** Slots gained for finishing a race. */
+export const SLOT_PER_FINISH = 1;
+
+/** What selling a component returns, as a share of everything paid for it. */
+export const SELL_RETURN = 0.6;
+
 // The rivals.
 
 /** A heat is this many laps, with a pit stop at the end of each one. */

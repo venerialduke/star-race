@@ -20,7 +20,7 @@ the code in `src/`.
 | # | Element | Under | What it is | Shape | Status | Rows |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | [Frames](frames.md) | The ship | Starting kits: the engine, shields and crew a ship begins with | catalogue | untouched | 0 |
-| 2 | [Ship parts](ship-parts.md) | The ship | Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection | catalogue | seeded | 5 |
+| 2 | [Ship parts](ship-parts.md) | The ship | Components that fill the slots: engines, shields, crew, navigation, weapons and deployables, collection | catalogue | seeded | 17 |
 | 3 | [Corner plans](corner-plans.md) | The ship | What the ship does at a bend: Lift, Carry, Charge, others | catalogue | untouched | 0 |
 | 4 | [Nav goals](nav-goals.md) | The ship | What the navigation system optimises for | catalogue | untouched | 0 |
 | 5 | [Crew types](crew-types.md) | The ship | Humanoid, robot, and whatever else | catalogue | untouched | 0 |

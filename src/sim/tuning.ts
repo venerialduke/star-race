@@ -73,6 +73,20 @@ export const RECOVER_FLOOR = 0.02;
 /** Lift brakes to a shade under the holding speed, to be sure of it. */
 export const LIFT_MARGIN = 0.97;
 
+// The rivals.
+
+/** A heat is this many laps, with a pit stop at the end of each one. */
+export const LAPS_PER_HEAT = 2;
+
+/** A bend counts as demanding if its holding speed is under this share of top speed. */
+export const BOT_TIGHT_HOLD = 0.95;
+
+/** How far a bot leans its build toward Handling on a track full of tight bends. */
+export const BOT_HANDLING_TILT = 2;
+
+/** How far a bot's build wanders off what the track suggests. */
+export const BOT_STAT_SPREAD = 0.22;
+
 /** Ship stats are clamped to this range, so a slider cannot break the sim. */
 export const STAT_MIN = 0.5;
 export const STAT_MAX = 1.6;

@@ -1,5 +1,6 @@
 // Canvas drawing. Reads sim state, never writes it.
 
+import type { ShipProgress } from '../sim/field';
 import type { RaceState } from '../sim/race';
 import { normalOf, sampleAt, type Track, type Vec } from '../sim/track';
 import { PATH_HALF_WIDTH } from '../sim/tuning';
@@ -10,13 +11,22 @@ const TRAIL = 46;
 /** How many past bends keep a mark on the track. */
 const MARKS = 5;
 
+/**
+ * Ships fly the same line, so on screen they would sit on top of each other.
+ * Each is nudged into its own lane — a drawing trick only: the simulation has
+ * no lanes, and no ship can touch another.
+ */
+const LANE_STEP = PATH_HALF_WIDTH * 0.42;
+
 const INK = '#e8eeff';
 const DEEP = '#0b1428';
 const PATH = '#ffd166';
 const PATH_EDGE = 'rgba(255, 209, 102, 0.22)';
 const OFF_PATH = 'rgba(120, 150, 210, 0.16)';
-const SHIP = '#7ee0ff';
 const SHIP_WIDE = '#ff7a6b';
+
+/** One colour per lane of the field. The player is always the first. */
+export const SHIP_COLOURS = ['#7ee0ff', '#f0a868', '#b48cff'] as const;
 
 export interface View {
   readonly scale: number;
@@ -57,10 +67,10 @@ function project(view: View, p: Vec): Vec {
   return { x: view.width / 2 + dx * view.scale, y: view.height / 2 + dy * view.scale };
 }
 
-export function drawRace(
+export function drawField(
   ctx: CanvasRenderingContext2D,
   track: Track,
-  state: RaceState,
+  ships: readonly ShipProgress[],
   width: number,
   height: number,
 ): void {
@@ -105,59 +115,95 @@ export function drawRace(
     ctx.stroke();
   }
 
-  // Where the last few bends threw it, fading as they fall behind.
-  const marks = state.swings.slice(-MARKS);
-  marks.forEach((swing, i) => {
-    if (swing.swing <= 0.5) return;
-    const age = (i + 1) / marks.length;
-    const at = sampleAt(track, swing.bendStart);
-    const n = normalOf(at);
-    const out = -at.turn * Math.min(swing.swing, PATH_HALF_WIDTH * 3);
-    const mark = project(view, { x: at.pos.x + n.x * out, y: at.pos.y + n.y * out });
-    ctx.beginPath();
-    ctx.arc(mark.x, mark.y, Math.max(2, view.scale * 1.8), 0, Math.PI * 2);
-    ctx.fillStyle = swing.wentWide
-      ? `rgba(255,122,107,${0.15 + age * 0.55})`
-      : `rgba(255,209,102,${0.1 + age * 0.3})`;
-    ctx.fill();
-  });
+  // Rivals first, the player last, so the player's ship is never hidden.
+  const order = ships
+    .map((ship, i) => ({
+      ship,
+      colour: SHIP_COLOURS[i % SHIP_COLOURS.length] as string,
+      lane: (i - (ships.length - 1) / 2) * LANE_STEP,
+    }))
+    .sort((a, b) => Number(a.ship.entrant.isPlayer) - Number(b.ship.entrant.isPlayer));
+  for (const { ship, colour, lane } of order) {
+    drawShip(ctx, view, track, ship.state, colour, ship.entrant.isPlayer, lane);
+  }
 
-  // The wake: where the ship has just been, which is what speed looks like.
+  // The track's name, quietly, so three tracks are tellable apart.
+  ctx.fillStyle = 'rgba(232,238,255,0.35)';
+  ctx.font = '600 12px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${track.name} · ${track.shape}`, 12, 20);
+  ctx.fillStyle = INK;
+}
+
+/**
+ * One ship: the marks its recent bends left, its wake, the tether back to the
+ * line it should be on, and the ship itself. A rival is drawn quieter than the
+ * player, so a glance finds the player first.
+ */
+function drawShip(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  track: Track,
+  state: RaceState,
+  colour: string,
+  isPlayer: boolean,
+  lane: number,
+): void {
+  const fade = isPlayer ? 1 : 0.6;
+
+  if (isPlayer) {
+    const marks = state.swings.slice(-MARKS);
+    marks.forEach((swing, i) => {
+      if (swing.swing <= 0.5) return;
+      const age = (i + 1) / marks.length;
+      const at = sampleAt(track, swing.bendStart);
+      const n = normalOf(at);
+      const out = -at.turn * Math.min(swing.swing, PATH_HALF_WIDTH * 3);
+      const mark = project(view, { x: at.pos.x + n.x * out, y: at.pos.y + n.y * out });
+      ctx.beginPath();
+      ctx.arc(mark.x, mark.y, Math.max(2, view.scale * 1.8), 0, Math.PI * 2);
+      ctx.fillStyle = swing.wentWide
+        ? `rgba(255,122,107,${0.15 + age * 0.55})`
+        : `rgba(255,209,102,${0.1 + age * 0.3})`;
+      ctx.fill();
+    });
+  }
+
   if (state.trail.length > 1) {
     ctx.beginPath();
     state.trail.slice(-TRAIL).forEach((point, i) => {
       const at = sampleAt(track, point.distance);
       const n = normalOf(at);
       const p = project(view, {
-        x: at.pos.x + n.x * point.offset,
-        y: at.pos.y + n.y * point.offset,
+        x: at.pos.x + n.x * (point.offset + lane),
+        y: at.pos.y + n.y * (point.offset + lane),
       });
       if (i === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
     });
-    ctx.strokeStyle = state.wide ? 'rgba(255,122,107,0.35)' : 'rgba(126,224,255,0.35)';
+    ctx.strokeStyle = withAlpha(state.wide ? SHIP_WIDE : colour, 0.35 * fade);
     ctx.lineWidth = Math.max(1.5, view.scale * 2);
     ctx.lineCap = 'round';
     ctx.stroke();
   }
 
-  // The ship, pushed off the line by its offset.
   const here = sampleAt(track, state.distance);
   const n = normalOf(here);
-  const world = {
-    x: here.pos.x + n.x * state.offset,
-    y: here.pos.y + n.y * state.offset,
-  };
-  const p = project(view, world);
-  const size = Math.max(7, 5 * view.scale);
+  const p = project(view, {
+    x: here.pos.x + n.x * (state.offset + lane),
+    y: here.pos.y + n.y * (state.offset + lane),
+  });
+  const size = Math.max(isPlayer ? 7 : 6, (isPlayer ? 5 : 4.2) * view.scale);
 
-  // A line back to the point on the path it should be on: the cost, drawn.
   if (Math.abs(state.offset) > 0.5) {
-    const onPath = project(view, here.pos);
+    const onPath = project(view, {
+      x: here.pos.x + n.x * lane,
+      y: here.pos.y + n.y * lane,
+    });
     ctx.beginPath();
     ctx.moveTo(onPath.x, onPath.y);
     ctx.lineTo(p.x, p.y);
-    ctx.strokeStyle = state.wide ? 'rgba(255,122,107,0.55)' : 'rgba(126,224,255,0.35)';
+    ctx.strokeStyle = withAlpha(state.wide ? SHIP_WIDE : colour, (state.wide ? 0.55 : 0.3) * fade);
     ctx.lineWidth = Math.max(1, view.scale * 0.8);
     ctx.stroke();
   }
@@ -171,16 +217,23 @@ export function drawRace(
   ctx.lineTo(-size * 0.35, 0);
   ctx.lineTo(-size * 0.7, -size * 0.62);
   ctx.closePath();
-  ctx.fillStyle = state.wide ? SHIP_WIDE : SHIP;
+  ctx.fillStyle = state.wide ? SHIP_WIDE : colour;
+  ctx.globalAlpha = fade;
   ctx.fill();
+  if (isPlayer) {
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(232,238,255,0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
   ctx.restore();
+  ctx.globalAlpha = 1;
+}
 
-  // The track's name, quietly, so three tracks are tellable apart.
-  ctx.fillStyle = 'rgba(232,238,255,0.35)';
-  ctx.font = '600 12px "Segoe UI", system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText(`${track.name} · ${track.shape}`, 12, 20);
-  ctx.fillStyle = INK;
+/** A hex colour at an alpha, so one palette serves lines and fills. */
+function withAlpha(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
 /** One edge of the golden path, offset from the centreline. */

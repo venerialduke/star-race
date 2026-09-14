@@ -320,6 +320,48 @@ sectors spliced in from a season seed holding the darkest splits, and augments
 that add a split or a whole sector. All of it is in the framework; none of it
 means anything until S5 gives the season somewhere to keep it.
 
+## V1 — the chase camera — **done**
+
+Dictated: follow the ship in third person, from behind and above; see the track
+and nearby rivals the way a racing game does; parallax space behind it; the old
+track view demoted to a mini-map. Art quality explicitly left for later — the
+question was whether the view feels right.
+
+**It is a pinhole camera over a flat plane**, in `src/render/camera.ts`. The
+world the simulation knows is already flat, so the only new dimension is the
+one the camera adds by sitting above it. No 3D library, no dependency, and the
+simulation neither knows nor cares: the same `ShipView` feeds both views, and
+three tracks raced end to end gave lap times identical to the frame before the
+camera existed.
+
+**There is no ground and no sky** — the track is a ribbon in the void, and the
+starfield wraps all the way round. That fell out of a mistake: the first version
+painted a sky gradient above a ground plane, and the pale wedges either side of
+the road looked like a desert. Space is better and simpler.
+
+**Parallax is three layers**: stars at no distance at all (they turn, never
+slide), bodies at 2,600–9,000 units, dust at 260–900. A background whose layers
+all move together says nothing about moving.
+
+**Four things that were wrong and are worth remembering.**
+
+- Quads made seams. Painting the road as a strip of quads put a visible
+  diagonal scar at every join, because neighbours were filled at slightly
+  different distances. Each surface is now one polygon with a gradient down the
+  screen; the fade is anchored to the ship's own patch of track, not to the
+  canvas, or the road only reaches full colour off the bottom of the screen.
+- Ships were drawn four times too big and hid the rivals right behind them. A
+  ship is 2 units of half-size against an 18-unit road, which is about as big as
+  one can honestly be with three of them abreast.
+- Splits and wakes were both cyan, so an alternate line and a line a ship left
+  behind were the same thing on screen. Splits are green now, in both views.
+- The chase view drew the track's name at its own top-left, which landed inside
+  the mini-map when it was the small one. Named once, at canvas level.
+
+**Left for the art pass:** ships are darts, checkpoints are two thin posts, and
+there is no sense of the ship banking into a bend. Frame cost is 16.7ms median
+at 420×900 with 520 stars, so there is room.
+
 ## S5 — the season
 
 **S5 is done when:** a run is several heats with a cut at the end of a phase,

@@ -124,7 +124,7 @@ Three tracks are built, and they exist to ask whether one strategy wins
 everywhere. They do not:
 
 | Track | Length | Bends | What wins on it |
-| --- | --- | --- | --- |
+| ---------------- | ------ | ------------------- | ------------------------------ |
 | **Kestrel Loop** | 1408 | mixed, tightest r42 | balanced build, Charge — 28.0s |
 | **Meridian Run** | 2370 | open, tightest r62 | reckless build, Carry — 39.3s |
 | **Cinder Coil** | 688 | tight, tightest r26 | nimble build, Charge — 16.9s |
@@ -333,22 +333,47 @@ speed and draws nothing.
 
 ## What the player sees
 
-The loop from above, the golden path as a bright ribbon with its two edges
-drawn — the lines the ship is thrown across, so crossing one reads as an event.
-The ship trails a wake, which is what speed looks like from above, and its
-lateral offset is drawn as the thing it is: a ship pushed off the line, tethered
-back to where it should be. The last few bends leave marks where they threw it,
-fading as they fall behind.
+**Two views of one race, and the player says which is big.**
+
+The **chase camera** is the race as it is flown: the eye sits above and behind
+the ship, looking along the track. The golden path runs away ahead and
+dissolves into the void — there is no ground under it and no sky over it, only
+a ribbon of track hung in space. Rivals are where they actually are, so one
+alongside is alongside and one ahead is a shape up the road. Tapping the small
+view swaps the two.
+
+The **map** is the race as a standings sheet: the whole loop at once, every
+ship's place on it, every split. It was the game's only view and is now the
+small one, because the two answer different questions — the camera answers
+"what is happening to me", the map answers "where am I in the race", and
+neither is any use for the other.
+
+Both draw the same world from the same numbers. The chase camera is a pinhole
+over a flat plane, so a position is projected rather than modelled, and nothing
+in the sim knows either view exists.
+
+**Space is three layers deep, and that is the whole point of it.** Stars are
+infinitely far and turn with the camera without ever sliding; bodies sit
+thousands of units out and drift over a lap; dust sits a few hundred out and
+slides fast enough to read as speed. A background that all moved together would
+say nothing about moving. Each track's sky is seeded from its own name, so a
+track keeps its sky and no two share one.
+
+In both views the golden path is drawn with its two edges — the lines the ship
+is thrown across, so crossing one reads as an event. Each ship trails a wake,
+which is what speed looks like, and the last few bends leave marks where they
+threw it, fading as they fall behind.
 
 Three ships fly it, each in its own colour, each nudged into its own drawing
-lane so they do not sit on top of each other — a drawing trick only: the
-simulation has no lanes and no ship can touch another. The player's ship is
-drawn brightest and on top, and only the player's bends leave marks.
+lane so they do not sit on top of each other — a drawing trick only, in both
+views: the simulation has no lanes and no ship can touch another.
 
 The **splits** are drawn as the lines they are: the one you planned in gold, a
-line you could plan but did not in the ships' own blue, and a split one grade
-beyond your navigation as a faint dash — you can see something turns off there,
-and no more than that. A split further out than that is not drawn at all.
+line you could plan but did not in green, and a split one grade beyond your
+navigation as a faint dash — you can see something turns off there, and no more
+than that. A split further out than that is not drawn at all. Green, and not a
+colour any ship uses: a line you could take and a line a ship left behind have
+to be tellable apart at a glance.
 
 The **tracking bar** is the thing that says who is winning: a lane per ship with
 its place, how far round the lap it is, and what it is giving away on total
@@ -361,8 +386,8 @@ the film off at the cursor changes no answer. It matters: on the Kestrel Loop a
 Charge can run third the whole lap, twenty-eight ticks down at half distance,
 and win at the line.
 
-**Two screens.** The **race** is playback: the loop, and the tracking bar over
-it. The **garage** is every decision: the track, the corner plan, the shop, the
+**Two screens.** The **race** is playback: the views above, and the tracking bar
+over them. The **garage** is every decision: the track, the corner plan, the shop, the
 shelf and the build — credits, slots used, and what the build adds up to. A seed
 box sits under both, because the same seed must produce the same heat and being
 able to prove that by eye is the point.

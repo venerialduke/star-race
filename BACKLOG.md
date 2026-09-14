@@ -540,18 +540,128 @@ well-formed value afterwards and the rivals could go on racing each other, but
 the player was being offered heats they were not in. `nextUp` answers `over` for
 a cut player now, and `playerIsOut` is what the UI reads.
 
-## S6 — interaction
+## S6 — interaction — **done**
 
-**S6 is done when:** what another ship bought changes your race.
+**S6 was done when:** what another ship bought changes your race.
 
 - **S6.1 Abilities**, firing automatically on proximity, track conditions or
-  the moment — and the placed kind, for abilities that are specifically placed.
+  the moment. — done
 - **S6.2 Weapons**: missiles, gravity mines, the tractor beam. Displacement,
-  not contact.
-- **S6.3 Fixtures**: bought and placed before a heat, shown to the heat — and
-  the ability-made kind that appears mid-race.
+  not contact. — done
+- **S6.3 Fixtures**: placed before a heat and shown to the heat, and the
+  ability-made kind that appears mid-race. — done
 - **S6.4 Collection**: dark matter as inventory, salvage from a shield that
-  keeps what hits it.
+  keeps what hits it. — done
+
+`DESIGN.md` has the rules. The seam is `src/sim/world.ts`, and the one rule that
+makes interaction safe to have is that **nothing lands on the tick it was
+fired**: every ship reads a world built from the state before the tick, and what
+it sends out arrives on the tick after. So no ship's move can depend on where
+another got to this tick, and the order the ships sit in the array cannot change
+the race. It is the rule the sim already ran on — a decision is an input, fixed
+before the tick that consumes it — applied to ships instead of players.
+
+**Two bugs the probes found and the reading did not.**
+
+- **A thing on the road bit every tick a ship was near it**, which nearly doubled
+  a lap time. This is the third time: damage learned it in S3.6, the corridor
+  wall learned it in V1.2, and this layer made it again. A fixture bites once per
+  ship per lap now. If a fourth thing ever lands on a ship over several ticks,
+  assume it has this bug until a test says otherwise.
+- **Three abilities never fired at all.** The mine reused the missile's range,
+  which is zero without a rack; and the three-bend chain counted bends only on
+  the current route, so on a track of short sectors the ability a whole engine is
+  built around never fired once. Both were invisible until a probe counted
+  firings — nothing crashed, nothing looked wrong, the parts simply did nothing.
+
+**Two more the measurement found**, which is why the measurement is worth the
+time it costs:
+
+- **`clearAhead` read a hairpin as clear road.** The samples are 3 units apart,
+  so a ship one sample into a bend still reads `radius 0`; and `nextBendOn` only
+  returns bends that *start* at or after the ship, so the bend it is standing in
+  was skipped. A ship 20 units into a 94-unit hairpin was told it had 174 units
+  of straight and boosted into the corner. On the Cinder Coil — longest straight
+  80 units, against a `BOOST_WANTS_CLEAR` of 150 — that was **every boost it ever
+  fired**. `nextBendOn` itself was left alone on purpose: `lookAhead` uses it for
+  braking, and changing it would move lap times that are pinned for other
+  reasons.
+- **A full collector shield never depleted.** A capture cost no shielding, so a
+  shield that started full stayed full and captured every weapon for the rest of
+  the race — free immunity, and 127–189 credits a heat against a 70-credit first
+  place and a 100-credit starting ship. Collecting was quietly a better living
+  than racing. A capture now loads the shield, so the next one has to wait for
+  the recharge.
+
+**Six constants moved on the numbers**, all with the measurement in the comment:
+`SALVAGE_PER_POWER` 0.9 → 0.2, `CHARGE_PER_TICK` 0.0042 → 0.0018,
+`PERFECT_BENDS` 3 → 2, `PUSH_PER_POWER` 0.55 → 0.3, `TRACTOR_SCRUB` roughly
+doubled, `BOOST_TICKS` 70 → 180. A new `CHARGE_FROM_REGEN` halves how much a
+crew's shield-regeneration rating also speeds up abilities: the catalogue does
+say Engineers do both, but at the full multiplier they silently doubled or
+tripled every ability in the game.
+
+**The finding that S6 does not fix, and the next milestone has to.**
+
+**A second engine beats every weapon, in every slot, on every track, by five to
+nine times.** Measured over 24+ seeds a cell with the subject rotated through all
+three grid positions: a balanced engine in the fourth slot is worth +548 to +946
+ticks of margin, and the best weapon is worth +273 — gravity mines on the
+Meridian Run, the only cell where a weapon clearly pays. On the Cinder Coil every
+weapon is dead weight, because ships are already off the golden path 75% of the
+time there and one more shove costs a target about ten ticks a heat.
+
+This is not really an S6 number. **Thrust dominates the whole game**, and it has
+since S3; interaction is the first system to be measured against it and so the
+first to show it. Two things worth holding on to before anything is tuned:
+
+- Weapons raise **win rate** more than they raise margin — a missile takes the
+  Meridian from 77% to 90% wins while costing 104 ticks of clock. Weapons only
+  ever target the ship *ahead*, so they are a rubber band. Points are by place
+  and the cut is on points, so that may be the currency that actually matters,
+  and a margin-only measurement would say a weapon is bad when the season says it
+  is good. The season-level version of this measurement has not been run.
+- The honest alternative is that the engine ladder is too steep and everything
+  else in the shop is priced against it. That is a tuning pass over `ship.ts`
+  costs and stat steps, not a new mechanic, and it should be measured in seasons
+  won rather than ticks gained.
+
+**Smaller things left standing**, recorded rather than fixed:
+
+- **The tractor beam may want rewriting rather than retuning.** Doubling its
+  scrub makes it roughly break even; it still has no job that the missile and the
+  mine do not do better.
+- **Collector shields are useless at L1–L2 and the whole part at L3.** Capture is
+  the only reason to own one. A part with nothing at its first two levels is a
+  shape worth avoiding next time something is added to the shop.
+- **Damage is a non-event in a two-lap heat**: mean integrity loss 0.000–0.034.
+  Shields' real job in S6 is stopping pushes, not soaking damage. Either heats
+  get longer or `HAZARD_DAMAGE` matters more than it does.
+- **Augments** — a player adding a split or a whole sector — are not in S6 and
+  are still blocked on the same thing as the track tool, under "Not scheduled".
+
+## S7 — the shop is a real choice
+
+**S7 is done when:** two builds that spend the same credits differently both win
+seasons, and neither is "buy engines".
+
+The measurement at the end of S6 is the brief: a second engine beats every weapon
+in every slot on every track by five to nine times. Nothing in the shop is priced
+against a stat ladder that steep.
+
+- **S7.1 Measure in seasons, not ticks.** Everything so far has been measured on
+  the clock over a heat. The season pays by place and the cut is on points, so a
+  part that wins races while losing time may already be good and the measurement
+  simply cannot see it. Build the season-level harness first; it may move several
+  of the answers below before anything is changed.
+- **S7.2 The engine ladder.** Costs and stat steps in `ship.ts`, measured in
+  seasons won. `STAT_MAX` is part of this: S5 found handling pinned at the cap in
+  24 of 24 seasons, so the top of the ladder is already flat and the ships that
+  get there stop differing.
+- **S7.3 Give the tractor beam a job, or cut it.** It is the one part with no
+  answer to "why this instead of the other two".
+- **S7.4 Levels 1 and 2 of the collector shield.** A part whose first two levels
+  do nothing is a part nobody buys twice.
 
 ## Not scheduled
 

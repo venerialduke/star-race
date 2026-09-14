@@ -13,7 +13,14 @@
 
 import type { Condition, Fitted } from './ship';
 import { levelOf } from './ship';
-import { nextBendOn, routeOf, type Route, type Sector, type Track } from './track';
+import {
+  bendOn,
+  nextBendOn,
+  routeOf,
+  type Route,
+  type Sector,
+  type Track,
+} from './track';
 import {
   ABILITY_WORKS,
   BOOST_WANTS_CLEAR,
@@ -166,10 +173,37 @@ const behind = (other: Presence, moment: Moment): number => {
   return gap > loop / 2 ? 0 : gap;
 };
 
-/** How much clear road runs ahead before the next bend on this line. */
+/**
+ * How much clear road runs ahead before the next bend on this line.
+ *
+ * Two traps here, and the first version fell into both. The samples are 3 units
+ * apart, so a ship one sample inside a bend still reads `radius 0` and does not
+ * look like it is on a bend at all; and `nextBendOn` only returns bends that
+ * *start* at or after the ship, so the bend it is standing in is skipped. Put
+ * together, a ship a sample into a hairpin was told it had 174 units of clear
+ * road and boosted into the corner — on the Cinder Coil, whose longest straight
+ * is 80 units, that was every boost it ever fired.
+ *
+ * So the bends table is asked directly, and the road is followed past the end of
+ * this line into the next sector rather than being assumed clear there.
+ */
 function clearAhead(moment: Moment): number {
-  const next = nextBendOn(moment.route, moment.along);
-  return next === undefined ? moment.route.length - moment.along : next.gap;
+  const { route, along, track, sector } = moment;
+  if (bendOn(route, along) !== undefined) return 0;
+  const next = nextBendOn(route, along);
+  if (next !== undefined) return next.gap;
+
+  let clear = route.length - along;
+  let index = sector.index;
+  for (let step = 0; step < track.sectors.length; step += 1) {
+    index = (index + 1) % track.sectors.length;
+    const after = track.sectors[index] as Sector;
+    const line = routeOf(after, moment.routes?.[index] ?? 0);
+    const first = nextBendOn(line, 0);
+    if (first !== undefined) return clear + first.gap;
+    clear += line.length;
+  }
+  return clear;
 }
 
 /**

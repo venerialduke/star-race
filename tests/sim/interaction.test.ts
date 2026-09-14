@@ -190,10 +190,18 @@ describe('a thing on the road bites once', () => {
 });
 
 describe('what answers a weapon', () => {
-  /** Fly one ship into one fixture and report what it cost. */
-  function meets(build: readonly Fitted[], fixture: Fixture): RaceState {
+  /**
+   * Fly one ship into one fixture and report the furthest it was thrown. The
+   * *final* offset says nothing: the ship hauls itself back afterwards, so
+   * where it happens to be 800 ticks later is about recovery, not about the hit.
+   */
+  function meets(
+    build: readonly Fitted[],
+    fixture: Fixture,
+  ): { peak: number; state: RaceState } {
     const stats = resolveBuild(build);
     let state = startRace(stats, build);
+    let peak = 0;
     for (let i = 0; i < 800; i += 1) {
       state = stepRace(state, {
         track: KESTREL_LOOP,
@@ -204,16 +212,56 @@ describe('what answers a weapon', () => {
         id: 'a',
         world: { ships: [], fixtures: [fixture] },
       });
+      peak = Math.max(peak, Math.abs(state.offset));
     }
-    return state;
+    return { peak, state };
+  }
+
+  /**
+   * One missile, on the first tick, from a standing start on the line. Nothing
+   * else is happening — measuring this against a fixture met mid-lap was the
+   * first version, and both ships simply peaked at the corridor wall because
+   * their own swing had already taken them there. The push has to be isolated
+   * to be measured.
+   */
+  function shoved(build: readonly Fitted[], power: number): RaceState {
+    const stats = resolveBuild(build);
+    return stepRace(startRace(stats, build), {
+      track: MERIDIAN_RUN,
+      stats,
+      build,
+      plan: 'carry',
+      seed: 1,
+      id: 'a',
+      incoming: [{ from: 'b', side: 1, power, scrub: 0 }],
+    });
   }
 
   it('pushes an unshielded ship further than a shielded one', () => {
+    const bare = shoved([fit('speed-engine', 2)], 60);
+    const thin = shoved([fit('speed-engine', 2), fit('general-shields', 1, 2)], 60);
+    const deep = shoved([fit('speed-engine', 2), fit('general-shields', 3, 2)], 60);
+    expect(Math.abs(bare.offset)).toBeGreaterThan(Math.abs(thin.offset));
+    expect(Math.abs(thin.offset)).toBeGreaterThan(Math.abs(deep.offset));
+    expect(bare.lastHit).toBe('a missile');
+  });
+
+  it('stops a weapon outright when the shields are deeper than it', () => {
+    const deep = shoved([fit('speed-engine', 2), fit('general-shields', 3, 2)], 20);
+    expect(deep.offset).toBe(0);
+    expect(deep.lastHit).toBeUndefined();
+    // The shielding is spent answering it, even though nothing got through.
+    expect(deep.shields).toBeLessThan(resolveBuild([
+      fit('speed-engine', 2),
+      fit('general-shields', 3, 2),
+    ]).shields);
+  });
+
+  it('is felt by a ship that flies into a mine on the road', () => {
     const mine = fixtureAt('mine', 300, 40);
     const bare = meets([fit('speed-engine', 2)], mine);
-    const armoured = meets([fit('speed-engine', 2), fit('general-shields', 3, 2)], mine);
-    expect(Math.abs(bare.offset)).toBeGreaterThan(Math.abs(armoured.offset));
-    expect(bare.lastHit).toBe('a gravity mine');
+    expect(bare.state.lastHit).toBe('a gravity mine');
+    expect(bare.peak).toBeGreaterThan(0);
   });
 
   it('keeps the weapon instead of taking it, at a full collector shield', () => {
@@ -232,8 +280,28 @@ describe('what answers a weapon', () => {
       incoming: [{ from: 'b', side: 1, power: 30, scrub: 0 }],
     });
     expect(state.salvage).toBeGreaterThan(0);
+    // It never lands: the ship is not moved an inch by a weapon it kept.
     expect(state.offset).toBe(0);
-    expect(state.shields).toBe(stats.shields);
+    // But catching it loads the shield, so the next one has to wait for the
+    // recharge. Without that the shield never leaves full and captures
+    // everything for the rest of the race for nothing.
+    expect(state.shields).toBeCloseTo(stats.shields - 30, 6);
+  });
+
+  it('cannot keep a weapon bigger than the shielding it has to catch it with', () => {
+    const build = [fit('speed-engine', 2), fit('collector-shield', 3, 2)];
+    const stats = resolveBuild(build);
+    const state = stepRace(startRace(stats, build), {
+      track: KESTREL_LOOP,
+      stats,
+      build,
+      plan: 'carry',
+      seed: 1,
+      id: 'a',
+      incoming: [{ from: 'b', side: 1, power: stats.shields + 10, scrub: 0 }],
+    });
+    expect(state.salvage).toBe(0);
+    expect(Math.abs(state.offset)).toBeGreaterThan(0);
   });
 
   it('takes speed off with a pull, which no shield answers', () => {

@@ -67,6 +67,7 @@ import {
   BLACK_HOLE_POWER,
   BOOST_SPEED,
   BOOST_TICKS,
+  CHARGE_FROM_REGEN,
   CHARGE_OFF_PATH,
   CHARGE_PER_TICK,
   DARK_MATTER_PER_HOLE,
@@ -353,7 +354,9 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const charge = Math.min(
     1,
     state.charge +
-      (state.wide ? CHARGE_OFF_PATH : CHARGE_PER_TICK * stats.shieldRegen),
+      (state.wide
+        ? CHARGE_OFF_PATH
+        : CHARGE_PER_TICK * (1 + (stats.shieldRegen - 1) * CHARGE_FROM_REGEN)),
   );
   const grants = grantsOf(config.build, state.condition);
   const fired =
@@ -692,8 +695,15 @@ function arrivals(
 
   const take = (power: number, side: number, what: string, hazard: boolean): void => {
     if (power <= 0) return;
-    if (stats.captures && full && !hazard) {
+    // A collector at full strength keeps the weapon: it never lands, and it
+    // sells when the race ends. Catching it still loads the shield, though —
+    // without that the shield never leaves full and captures everything for the
+    // rest of the race for nothing, which measured at roughly two first places
+    // of income a heat. Now a capture buys the next one time to recharge.
+    if (stats.captures && full && !hazard && left >= power) {
       salvage += power * SALVAGE_PER_POWER;
+      left -= power;
+      spent += power;
       hit = `captured ${what}`;
       return;
     }
@@ -720,9 +730,12 @@ function arrivals(
     if (fixture.kind === 'black-hole') {
       // A ship built for them reads the hole as a corner: through it faster,
       // unharmed, and gathering what it sheds if a collector is aboard.
+      // A collector gathers what the hole sheds either way. Needing the engine
+      // as well left the shield collecting nothing at all below level 3, which
+      // made it strictly worse than plain shielding at the levels you buy first.
+      if (stats.collects > 0) darkMatter += DARK_MATTER_PER_HOLE;
       if (stats.readsHoles) {
         carry += BLACK_HOLE_CARRY * SPEED_PER_THRUST;
-        if (stats.collects > 0) darkMatter += DARK_MATTER_PER_HOLE;
         hit = 'through a black hole';
         continue;
       }

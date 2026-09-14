@@ -13,7 +13,7 @@
 // you buy or fit reaches the ship until the next decision point — the segment
 // on screen was settled before you opened it.
 
-import { drawField, type ShipView } from './render/draw';
+import { drawField, insetRect, newScene, type ShipView } from './render/draw';
 import { botOrders, makeBot } from './sim/bot';
 import { finishRace, newGarage, type Garage } from './sim/garage';
 import {
@@ -139,6 +139,24 @@ function nextSegment(): void {
 
 startHeat();
 
+/** What the two views keep between frames: the camera's lag, and the sky. */
+const scene = newScene();
+
+// Tapping the small view swaps it with the big one. The chase camera answers a
+// different question from the map, and which one you want changes lap by lap.
+canvas.addEventListener('click', (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const inset = insetRect(rect.width, rect.height);
+  const inside =
+    x >= inset.x &&
+    x <= inset.x + inset.width &&
+    y >= inset.y &&
+    y <= inset.y + inset.height;
+  if (inside) scene.big = scene.big === 'chase' ? 'map' : 'chase';
+});
+
 let sized = { width: 0, height: 0 };
 
 /** Match the backing store to the canvas, which changes height with the screen. */
@@ -207,6 +225,7 @@ function frame(now: number): void {
     config.track,
     views(),
     { planned: controls.settings.routes, nav: resolveBuild(garage.fitted).nav },
+    scene,
     rect.width,
     rect.height,
   );

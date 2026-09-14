@@ -15,13 +15,22 @@ import {
 } from './track';
 import {
   ACCEL_PER_THRUST,
+  BASE_HULL,
   BRAKE_PER_TICK,
   CARRY_SCRUB,
   CHARGE_EXCESS_BONUS,
   LIFT_MARGIN,
   PATH_HALF_WIDTH,
+  GRAVITY_CHARGE_MULTIPLIER,
+  GRAVITY_PER_ACCEL,
+  GRAVITY_PER_CORNER,
+  GRAVITY_RECOVERY,
+  HAZARD_DAMAGE,
+  HAZARD_FULL_EXPOSURE,
+  EXCURSION_CLEAR,
   RECOVER_FLOOR,
   RECOVER_PER_HANDLING,
+  SHIELD_REGEN,
   SPEED_PER_THRUST,
   STAT_MAX,
   STAT_MIN,
@@ -31,6 +40,7 @@ import {
   WIDE_SPEED_AT_EDGE,
   WIDE_SPEED_FLOOR,
   WIDE_SPEED_PER_UNIT,
+  WORN_HANDLING_LOSS,
 } from './tuning';
 
 /** What the ship does about the gap between its speed and a bend's holding speed. */
@@ -41,6 +51,14 @@ export interface ShipStats {
   readonly thrust: number;
   /** The holding speed of every bend, and how fast a wide ship recovers. */
   readonly handling: number;
+  /** Damage the shields soak before the hull sees any. */
+  readonly shields: number;
+  /** How much the ship survives. Gone, and it is out of the heat. */
+  readonly hull: number;
+  /** How long the crew lasts under gravity. */
+  readonly endurance: number;
+  /** Shield regeneration on the path, as a multiple of the base rate. */
+  readonly shieldRegen: number;
 }
 
 /** One bend, as it happened. What the player is really watching. */
@@ -77,6 +95,19 @@ export interface RaceState {
   readonly lastLapTicks: number | undefined;
   readonly lastSectorTicks: number | undefined;
   readonly swings: readonly SwingEvent[];
+  /** What is left of the shields, and of the hull under them. */
+  readonly shields: number;
+  readonly hull: number;
+  /** Gravity the crew is carrying, 0 to 1. At 1 they are spent. */
+  readonly worn: number;
+  /** Hull gone. The ship stops where it is and is placed last. */
+  readonly lost: boolean;
+  /**
+   * An excursion is in progress: the ship crossed the edge and has not yet
+   * settled back well inside it. Without this the ship pays for the same
+   * excursion over and over, because the offset hovers across the line.
+   */
+  readonly outside: boolean;
   /** The bend currently being taken, if any. */
   readonly inBend: Bend | undefined;
   /** Where the current swing is pulling the ship. */
@@ -95,7 +126,7 @@ export interface RaceConfig {
 const clampStat = (value: number): number =>
   Math.min(STAT_MAX, Math.max(STAT_MIN, value));
 
-export function startRace(): RaceState {
+export function startRace(stats?: ShipStats): RaceState {
   return {
     tick: 0,
     distance: 0,
@@ -109,6 +140,11 @@ export function startRace(): RaceState {
     lastLapTicks: undefined,
     lastSectorTicks: undefined,
     swings: [],
+    shields: stats?.shields ?? 0,
+    hull: stats?.hull ?? BASE_HULL,
+    worn: 0,
+    lost: false,
+    outside: false,
     inBend: undefined,
     swingTarget: 0,
     trail: [],
@@ -131,8 +167,11 @@ function brakingDistance(from: number, to: number): number {
  */
 export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const { track, plan } = config;
+  if (state.lost) return { ...state, tick: state.tick + 1, speed: 0 };
   const thrust = clampStat(config.stats.thrust);
-  const handling = clampStat(config.stats.handling);
+  // A worn crew flies worse: the ship is being held by whatever is left of
+  // them, and by the nav system, which the framework says drifts wide.
+  const handling = clampStat(config.stats.handling) * (1 - state.worn * WORN_HANDLING_LOSS);
 
   const topSpeed = SPEED_PER_THRUST * thrust;
   const accel = ACCEL_PER_THRUST * thrust;
@@ -157,6 +196,29 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     }
     if (!braking) speed = Math.min(topSpeed, speed + accel);
   }
+
+  // 1b. Gravity: what the crew actually feels. A bend taken fast is lateral
+  // load — speed squared over the radius, which is why a tight corner at pace
+  // is the thing that empties a crew — and the engine adds its own when it is
+  // pushing. Charging a bend does both at once.
+  //
+  // Measuring acceleration alone was the first attempt and it was backwards:
+  // a Charge that holds top speed never "accelerates", so it read as the
+  // gentlest plan in the game.
+  const cornering = onBend ? (speed * speed) / here.radius : 0;
+  const pushing = Math.max(0, speed - state.speed) + (onBend && plan === 'charge' ? accel : 0);
+  const load =
+    (cornering * GRAVITY_PER_CORNER + pushing * GRAVITY_PER_ACCEL) *
+    (onBend && plan === 'charge' ? GRAVITY_CHARGE_MULTIPLIER : 1);
+  const endurance = Math.max(0.05, config.stats.endurance);
+  // Coasting is what recovers a crew, so the two never cancel each other out.
+  const worn = Math.min(
+    1,
+    Math.max(
+      0,
+      load > 0 ? state.worn + load / (endurance * 100) : state.worn - GRAVITY_RECOVERY,
+    ),
+  );
 
   // 2. Entering a bend: one seeded draw decides how wide this one throws us.
   let inBend = state.inBend;
@@ -206,12 +268,34 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const over = Math.abs(offset) - PATH_HALF_WIDTH;
   const wide = over > 0;
 
+  // 3b. The ground off the path holds things that hurt — and you hit them on
+  // the way out, not by the second. Damage lands once per excursion, the tick
+  // the ship crosses the edge, scaled by how hard it was thrown and how fast
+  // it was going.
+  //
+  // Charging it per tick was the first version, and it punished a low-handling
+  // build by the clock: a ship that spends most of a lap wide died every time,
+  // which is a ban rather than a risk.
+  const crossed = wide && !state.outside;
+  const outside = wide || Math.abs(offset) > PATH_HALF_WIDTH * EXCURSION_CLEAR;
+  const exposure = Math.min(1, Math.abs(state.swingTarget) / HAZARD_FULL_EXPOSURE);
+  const hit = crossed ? HAZARD_DAMAGE * exposure * (speed / SPEED_PER_THRUST) : 0;
+  const soaked = Math.min(state.shields, hit);
+  const shields = crossed
+    ? state.shields - soaked
+    : Math.min(
+        config.stats.shields,
+        state.shields + (wide ? 0 : SHIELD_REGEN * config.stats.shieldRegen),
+      );
+  const hull = state.hull - (hit - soaked);
+  const lost = hull <= 0;
+
   // 4. Move. Being off the golden path costs time, not damage — and the
   // further out the ship is thrown, the more of its speed it loses.
   const keep = wide
     ? Math.max(WIDE_SPEED_FLOOR, WIDE_SPEED_AT_EDGE - over * WIDE_SPEED_PER_UNIT)
     : 1;
-  const distance = state.distance + speed * keep;
+  const distance = lost ? state.distance : state.distance + speed * keep;
 
   // 5. Checkpoints and laps.
   const tick = state.tick + 1;
@@ -233,6 +317,11 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     lastLapTicks: crossedLap ? tick - state.lapStartTick : state.lastLapTicks,
     lastSectorTicks: crossedSector ? tick - state.sectorStartTick : state.lastSectorTicks,
     swings,
+    shields,
+    hull: Math.max(0, hull),
+    worn,
+    lost,
+    outside,
     inBend,
     swingTarget,
     trail: [...state.trail, { distance, offset }].slice(-TRAIL_LENGTH),

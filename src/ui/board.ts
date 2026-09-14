@@ -20,6 +20,7 @@ import {
   componentById,
   slotsOf,
   upgradeCost,
+  type Category,
   type Fitted,
 } from '../sim/ship';
 
@@ -118,14 +119,25 @@ export function mountBoard(
               )
               .join('')}`;
 
-      const shopRows = COMPONENTS.map((component) => {
-        const first = component.levels[0];
-        return `<div class="part">
-          <span class="t"><span>${component.name}</span><em>${component.arrows} · ${first.note}</em></span>
-          <span class="actions">
-            <button type="button" data-do="buy" data-id="${component.id}" ${first.cost > garage.credits ? 'disabled' : ''}>Buy ${first.cost}c</button>
-          </span>
-        </div>`;
+      const CATEGORIES: readonly Category[] = ['engine', 'shields', 'crew'];
+      const CATEGORY_NAMES: Record<Category, string> = {
+        engine: 'Engines',
+        shields: 'Shields',
+        crew: 'Crew',
+      };
+      const shopRows = CATEGORIES.map((category) => {
+        const rows = COMPONENTS.filter((c) => c.category === category)
+          .map((component) => {
+            const first = component.levels[0];
+            return `<div class="part">
+              <span class="t"><span>${component.name}</span><em>${component.arrows} · ${first.note}</em></span>
+              <span class="actions">
+                <button type="button" data-do="buy" data-id="${component.id}" ${first.cost > garage.credits ? 'disabled' : ''}>Buy ${first.cost}c</button>
+              </span>
+            </div>`;
+          })
+          .join('');
+        return `<h4>${CATEGORY_NAMES[category]}</h4>${rows}`;
       }).join('');
 
       element.innerHTML = `
@@ -134,6 +146,8 @@ export function mountBoard(
           <span><b>${slotsUsed(garage)}/${garage.slots}</b> slots</span>
           <span>Thrust <b>${stats.thrust.toFixed(2)}</b></span>
           <span>Handling <b>${stats.handling.toFixed(2)}</b></span>
+          <span>Shields <b>${stats.shields}</b></span>
+          <span>Crew <b>${stats.endurance.toFixed(2)}</b></span>
         </div>
         <h3>Fitted</h3>
         ${fittedRows}

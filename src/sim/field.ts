@@ -14,12 +14,15 @@ import {
   type ShipStats,
 } from './race';
 import { makeRng } from './rng';
+import type { Fitted } from './ship';
 import type { Track } from './track';
 
 export interface Entrant {
   readonly id: string;
   readonly name: string;
   readonly stats: ShipStats;
+  /** What it fitted to get those stats. Visible, so a rival can be read. */
+  readonly build?: readonly Fitted[];
   readonly isPlayer: boolean;
 }
 
@@ -73,7 +76,7 @@ export function startField(
     ships: entrants.map((entrant, i) => ({
       entrant,
       plan: plans[i] ?? 'carry',
-      state: startRace(),
+      state: startRace(entrant.stats),
       lapTicks: [],
       totalTicks: 0,
       waiting: false,
@@ -98,6 +101,11 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
       plan: ship.plan,
       seed: seedFor(config.seed, i, state.lap),
     });
+    // A ship whose hull is gone stops where it is: it is out of the heat, and
+    // the standings place it behind everyone who finished.
+    if (next.lost) {
+      return { ...ship, state: next, waiting: true };
+    }
     if (next.distance < config.track.length) return { ...ship, state: next };
     return {
       ...ship,
@@ -130,8 +138,9 @@ export function leavePit(state: FieldState, plans: readonly CornerPlan[]): Field
     ships: state.ships.map((ship, i) => ({
       ...ship,
       plan: plans[i] ?? ship.plan,
-      state: startRace(),
-      waiting: false,
+      // Shields come back at the pit stop; the hull does not.
+      state: { ...startRace(ship.entrant.stats), hull: ship.state.hull, lost: ship.state.lost },
+      waiting: ship.state.lost,
     })),
   };
 }
@@ -142,6 +151,8 @@ export function leavePit(state: FieldState, plans: readonly CornerPlan[]): Field
  * is not the same as leading, so this is what the tracking bar reads.
  */
 export function projectedTicks(state: FieldState, ship: ShipProgress): number {
+  // A lost ship is behind everyone, however good its time was up to then.
+  if (ship.state.lost) return Number.MAX_SAFE_INTEGER;
   if (ship.waiting || state.phase === 'done') return ship.totalTicks;
   const furthest = Math.max(...state.ships.map((s) => s.state.distance));
   const behind = Math.max(0, furthest - ship.state.distance);

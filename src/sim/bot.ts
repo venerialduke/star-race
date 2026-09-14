@@ -8,6 +8,8 @@
 import type { Entrant } from './field';
 import type { CornerPlan } from './race';
 import { makeRng, seedFrom } from './rng';
+import { buy, fit, newGarage, upgrade, type Garage } from './garage';
+import { resolveBuild } from './ship';
 import { holdingSpeed, type Track } from './track';
 import {
   BOT_HANDLING_TILT,
@@ -19,6 +21,15 @@ import {
 } from './tuning';
 
 const NAMES = ['Vex Ardo', 'Sable Rook', 'Juno Kest', 'Ilsa Crane', 'Mott Rell'];
+
+/** What a bot fills its spare slots with, once the engines are chosen. */
+const SUPPORT = [
+  'general-shields',
+  'crew-androids',
+  'crew-engineers',
+  'crew-nanites',
+  'crew-scientists',
+] as const;
 
 const clamp = (v: number): number => Math.min(STAT_MAX, Math.max(STAT_MIN, v));
 
@@ -40,20 +51,42 @@ export function tightness(track: Track): number {
 }
 
 /**
- * A build shaped by the track, then pushed off it by the draw. A bot that
- * reads the track well still has to commit before it knows how the bends fall.
+ * A bot shops in the same garage the player does, with the same budget and the
+ * same slots. It leans its engines toward what the track asks for, then fills
+ * what is left with a shield or a crew on a seeded draw — so it commits to a
+ * build before it knows how the bends will fall, exactly as the player must.
  */
 export function makeBot(track: Track, seed: number, index: number): Entrant {
   const rng = makeRng(seed).fork(index * 5381);
   const tilt = tightness(track) * BOT_HANDLING_TILT;
   const wobble = (): number => (rng.unitInterval() - 0.5) * 2 * BOT_STAT_SPREAD;
+
+  const lean = clamp(tilt + wobble());
+  const engine =
+    lean > 0.58 ? 'handling-engine' : lean < 0.34 ? 'speed-engine' : 'balanced-engine';
+  const second = rng.unitInterval() < 0.5 ? engine : 'balanced-engine';
+  const pick = (): string =>
+    SUPPORT[Math.floor(rng.unitInterval() * SUPPORT.length)] as string;
+  const support = pick();
+  const spare = pick();
+
+  let garage: Garage = newGarage();
+  for (const id of [engine, second, support, spare]) {
+    const before = garage;
+    garage = buy(garage, id);
+    if (garage !== before) garage = fit(garage, garage.shelf.length - 1);
+  }
+  // Whatever is left goes into deepening one of the parts it already has.
+  if (garage.fitted.length > 0) {
+    const target = Math.floor(rng.unitInterval() * garage.fitted.length);
+    garage = upgrade(garage, target);
+  }
+
   return {
     id: `bot-${index}`,
     name: NAMES[index % NAMES.length] as string,
-    stats: {
-      thrust: clamp(1 + (0.5 - tilt) * 0.6 + wobble()),
-      handling: clamp(1 + (tilt - 0.5) * 0.6 + wobble()),
-    },
+    stats: resolveBuild(garage.fitted),
+    build: garage.fitted,
     isPlayer: false,
   };
 }

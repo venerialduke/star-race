@@ -142,7 +142,7 @@ units of lateral offset. Through the bend the offset grows toward the drawn
 swing; on the straight after it, the ship pulls back toward the path at a rate
 set by Handling.
 
-**Wide** is where the cost lands. A ship whose offset exceeds
+**Wide** is where the cost lands, in time and now in damage. A ship whose offset exceeds
 `PATH_HALF_WIDTH` has left the golden path, and what it keeps of its speed
 falls the further out it is:
 
@@ -158,6 +158,39 @@ mildest. Scaling it is what prices the gamble.
 
 The ship hauls itself back proportionally — fast at first, fighting the last
 few units — at a rate set by Handling.
+
+## Damage, shields and the hull
+
+The ground off the golden path holds things that hurt, and **you hit them on
+the way out**. Damage lands once per **excursion** — the tick the ship crosses
+the edge — scaled by how hard the bend threw it and how fast it was going. An
+excursion is over only once the ship is back well inside the path, so drifting
+across the line is not billed twice.
+
+Charging by the tick was the first version and it was wrong: a low-handling
+build spends most of a lap outside, so it died every time. That is a ban on a
+build, not a risk.
+
+**Shields** take the hit first and regrow while the ship is on the path.
+**Hull** is underneath and never comes back inside a heat; at zero the ship is
+**lost** — it stops where it is, and the standings place it behind everyone who
+finished. Shields come back at a pit stop. The hull does not.
+
+## Gravity and the crew
+
+Gravity is what the crew feels: **cornering load**, which is speed squared over
+the bend's radius, plus what the engine adds when it is pushing. Charging a
+bend does both at once. Coasting sheds it.
+
+**Endurance** decides how fast that bites. A spent crew loses
+`WORN_HANDLING_LOSS` of the ship's handling, which is the framework's "nav
+flies it alone, and drifts wide at every bend". With no crew fitted, endurance
+is `BASE_ENDURANCE` — low, because nobody is flying it but the nav.
+
+Measuring acceleration alone was the first attempt and it read backwards: a
+Charge that holds top speed never accelerates, so it came out the gentlest plan
+in the game. Cornering load is what the crew actually feels, and it is why the
+tight track empties them and the open one does not.
 
 **Charge** adds `CHARGE_EXCESS_BONUS` to the excess before the draw, because it
 is still accelerating when the bend arrives. **Lift** brakes to the holding

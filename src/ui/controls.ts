@@ -30,6 +30,15 @@ const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
 
 const seconds = (ticks: number): string => `${(ticks / TICK_HZ).toFixed(2)}s`;
 
+/** Hull, shields and how spent the crew is — only what is worth saying. */
+function condition(me: { state: { hull: number; shields: number; worn: number } } | undefined): string {
+  if (me === undefined) return '';
+  const parts = [`hull ${Math.round(me.state.hull)}`];
+  if (me.state.shields > 0.5) parts.push(`shields ${Math.round(me.state.shields)}`);
+  if (me.state.worn > 0.25) parts.push(`crew ${Math.round((1 - me.state.worn) * 100)}%`);
+  return ` · ${parts.join(' · ')}`;
+}
+
 const gap = (ticks: number): string =>
   ticks <= 0.5 ? 'leader' : `+${(ticks / TICK_HZ).toFixed(2)}`;
 
@@ -175,11 +184,14 @@ export function mountControls(
               : `P${mine.place} of ${rows.length} — ${seconds(mine.ticks - (leader?.ticks ?? 0))} off the win.`;
         rState.textContent = `${result} +1 slot. Race again to spend it.`;
         rState.className = 'state done';
+      } else if (me?.state.lost === true) {
+        rState.textContent = 'HULL GONE — out of the heat.';
+        rState.className = 'state wide';
       } else if (me?.state.wide === true) {
-        rState.textContent = 'WIDE — off the golden path, losing time';
+        rState.textContent = `WIDE — off the path${condition(me)}`;
         rState.className = 'state wide';
       } else {
-        rState.textContent = `Lap ${field.lap + 1} · ${me === undefined ? '' : `${me.state.speed.toFixed(2)} speed`}`;
+        rState.textContent = `Lap ${field.lap + 1}${condition(me)}`;
         rState.className = 'state';
       }
     },

@@ -37,10 +37,10 @@ describe('the garage', () => {
     expect(garage.credits).toBeGreaterThan(0);
     expect(garage.slots).toBe(SLOTS_AT_START);
     expect(garage.fitted).toHaveLength(0);
-    expect(resolveBuild(garage.fitted)).toEqual({
-      thrust: BASE_THRUST,
-      handling: BASE_HANDLING,
-    });
+    const stats = resolveBuild(garage.fitted);
+    expect(stats.thrust).toBe(BASE_THRUST);
+    expect(stats.handling).toBe(BASE_HANDLING);
+    expect(stats.shields).toBe(0);
   });
 
   it('buys onto the shelf, not onto the ship', () => {

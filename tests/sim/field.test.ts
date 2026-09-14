@@ -15,13 +15,14 @@ import {
 } from '../../src/sim/field';
 import type { CornerPlan } from '../../src/sim/race';
 import { seedFrom } from '../../src/sim/rng';
+import { bareShip } from '../../src/sim/ship';
 import { CINDER_COIL, KESTREL_LOOP, MERIDIAN_RUN } from '../../src/sim/track';
 import { LAPS_PER_HEAT } from '../../src/sim/tuning';
 
 const SEED = seedFrom('heat');
 
 const entrants = (): Entrant[] => [
-  { id: 'player', name: 'You', stats: { thrust: 1, handling: 1 }, isPlayer: true },
+  { id: 'player', name: 'You', stats: bareShip(1, 1), isPlayer: true },
   makeBot(KESTREL_LOOP, SEED, 1),
   makeBot(KESTREL_LOOP, SEED, 2),
 ];
@@ -132,10 +133,17 @@ describe('the bots', () => {
     expect(quick.stats.thrust).toBeGreaterThan(quick.stats.handling);
   });
 
-  it('are not the same ship as each other', () => {
-    const one = makeBot(KESTREL_LOOP, SEED, 1);
-    const two = makeBot(KESTREL_LOOP, SEED, 2);
-    expect(one.stats).not.toEqual(two.stats);
+  it('are opponents rather than metronomes: two rivals rarely agree', () => {
+    // Builds are made of discrete components now, so two bots landing on the
+    // same one is legitimate — it just has to be the exception.
+    const pairs = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+      const seed = seedFrom(`field ${i}`);
+      return [makeBot(KESTREL_LOOP, seed, 1), makeBot(KESTREL_LOOP, seed, 2)] as const;
+    });
+    const different = pairs.filter(
+      ([one, two]) => JSON.stringify(one.build) !== JSON.stringify(two.build),
+    );
+    expect(different.length).toBeGreaterThanOrEqual(pairs.length - 1);
   });
 
   it('pick a plan deterministically, and change their minds between laps', () => {

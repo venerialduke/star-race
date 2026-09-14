@@ -22,6 +22,7 @@ import {
   type FieldState,
 } from './field';
 import { finishRace, newGarage, type Garage } from './garage';
+import type { RaceState, ShipStats } from './race';
 import { makeRng } from './rng';
 import { resolveBuild } from './ship';
 import { TRACKS, type Track } from './track';
@@ -39,6 +40,7 @@ import {
   PHASES,
   POINTS_BY_PLACE,
   PURSE_BY_PLACE,
+  DARK_MATTER_VALUE,
   ROSTER,
 } from './tuning';
 
@@ -232,6 +234,13 @@ export const racerById = (season: Season, id: string): Racer | undefined =>
 export interface Finish {
   readonly id: string;
   readonly ticks: number;
+  /**
+   * Credits gathered during the heat rather than won by finishing: weapons a
+   * collector shield kept, and dark matter turned in. This is the first income
+   * that does not come from beating somebody — and the first reason to spend
+   * late-season credits on something that is not a stat.
+   */
+  readonly collected: number;
 }
 
 /**
@@ -261,7 +270,18 @@ export function finishesOf(field: FieldState): readonly Finish[] {
   return standings(field).map((row) => ({
     id: row.ship.entrant.id,
     ticks: row.ship.totalTicks,
+    collected: collectedBy(row.ship.state, row.ship.entrant.stats),
   }));
+}
+
+/**
+ * What a ship's collecting was worth. Salvage sells whatever it is; dark matter
+ * only turns into credits with a level 3 collector aboard — below that it is
+ * fuel for a dark matter engine's boost and nothing else.
+ */
+export function collectedBy(state: RaceState, stats: ShipStats): number {
+  const dark = stats.collects >= 3 ? state.darkMatter * DARK_MATTER_VALUE : 0;
+  return Math.round(state.salvage + dark);
 }
 
 /**
@@ -298,7 +318,14 @@ export function settleHeat(
     const winner = group[0]?.ticks ?? 0;
     group.forEach((finish, i) => {
       const { points, purse } = payFor(i + 1, finish.ticks - winner);
-      paid.set(finish.id, { place: i + 1, ticks: finish.ticks, points, purse });
+      // What it gathered is paid on top of what it won, so a ship can come
+      // third and still leave the heat richer than the ship that beat it.
+      paid.set(finish.id, {
+        place: i + 1,
+        ticks: finish.ticks,
+        points,
+        purse: purse + finish.collected,
+      });
     });
   }
 

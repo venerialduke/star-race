@@ -1,6 +1,13 @@
 // A heat: three ships flying the same loop, stepped in lockstep, never
 // touching. Each carries its own race state and its own seeded draws, so one
-// ship's luck can never shift another's.
+// ship's *luck* can never shift another's.
+//
+// Since S6 a ship's **choices** can. A weapon pushes a rival off their line, a
+// mine waits on the road for whoever is behind, a boost leaves a black hole.
+// The rule that keeps this deterministic is that nothing lands on the tick it
+// was fired: every ship reads a world built from the state before the tick, and
+// what it sends out is resolved into impulses that arrive on the tick after. So
+// the order the ships sit in this array cannot change the race.
 //
 // Every ship finishes. Damage costs a ship its pace, never its race.
 //
@@ -9,6 +16,7 @@
 // which is why being ahead on the track is not the same as leading.
 
 import {
+  presenceOf,
   startRace,
   stepRace,
   type CornerPlan,
@@ -18,7 +26,14 @@ import {
 import { makeRng } from './rng';
 import type { Fitted } from './ship';
 import { legalRoutes, type Track } from './track';
-import { NAV_FOR_REPLAN } from './tuning';
+import { MINE_POWER, NAV_FOR_REPLAN } from './tuning';
+import {
+  ageFixtures,
+  resolveEmissions,
+  type Emission,
+  type Fixture,
+  type World,
+} from './world';
 
 export interface Entrant {
   readonly id: string;
@@ -37,6 +52,12 @@ export interface Orders {
   readonly plan: CornerPlan;
   /** One route index per sector. Anything the ship's nav cannot read is ignored. */
   readonly routes: readonly number[];
+  /**
+   * Which sector to lay a mine in before the heat starts, if the ship has any.
+   * Decided in the garage like everything else, and shown to the whole heat —
+   * a placed fixture is the one piece of interaction nobody is surprised by.
+   */
+  readonly place?: number | undefined;
 }
 
 /**
@@ -76,6 +97,12 @@ export interface FieldState {
   readonly lap: number;
   readonly phase: FieldPhase;
   readonly ships: readonly ShipProgress[];
+  /** What is lying on the track right now. */
+  readonly fixtures: readonly Fixture[];
+  /** Fired last tick, landing this one. Nothing ever lands on its own tick. */
+  readonly emissions: readonly Emission[];
+  /** The mines laid before the heat, restored at every pit stop. */
+  readonly placed: readonly Fixture[];
 }
 
 export interface FieldConfig {
@@ -98,23 +125,79 @@ export function startField(
   commands: readonly Command[],
   track?: Track,
 ): FieldState {
+  const ships = entrants.map((entrant, i) => {
+    const routes = readable(track, entrant, asOrders(commands[i]).routes);
+    return {
+      entrant,
+      plan: asOrders(commands[i]).plan,
+      routes,
+      state: startRace(entrant.stats, entrant.build ?? [], routes[0] ?? 0),
+      lapTicks: [],
+      totalTicks: 0,
+      waiting: false,
+    };
+  });
+  const placed = placedFixtures(entrants, commands, ships, track);
   return {
     tick: 0,
     lap: 0,
     phase: 'racing',
-    ships: entrants.map((entrant, i) => {
-      const routes = readable(track, entrant, asOrders(commands[i]).routes);
-      return {
-        entrant,
-        plan: asOrders(commands[i]).plan,
-        routes,
-        state: startRace(entrant.stats, entrant.build ?? [], routes[0] ?? 0),
-        lapTicks: [],
-        totalTicks: 0,
-        waiting: false,
-      };
-    }),
+    ships,
+    fixtures: placed,
+    emissions: [],
+    placed,
   };
+}
+
+/**
+ * The mines laid before the heat. Everyone in the heat can see these — they are
+ * on the board before the start, which is what separates them from the ones
+ * dropped mid-race, which nobody knows about until they bite.
+ *
+ * A ship can only lay one if it brought a mine rack, and it lays it on the line
+ * it planned to fly, which is what makes placing one a route decision too.
+ */
+function placedFixtures(
+  entrants: readonly Entrant[],
+  commands: readonly Command[],
+  ships: readonly ShipProgress[],
+  track: Track | undefined,
+): readonly Fixture[] {
+  if (track === undefined) return [];
+  const laid: Fixture[] = [];
+  entrants.forEach((entrant, i) => {
+    const where = asOrders(commands[i]).place;
+    if (where === undefined) return;
+    const sector = track.sectors[where];
+    if (sector === undefined) return;
+    const level = mineLevel(entrant);
+    if (level === 0) return;
+    const index = ships[i]?.routes[where] ?? 0;
+    laid.push({
+      id: `${entrant.id}:placed:${where}`,
+      kind: 'mine',
+      owner: entrant.id,
+      // Half way down the line, so it is met at speed rather than at a
+      // checkpoint where everybody is bunched anyway.
+      distance: (sector.start + sector.end) / 2,
+      sector: where,
+      route: index,
+      offset: 0,
+      power: MINE_POWER[level - 1] ?? 0,
+      // A placed mine is there for the whole heat, not for a while.
+      life: Number.MAX_SAFE_INTEGER,
+    });
+  });
+  return laid;
+}
+
+/** How deep a mine rack this ship brought, or 0 for none. */
+export function mineLevel(entrant: Entrant): number {
+  let best = 0;
+  for (const item of entrant.build ?? []) {
+    if (item.componentId === 'gravity-mine') best = Math.max(best, item.level);
+  }
+  return best;
 }
 
 /**
@@ -144,6 +227,20 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
   if (state.phase !== 'racing') return state;
   const tick = state.tick + 1;
 
+  // What was fired last tick lands now, and what was dropped last tick is on
+  // the road now. Both are resolved before a single ship moves, so every ship
+  // this tick reads the same world and none of them can read another's move.
+  const { incoming, dropped } = resolveEmissions(state.emissions);
+  const fixtures = [...ageFixtures(state.fixtures), ...dropped];
+  const world: World = {
+    // A ship waiting at the line is out of the race and out of the world:
+    // there is nothing to be gained by shooting it.
+    ships: state.ships
+      .filter((ship) => !ship.waiting)
+      .map((ship) => presenceOf(ship.state, ship.entrant.id)),
+    fixtures,
+  };
+
   const ships = state.ships.map((ship, i) => {
     if (ship.waiting) return ship;
     const next = stepRace(ship.state, {
@@ -153,6 +250,9 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
       plan: ship.plan,
       routes: ship.routes,
       seed: seedFor(config.seed, i, state.lap),
+      id: ship.entrant.id,
+      world,
+      incoming: incoming.get(ship.entrant.id) ?? [],
     });
     if (next.distance < config.track.length) return { ...ship, state: next };
     return {
@@ -171,6 +271,10 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
     lap: state.lap,
     phase: allIn ? (lastLap ? 'done' : 'pit') : 'racing',
     ships,
+    fixtures,
+    // Collected, not applied: these land on the next tick.
+    emissions: ships.flatMap((s) => (s.waiting ? [] : s.state.emitted)),
+    placed: state.placed,
   };
 }
 
@@ -207,6 +311,11 @@ export function leavePit(
         waiting: false,
       };
     }),
+    // The lap restarts, so the road is clear again — except for the mines that
+    // were laid before the heat, which are there for the whole of it.
+    fixtures: state.placed,
+    emissions: [],
+    placed: state.placed,
   };
 }
 

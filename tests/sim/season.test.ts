@@ -185,7 +185,7 @@ describe('what a heat pays', () => {
   it('banks the purse and a slot into the garage that carries', () => {
     const before = { ...newSeason(3), paced: true };
     const me = racerById(before, 'player')!;
-    const after = settleHeat(before, [[{ id: 'player', ticks: 1000 }]]);
+    const after = settleHeat(before, [[{ id: 'player', ticks: 1000, collected: 0 }]]);
     const then = racerById(after, 'player')!;
     expect(then.points).toBe((POINTS_BY_PLACE[0] ?? 0) + MARGIN_POINTS);
     expect(then.garage.credits).toBeGreaterThan(me.garage.credits);

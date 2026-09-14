@@ -4,6 +4,7 @@
 // consumes it — which is the seam a networked opponent will arrive through.
 // Nothing here reads the clock, the DOM, or anything but its arguments.
 
+import { fires, grantsOf, type AbilityId, type Grant } from './ability';
 import { makeRng, type Rng } from './rng';
 import {
   bareShip,
@@ -62,7 +63,37 @@ import {
   WIDE_SPEED_FLOOR,
   WIDE_SPEED_PER_UNIT,
   WORN_HANDLING_LOSS,
+  BLACK_HOLE_CARRY,
+  BLACK_HOLE_POWER,
+  BOOST_SPEED,
+  BOOST_TICKS,
+  CHARGE_FROM_REGEN,
+  CHARGE_OFF_PATH,
+  CHARGE_PER_TICK,
+  DARK_MATTER_PER_HOLE,
+  FIXTURE_LIFE,
+  MINE_DROP_BACK,
+  MINE_POWER,
+  MINE_SEE_BACK,
+  MISSILE_POWER,
+  MISSILE_RANGE,
+  PERFECT_BENDS,
+  PERFECT_BONUS,
+  PERFECT_WINDOW,
+  PUSH_PER_POWER,
+  SALVAGE_PER_POWER,
+  TRACTOR_RANGE,
+  TRACTOR_SCRUB,
 } from './tuning';
+import {
+  EMPTY_WORLD,
+  fixturesHit,
+  nearestAhead,
+  type Emission,
+  type Impulse,
+  type Presence,
+  type World,
+} from './world';
 
 /** What the ship does about the gap between its speed and a bend's holding speed. */
 export type CornerPlan = 'lift' | 'carry' | 'charge';
@@ -82,6 +113,14 @@ export interface ShipStats {
   readonly repair: number;
   /** Which grades of split the ship can plan, and whether it can re-plan at a pit stop. */
   readonly nav: number;
+  /** A multiplier on what this ship's weapons carry and how far they reach. */
+  readonly weaponPower: number;
+  /** Keeps a weapon that hits it at full shields, to sell when the race ends. */
+  readonly captures: boolean;
+  /** Reads a black hole as a corner: faster through one, and unharmed by it. */
+  readonly readsHoles: boolean;
+  /** How deep a collector is aboard. At 3 it can cash dark matter in. */
+  readonly collects: number;
 }
 
 /** One bend, as it happened. What the player is really watching. */
@@ -153,6 +192,35 @@ export interface RaceState {
   readonly swingTarget: number;
   /** Recent positions, oldest first. Bounded, so a long race stays cheap. */
   readonly trail: readonly TrailPoint[];
+
+  // S6. What the ship has to spend, what it is spending, and what it has taken.
+
+  /** Charge, 0 to 1. Gathered on the golden path and nowhere else. */
+  readonly charge: number;
+  /** Ticks of boost still running. */
+  readonly boostLeft: number;
+  /** Bends still to be taken perfectly by the handling engine's chain. */
+  readonly perfectLeft: number;
+  /** When the last bend of that chain was taken, so a quick one can pay extra. */
+  readonly lastPerfectTick: number | undefined;
+  /** What this ship did this tick that reaches past itself. Read by the field. */
+  readonly emitted: readonly Emission[];
+  /** Weapons kept by a collector shield, in credits' worth. */
+  readonly salvage: number;
+  /** Dark matter gathered off the black holes it has flown through. */
+  readonly darkMatter: number;
+  /**
+   * Fixtures this ship has already been bitten by. A thing on the road bites
+   * once per ship per lap, not once per tick it is near — which is the lesson
+   * damage learned in S3.6 and the corridor wall learned in V1.2, and which
+   * doubled a lap time the first time this file forgot it.
+   */
+  readonly met: readonly string[];
+  /** The last thing that reached it from outside, for the readout. */
+  readonly lastHit: string | undefined;
+  /** The ability it fired last, and when — what the player is watching for. */
+  readonly lastFired: AbilityId | undefined;
+  readonly lastFiredTick: number | undefined;
 }
 
 export interface RaceConfig {
@@ -169,6 +237,12 @@ export interface RaceConfig {
    */
   readonly routes?: readonly number[];
   readonly seed: number;
+  /** Who this ship is, so a weapon it fires can be addressed to somebody else. */
+  readonly id?: string;
+  /** The field and the track's furniture, as they stood **before** this tick. */
+  readonly world?: World;
+  /** What was fired at this ship a tick ago and lands now. */
+  readonly incoming?: readonly Impulse[];
 }
 
 const clampStat = (value: number): number =>
@@ -208,6 +282,17 @@ export function startRace(
     bendKey: undefined,
     swingTarget: 0,
     trail: [],
+    charge: 0,
+    boostLeft: 0,
+    perfectLeft: 0,
+    lastPerfectTick: undefined,
+    emitted: [],
+    salvage: 0,
+    darkMatter: 0,
+    met: [],
+    lastHit: undefined,
+    lastFired: undefined,
+    lastFiredTick: undefined,
   };
 }
 
@@ -243,9 +328,6 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   // them, and by the nav system, which the framework says drifts wide.
   const handling = clampStat(stats.handling) * (1 - state.worn * WORN_HANDLING_LOSS);
 
-  const topSpeed = SPEED_PER_THRUST * thrust;
-  const accel = ACCEL_PER_THRUST * thrust;
-
   // Where the ship is: which sector, which way through it, and how far along
   // that line. Canonical distance stays on the main line so laps and standings
   // never care which way anyone went; the route decides the geometry.
@@ -257,12 +339,64 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const onBend = here.radius > 0;
   const holding = onBend ? holdingSpeed(here.radius, handling) : Infinity;
 
-  // 1. Speed. The corner plan decides what happens about a bend.
-  let speed = state.speed;
+  // 0. What reached the ship since its last tick. Ships still never touch: a
+  // weapon fired at this ship a tick ago arrives now, and anything lying on the
+  // track is met by flying past it. Nothing lands on the tick it was fired, so
+  // no ship's move can depend on where another one got to this tick — which is
+  // the same rule the whole sim runs on, applied to ships instead of players.
+  const world = config.world ?? EMPTY_WORLD;
+  const me = presenceOf(state, config.id ?? 'me');
+  const arrived = arrivals(state, stats, world, track, me, config.incoming ?? []);
+
+  // 0b. Charge, and what the ship spends it on. Charge is gathered on the
+  // golden path and nowhere else, so a lap spent being thrown wide arrives at
+  // the last bend with nothing to spend — the second reason to hold the line.
+  const charge = Math.min(
+    1,
+    state.charge +
+      (state.wide
+        ? CHARGE_OFF_PATH
+        : CHARGE_PER_TICK * (1 + (stats.shieldRegen - 1) * CHARGE_FROM_REGEN)),
+  );
+  const grants = grantsOf(config.build, state.condition);
+  const fired =
+    charge >= 1
+      ? fires(grants, {
+          onBend,
+          route,
+          sector,
+          along,
+          me,
+          track,
+          world,
+          routes: config.routes,
+          busy: state.boostLeft > 0 || state.perfectLeft > 0,
+          ranges: {
+            missile: reach(MISSILE_RANGE, grants, 'missile', stats.weaponPower),
+            tractor: reach(TRACTOR_RANGE, grants, 'tractor', stats.weaponPower),
+            mine: reach(MINE_SEE_BACK, grants, 'mine', stats.weaponPower),
+          },
+        })
+      : undefined;
+
+  const boosting = fired?.id === 'boost' || fired?.id === 'dark-boost';
+  const boostLeft = boosting ? BOOST_TICKS : Math.max(0, state.boostLeft - 1);
+  // A boost is speed the engine did not have to build up to, so it lifts the
+  // ceiling rather than the acceleration: what it buys is a faster straight.
+  const topSpeed = SPEED_PER_THRUST * thrust + (boostLeft > 0 ? BOOST_SPEED : 0);
+  const accel = ACCEL_PER_THRUST * thrust;
+
+  // 1. Speed. The corner plan decides what happens about a bend — unless the
+  // chain is running, which takes the bend perfectly whatever the plan says.
+  //
+  // A tractor beam is taken off the top: no shield answers a pull, and a black
+  // hole read as a corner is speed the ship gains rather than loses.
+  let speed = state.speed * (1 - arrived.scrub) + arrived.carry;
+  const chaining = state.perfectLeft > 0 || fired?.id === 'three-bends';
   if (onBend) {
     // What this plan is willing to take the bend at. Charge ignores it.
     const cap = plan === 'lift' ? holding * LIFT_MARGIN : holding;
-    if (plan === 'charge') speed = Math.min(topSpeed, speed + accel);
+    if (chaining || plan === 'charge') speed = Math.min(topSpeed, speed + accel);
     else if (speed > cap) {
       speed = plan === 'lift' ? cap : Math.max(cap, speed - CARRY_SCRUB);
     } else {
@@ -316,13 +450,28 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
       : `${sector.index}:${state.route}:${Math.round(bend.start)}`;
   let bendKey = state.bendKey;
   let swingTarget = state.swingTarget;
+  let perfectLeft = fired?.id === 'three-bends' ? PERFECT_BENDS : state.perfectLeft;
+  let lastPerfectTick = state.lastPerfectTick;
   const swings = [...state.swings];
   if (bend !== undefined && key !== bendKey) {
     bendKey = key;
     const bendHolding = holdingSpeed(bend.radius, handling);
+    // A bend inside the chain is taken perfectly — no swing at all — and one
+    // reached soon after the last pays speed for the run being quick. That is
+    // what makes the chain want a coil of bends rather than three stray ones.
+    const perfect = perfectLeft > 0;
+    if (perfect) {
+      perfectLeft -= 1;
+      const quick =
+        lastPerfectTick !== undefined && state.tick - lastPerfectTick <= PERFECT_WINDOW;
+      if (quick) speed = Math.min(topSpeed, speed + PERFECT_BONUS * topSpeed);
+      lastPerfectTick = state.tick;
+    }
     const rawExcess = Math.max(0, speed - bendHolding) / bendHolding;
     const excess =
-      plan === 'lift' ? 0 : rawExcess + (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0);
+      perfect || plan === 'lift'
+        ? 0
+        : rawExcess + (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0);
     const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT);
     const draw = drawFor(config.seed, key as string, state.lap).unitInterval();
     const swing = spread * draw;
@@ -357,6 +506,10 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     );
     offset = Math.abs(offset) <= pull ? 0 : offset - Math.sign(offset) * pull;
   }
+  // What a weapon or a fixture does is push you off your line. It lands here,
+  // in the same units the swing is paid in, and the corridor holds it in the
+  // same way — so being shot is being thrown wide by somebody else's choice.
+  offset += arrived.push;
   // The corridor. Off the golden path is ground you can fly over; past the
   // corridor there is something solid, and the ship does not go through it.
   //
@@ -383,18 +536,20 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const outside = wide || Math.abs(offset) > PATH_HALF_WIDTH * EXCURSION_CLEAR;
   const exposure = Math.min(1, Math.abs(state.swingTarget) / HAZARD_FULL_EXPOSURE);
   const hit = crossed ? HAZARD_DAMAGE * exposure * (speed / SPEED_PER_THRUST) : 0;
-  const soaked = Math.min(state.shields, hit);
-  const shields = crossed
-    ? state.shields - soaked
-    : Math.min(
-        stats.shields,
-        state.shields + (wide ? 0 : SHIELD_REGEN * stats.shieldRegen),
-      );
+  const soaked = Math.min(Math.max(0, state.shields - arrived.spent), hit);
+  // Shields answer a weapon and a hazard with the same pool, and only recharge
+  // in a tick where nothing reached the ship at all.
+  const quiet = !crossed && arrived.spent === 0 && arrived.damage === 0;
+  const shields = quiet
+    ? Math.min(stats.shields, state.shields + (wide ? 0 : SHIELD_REGEN * stats.shieldRegen))
+    : Math.max(0, state.shields - arrived.spent - soaked);
 
   // What the shields did not stop breaks things. A bigger hit finds more to
   // break, and which parts it finds is a seeded draw — so the same excursion
   // always costs you the same, and two ships never share the damage.
-  const through = hit - soaked;
+  // A weapon displaces rather than damages; a black hole does both. So what
+  // breaks a part is the hazard half, path and hole alike.
+  const through = hit - soaked + arrived.damage;
   const repaired = repair(state.condition, stats.repair);
   const { condition, broken } =
     through > 0
@@ -451,7 +606,241 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     bendKey,
     swingTarget,
     trail: [...state.trail, { distance, offset, route: nextRoute }].slice(-TRAIL_LENGTH),
+    // A charge spent is a charge gone, whatever it bought.
+    charge: fired === undefined ? charge : 0,
+    boostLeft,
+    perfectLeft,
+    lastPerfectTick,
+    emitted: emissionsFor(fired, state, stats, world, track, me),
+    salvage: state.salvage + arrived.salvage,
+    darkMatter: state.darkMatter + arrived.darkMatter,
+    met: arrived.met.length === 0 ? state.met : [...state.met, ...arrived.met],
+    lastHit: arrived.hit ?? state.lastHit,
+    lastFired: fired?.id ?? state.lastFired,
+    lastFiredTick: fired === undefined ? state.lastFiredTick : tick,
   };
+}
+
+/** This ship as the rest of the field is allowed to see it. */
+export function presenceOf(state: RaceState, id: string): Presence {
+  return {
+    id,
+    distance: state.distance,
+    offset: state.offset,
+    sector: state.sector,
+    route: state.route,
+    speed: state.speed,
+  };
+}
+
+/** How far a weapon reaches, or how hard it hits, at the level fitted. */
+function reach(
+  table: readonly number[],
+  grants: readonly Grant[],
+  id: AbilityId,
+  power: number,
+): number {
+  const grant = grants.find((g) => g.id === id);
+  if (grant === undefined) return 0;
+  return (table[grant.level - 1] ?? 0) * power;
+}
+
+/** Everything that reached the ship this tick, once the shields have had a say. */
+interface Arrival {
+  /** Track units sideways, in the same currency the swing is paid in. */
+  readonly push: number;
+  /** A share of speed taken straight off. No shield answers a pull. */
+  readonly scrub: number;
+  /** Speed gained, which only a ship that reads black holes ever sees. */
+  readonly carry: number;
+  /** Shielding spent answering what arrived. */
+  readonly spent: number;
+  /** Damage that got through. Weapons displace; hazards damage. */
+  readonly damage: number;
+  readonly salvage: number;
+  readonly darkMatter: number;
+  /** Fixtures met this tick, so they are not met again on the next one. */
+  readonly met: readonly string[];
+  readonly hit: string | undefined;
+}
+
+/**
+ * What a tick's worth of other people's decisions does to this ship: weapons
+ * fired at it a tick ago, and whatever is lying on the track where it is.
+ *
+ * The shields answer all of it with one pool. A collector shield at full
+ * strength does something else entirely — it **keeps** the weapon, which never
+ * lands at all and sells when the race ends. That is the only way a ship
+ * profits from being shot at.
+ */
+function arrivals(
+  state: RaceState,
+  stats: ShipStats,
+  world: World,
+  track: Track,
+  me: Presence,
+  incoming: readonly Impulse[],
+): Arrival {
+  let push = 0;
+  let scrub = 0;
+  let carry = 0;
+  let spent = 0;
+  let damage = 0;
+  let salvage = 0;
+  let darkMatter = 0;
+  const met: string[] = [];
+  let hit: string | undefined;
+  let left = state.shields;
+  const full = stats.shields > 0 && state.shields >= stats.shields;
+
+  const take = (power: number, side: number, what: string, hazard: boolean): void => {
+    if (power <= 0) return;
+    // A collector at full strength keeps the weapon: it never lands, and it
+    // sells when the race ends. Catching it still costs the shielding, though —
+    // without that the shield never leaves full, captures everything for the
+    // rest of the race for nothing, and earns about two first places a heat.
+    //
+    // A weapon bigger than the shield is still caught, and empties it. Refusing
+    // those was the first version of this fix and it went too far the other way:
+    // the missiles worth catching are exactly the ones that outweigh a shield,
+    // so collectors earned nothing at all. What limits it is the recharge — the
+    // next capture waits for full shields, however big the last one was.
+    if (stats.captures && full && !hazard) {
+      salvage += power * SALVAGE_PER_POWER;
+      const caught = Math.min(left, power);
+      left -= caught;
+      spent += caught;
+      hit = `captured ${what}`;
+      return;
+    }
+    const soaked = Math.min(left, power);
+    left -= soaked;
+    spent += soaked;
+    const rest = power - soaked;
+    if (hazard) damage += rest;
+    else push += rest * PUSH_PER_POWER * side;
+    if (rest > 0) hit = what;
+  };
+
+  // Weapons fired at this ship a tick ago. A pull is taken straight off the
+  // speed; a shove is answered by the shields and what beats them moves the
+  // ship. Both were decided before this tick, by somebody else.
+  for (const impulse of incoming) {
+    scrub += impulse.scrub;
+    take(impulse.power, impulse.side, 'a missile', false);
+  }
+
+  for (const fixture of fixturesHit(world, me, track.length)) {
+    if (state.met.includes(fixture.id)) continue;
+    met.push(fixture.id);
+    if (fixture.kind === 'black-hole') {
+      // A ship built for them reads the hole as a corner: through it faster,
+      // unharmed, and gathering what it sheds if a collector is aboard.
+      // A collector gathers what the hole sheds either way. Needing the engine
+      // as well left the shield collecting nothing at all below level 3, which
+      // made it strictly worse than plain shielding at the levels you buy first.
+      if (stats.collects > 0) darkMatter += DARK_MATTER_PER_HOLE;
+      if (stats.readsHoles) {
+        carry += BLACK_HOLE_CARRY * SPEED_PER_THRUST;
+        hit = 'through a black hole';
+        continue;
+      }
+      // Otherwise it pulls, toward itself, and hurts.
+      take(
+        fixture.power,
+        Math.sign(fixture.offset - me.offset) || 1,
+        'a black hole',
+        true,
+      );
+      continue;
+    }
+    // A gravity mine throws the ship further off whatever line it was on,
+    // which is why it costs most to a ship that meets it already out of shape.
+    take(fixture.power, Math.sign(me.offset) || 1, 'a gravity mine', false);
+  }
+
+  return { push, scrub, carry, spent, damage, salvage, darkMatter, met, hit };
+}
+
+/** What this ship's fired ability sends out into the world. */
+function emissionsFor(
+  fired: Grant | undefined,
+  state: RaceState,
+  stats: ShipStats,
+  world: World,
+  track: Track,
+  me: Presence,
+): readonly Emission[] {
+  if (fired === undefined) return [];
+  switch (fired.id) {
+    case 'missile': {
+      const range = (MISSILE_RANGE[fired.level - 1] ?? 0) * stats.weaponPower;
+      const target = nearestAhead(world, me, range, track.length);
+      if (target === undefined) return [];
+      return [
+        {
+          kind: 'push',
+          from: me.id,
+          target: target.id,
+          // Shove them further off whatever line they are on.
+          side: Math.sign(target.offset) || 1,
+          power: (MISSILE_POWER[fired.level - 1] ?? 0) * stats.weaponPower,
+        },
+      ];
+    }
+    case 'tractor': {
+      const range = (TRACTOR_RANGE[fired.level - 1] ?? 0) * stats.weaponPower;
+      const target = nearestAhead(world, me, range, track.length);
+      if (target === undefined) return [];
+      return [
+        {
+          kind: 'drag',
+          from: me.id,
+          target: target.id,
+          scrub: TRACTOR_SCRUB[fired.level - 1] ?? 0,
+        },
+      ];
+    }
+    case 'mine':
+      return [
+        {
+          kind: 'drop',
+          fixture: {
+            id: `${me.id}:${state.tick}:mine`,
+            kind: 'mine',
+            owner: me.id,
+            distance: state.distance - MINE_DROP_BACK,
+            sector: state.sector,
+            route: state.route,
+            offset: state.offset,
+            power: (MINE_POWER[fired.level - 1] ?? 0) * stats.weaponPower,
+            life: FIXTURE_LIFE,
+          },
+        },
+      ];
+    // The one ability that changes the track. It is not announced, and it
+    // discriminates by build: a ship with a dark matter engine reads the hole
+    // it leaves as a corner, and everybody else meets a hazard.
+    case 'dark-boost':
+      return [
+        {
+          kind: 'drop',
+          fixture: {
+            id: `${me.id}:${state.tick}:hole`,
+            kind: 'black-hole',
+            owner: me.id,
+            distance: state.distance,
+            sector: state.sector,
+            route: state.route,
+            offset: state.offset,
+            power: BLACK_HOLE_POWER,
+            life: FIXTURE_LIFE,
+          },
+        },
+      ];
+    default:
+      return [];
+  }
 }
 
 /** Everything a crew can reach, patched a little further back toward whole. */

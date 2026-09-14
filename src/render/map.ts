@@ -20,9 +20,12 @@ import {
 } from '../sim/track';
 import { PATH_HALF_WIDTH } from '../sim/tuning';
 import {
+  HOLE,
+  MINE,
   SHIP_COLOURS,
   SHIP_WIDE,
   withAlpha,
+  type FixtureView,
   type Rect,
   type RouteView,
   type ShipView,
@@ -99,6 +102,7 @@ export function drawMap(
   track: Track,
   ships: readonly ShipView[],
   routes: RouteView,
+  fixtures: readonly FixtureView[],
   rect: Rect,
 ): void {
   const { width, height } = rect;
@@ -171,6 +175,10 @@ export function drawMap(
     ctx.stroke();
   }
 
+  // What is lying on the road, under the ships: a ship must never be hidden by
+  // the thing that is about to hit it.
+  for (const fixture of fixtures) drawFixture(ctx, view, track, fixture);
+
   // Rivals first, the player last, so the player's ship is never hidden.
   const order = ships
     .map((ship, i) => ({
@@ -184,6 +192,40 @@ export function drawMap(
   }
 
   ctx.restore();
+}
+
+/**
+ * A mine or a black hole where it actually sits. Drawn as a ring rather than a
+ * blob so the road under it stays readable — you are meant to see what you are
+ * about to fly into, and where the line goes past it.
+ */
+function drawFixture(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  track: Track,
+  fixture: FixtureView,
+): void {
+  // A fixture does not move, so the snapped sample is the right one: there is
+  // nothing here for the smoothing to smooth.
+  const at = placeOn(track, fixture.distance, fixture.route);
+  const n = normalOf(at);
+  const p = project(view, {
+    x: at.pos.x + n.x * fixture.offset,
+    y: at.pos.y + n.y * fixture.offset,
+  });
+  const colour = fixture.kind === 'mine' ? MINE : HOLE;
+  const size = Math.max(3, view.scale * (fixture.kind === 'mine' ? 3.5 : 6));
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+  ctx.strokeStyle = withAlpha(colour, fixture.mine ? 0.55 : 0.9);
+  ctx.lineWidth = Math.max(1, view.scale * 0.8);
+  ctx.stroke();
+  if (fixture.kind === 'black-hole') {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size * 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = withAlpha(colour, 0.5);
+    ctx.fill();
+  }
 }
 
 /**

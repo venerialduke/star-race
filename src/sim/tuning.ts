@@ -292,3 +292,159 @@ export const BOT_ROUTE_NERVE = 0.55;
 /** Ship stats are clamped to this range, so a slider cannot break the sim. */
 export const STAT_MIN = 0.5;
 export const STAT_MAX = 1.6;
+
+// S6 — interaction. Ships still never touch: everything below reaches another
+// ship through the track, and lands on the tick after it was fired, so no
+// ship's move can depend on where another one got to this tick.
+
+/**
+ * Charge gained per tick on the golden path, as a share of a full charge.
+ *
+ * Measured at 0.0042 a ship refilled in about 100 ticks and fired nine to
+ * nineteen times a lap, which no shield could answer and which made charge a
+ * formality rather than a resource. At this rate it is two or three abilities a
+ * lap, and choosing the moment is a real thing the ship does.
+ */
+export const CHARGE_PER_TICK = 0.0018;
+
+/**
+ * How much of a crew's shield-regeneration rating also speeds up abilities. The
+ * catalogue gives Engineers "shields **and abilities** recharge faster", so it
+ * is one rating doing both — but at the full multiplier Engineers silently
+ * doubled or tripled every ability in the game (3.17 boosts a lap against 1.51
+ * with Androids), which is a bigger effect than the part is sold on.
+ */
+export const CHARGE_FROM_REGEN = 0.5;
+
+/**
+ * Charge is only gathered on the path. Off it a ship is surviving, not
+ * charging — which is the second reason to stay on the line, after speed.
+ */
+export const CHARGE_OFF_PATH = 0;
+
+/**
+ * How long a boost runs, and what it adds to top speed while it does.
+ *
+ * A boost lifts the ceiling rather than the acceleration, so the ship still has
+ * to climb to it: at 70 ticks it spent about 55 of them reaching the speed it
+ * had been granted and the whole ability was worth 7 ticks a heat.
+ */
+export const BOOST_TICKS = 180;
+export const BOOST_SPEED = 0.3;
+
+/** A boost wants a straight at least this long ahead of it to be worth firing. */
+export const BOOST_WANTS_CLEAR = 150;
+
+/**
+ * How many bends the handling engine's chain takes perfectly.
+ *
+ * Three was an off switch, not an ability. On the Cinder Coil it covered every
+ * bend of every lap: the ship went from 48% of the lap off the golden path to
+ * 0%, and the finish time's standard error over 72 races was exactly zero. A
+ * part that makes a track deterministic defeats the bet the whole game rests on.
+ */
+export const PERFECT_BENDS = 2;
+
+/** A bend reached within this many ticks of the last pays extra speed. */
+export const PERFECT_WINDOW = 180;
+
+/** What that extra is, as a share of top speed. */
+export const PERFECT_BONUS = 0.08;
+
+/** The chain wants this many bends close together ahead before it fires. */
+export const PERFECT_WANTS_BENDS = 3;
+
+// Weapons. A weapon displaces a ship rather than hitting it: what it costs you
+// is the line you were on, which is the same currency the swing is paid in.
+
+/** How far up the road a missile reaches, in track units, per level. */
+export const MISSILE_RANGE = [260, 340, 420] as const;
+
+/**
+ * What a missile carries. Shields soak it; what gets through pushes.
+ *
+ * Raised once the charge rate and the push were both cut, because the two cuts
+ * multiplied: weapons fired a third as often and each landing hit moved a ship
+ * half as far, so their output fell about sixfold and every weapon became worse
+ * than leaving the slot empty. The fix is here rather than in `PUSH_PER_POWER`
+ * — a bigger power beats the shields that were eating these whole, where a
+ * bigger push per point would bring back the one-hit-to-the-wall problem.
+ */
+export const MISSILE_POWER = [26, 38, 48] as const;
+
+/**
+ * Track units of lateral push per point of weapon power that beats the shields.
+ *
+ * At 0.55 the biggest missile in the game carried 38.7 units against a corridor
+ * 26 wide, so one hit took an unshielded ship from the centreline to the wall —
+ * where it could not gather charge and so could not answer. Survivable, and
+ * measured so, but it is the shape a player calls unfair. A full-power hit now
+ * costs a line and a bend rather than the rest of the sector.
+ */
+export const PUSH_PER_POWER = 0.3;
+
+/** How far a tractor beam reaches, and the share of speed it takes off. */
+export const TRACTOR_RANGE = [200, 280, 360] as const;
+
+/**
+ * At level 2 this cost its target fourteen ticks across a whole heat and its
+ * owner a hundred and forty-three, which is a slot spent on being polite.
+ */
+export const TRACTOR_SCRUB = [0.12, 0.18, 0.26] as const;
+
+/** A mine sits this far back down the road from where it was dropped. */
+export const MINE_DROP_BACK = 40;
+
+/** How close a ship must pass a fixture for it to bite, along and across. */
+export const FIXTURE_REACH = 30;
+export const FIXTURE_ACROSS = 20;
+
+/**
+ * What a mine and a black hole carry when a ship passes one. Raised with
+ * `MISSILE_POWER` and for the same reason: against a rival carrying the
+ * cheapest shield in the shop, a mine was delivering 2.4 units of push against
+ * a golden path 9 wide, which is not an event.
+ */
+export const MINE_POWER = [30, 42, 54] as const;
+export const BLACK_HOLE_POWER = 30;
+
+/** Ticks a dropped fixture lasts before it fades. A placed one lasts the heat. */
+export const FIXTURE_LIFE = 3600;
+
+/** A ship built for black holes takes this much more speed through one. */
+export const BLACK_HOLE_CARRY = 0.12;
+
+// Collection. What a heat gathers, and what it is worth in the garage.
+
+/**
+ * Credits a captured weapon sells for, per point of power it was carrying.
+ *
+ * At 0.9 a heat's salvage came to 127-189 credits against a 70-credit first
+ * place and a 100-credit starting ship — the loot was worth about two wins, and
+ * collecting quietly became a better living than racing. Cut to 0.2 it landed at
+ * 9-17 credits, which is a third of a third place and below noticing. This is
+ * the middle: a good heat's collecting is worth something without being worth
+ * more than winning.
+ */
+export const SALVAGE_PER_POWER = 0.45;
+
+/** Dark matter gathered by passing through a black hole with a collector. */
+export const DARK_MATTER_PER_HOLE = 12;
+
+/** Credits a unit of dark matter turns into, with a level 3 collector. */
+export const DARK_MATTER_VALUE = 1.4;
+
+/** How often a bot fits a weapon when it can afford one. */
+export const BOT_AGGRESSION = 0.45;
+
+/**
+ * How whole a part must still be to grant its ability. A badly broken engine
+ * flies on, worth less; it does not also hand you a boost.
+ */
+export const ABILITY_WORKS = 0.5;
+
+/** How far ahead the three-bend chain looks for a run of bends to spend itself on. */
+export const PERFECT_LOOKAHEAD = 420;
+
+/** How far back a mine rack notices somebody chasing, per level. */
+export const MINE_SEE_BACK = [180, 240, 300] as const;

@@ -5,11 +5,12 @@
 // time, which is here. Each entry below cites the row it comes from; the
 // values are this file's to choose, the mechanics are not.
 //
-// A component is stocked only when the race can honour what it does. Engines,
-// shields, crew and navigation are. Weapons need something to hit and
-// collection needs an economy — those say what they are waiting for instead of
-// quietly doing nothing.
+// A component is stocked only when the race can honour what it does. Since S6
+// that is nearly all of them: weapons have ships to reach, and collection has
+// an economy to collect into. What is left in `NOT_STOCKED` says what it is
+// still waiting for rather than quietly doing nothing.
 
+import type { AbilityId } from './ability';
 import type { ShipStats } from './race';
 import {
   BASE_ENDURANCE,
@@ -18,11 +19,18 @@ import {
   BASE_REPAIR,
   BASE_SHIELDS,
   BASE_THRUST,
+  ABILITY_WORKS,
   STAT_MAX,
   STAT_MIN,
 } from './tuning';
 
-export type Category = 'engine' | 'shields' | 'crew' | 'navigation';
+export type Category =
+  | 'engine'
+  | 'shields'
+  | 'crew'
+  | 'navigation'
+  | 'weapons'
+  | 'collection';
 
 export interface Level {
   /** What this level adds to the ship's stats. Anything unset adds nothing. */
@@ -41,6 +49,16 @@ export interface Level {
   /** A share off the price of upgrades, or of buying a slot. */
   readonly upgradeDiscount?: number;
   readonly slotDiscount?: number;
+  /** An ability this level grants. Abilities fire themselves; see ability.ts. */
+  readonly grants?: AbilityId;
+  /** A multiplier on what this ship's weapons carry, and how far they reach. */
+  readonly weaponPower?: number;
+  /** Keeps the weapon that hits it at full shields, to sell when the race ends. */
+  readonly captures?: boolean;
+  /** Reads a black hole as a corner rather than a hazard, and takes no damage. */
+  readonly readsHoles?: boolean;
+  /** Gathers dark matter. At 3 it can cash it in for credits. */
+  readonly collects?: number;
   /** Slots it occupies at this level. */
   readonly slots: number;
   /** Credits to reach this level from the one below. */
@@ -109,12 +127,12 @@ export const COMPONENTS: readonly Component[] = [
       {
         thrust: 0.55,
         handling: -0.08,
+        grants: 'boost',
         slots: 1,
         cost: 40,
-        note: 'Harder again. Grants a boost.',
+        note: 'Harder again — and it boosts down a straight when it has the charge.',
       },
     ],
-    waiting: 'its level 3 boost — abilities arrive with S6',
   },
   {
     id: 'handling-engine',
@@ -139,12 +157,12 @@ export const COMPONENTS: readonly Component[] = [
       {
         thrust: -0.02,
         handling: 0.52,
+        grants: 'three-bends',
         slots: 2,
         cost: 40,
-        note: 'Better again — and takes a second slot.',
+        note: 'Better again. Takes a run of three bends perfectly, and takes a second slot.',
       },
     ],
-    waiting: 'its level 3 run of three perfect bends — abilities arrive with S6',
   },
   {
     id: 'balanced-engine',
@@ -196,7 +214,7 @@ export const COMPONENTS: readonly Component[] = [
     id: 'crew-engineers',
     name: 'Engineers',
     category: 'crew',
-    arrows: 'endurance · Shields recharge↑',
+    arrows: 'endurance · Shields and abilities recharge↑',
     levels: [
       {
         endurance: 0.55,
@@ -223,7 +241,6 @@ export const COMPONENTS: readonly Component[] = [
         note: 'Steadier still.',
       },
     ],
-    waiting: 'the ability half of "shields and abilities recharge faster"',
   },
   {
     id: 'crew-androids',
@@ -348,16 +365,183 @@ export const COMPONENTS: readonly Component[] = [
       },
     ],
   },
+{
+    id: 'dark-matter-engine',
+    name: 'Dark matter engine',
+    category: 'engine',
+    arrows: 'Thrust↑ · reads black holes',
+    levels: [
+      {
+        thrust: 0.2,
+        handling: 0.05,
+        readsHoles: true,
+        slots: 1,
+        cost: 36,
+        note: 'Reads a black hole as a corner: through one faster, and unharmed.',
+      },
+      {
+        thrust: 0.32,
+        handling: 0.05,
+        readsHoles: true,
+        grants: 'dark-boost',
+        slots: 1,
+        cost: 30,
+        note: 'Boosts down a straight — and leaves a small black hole behind it.',
+      },
+      {
+        thrust: 0.46,
+        handling: 0.06,
+        readsHoles: true,
+        grants: 'dark-boost',
+        slots: 2,
+        cost: 46,
+        note: 'Harder again, and takes a second slot.',
+      },
+    ],
+  },
+  {
+    id: 'collector-shield',
+    name: 'Collector shield',
+    category: 'shields',
+    arrows: 'Shields↑ · collects',
+    levels: [
+      {
+        shields: 18,
+        collects: 1,
+        slots: 1,
+        cost: 28,
+        note: 'Lighter than general shields, and gathers dark matter off a black hole.',
+      },
+      {
+        shields: 32,
+        collects: 2,
+        slots: 1,
+        cost: 26,
+        note: 'More shielding, and gathers more.',
+      },
+      {
+        shields: 48,
+        collects: 3,
+        captures: true,
+        slots: 1,
+        cost: 42,
+        note: 'Keeps a weapon that hits it at full shields, and cashes dark matter in.',
+      },
+    ],
+  },
+  {
+    id: 'missile-rack',
+    name: 'Missile rack',
+    category: 'weapons',
+    arrows: 'reach↑ · Thrust↓',
+    levels: [
+      {
+        thrust: -0.06,
+        grants: 'missile',
+        slots: 1,
+        cost: 30,
+        note: 'Fires at the ship ahead when it has the charge, pushing it off its line.',
+      },
+      {
+        thrust: -0.06,
+        grants: 'missile',
+        slots: 1,
+        cost: 26,
+        note: 'Reaches further, and shoves harder.',
+      },
+      {
+        thrust: -0.07,
+        grants: 'missile',
+        slots: 2,
+        cost: 42,
+        note: 'Further and harder again, and takes a second slot.',
+      },
+    ],
+  },
+  {
+    id: 'gravity-mine',
+    name: 'Gravity mines',
+    category: 'weapons',
+    arrows: 'leaves something behind',
+    levels: [
+      {
+        thrust: -0.04,
+        grants: 'mine',
+        slots: 1,
+        cost: 26,
+        note: 'Drops a mine behind you when somebody is chasing. It drags them wide.',
+      },
+      { thrust: -0.04, grants: 'mine', slots: 1, cost: 24, note: 'Drags harder.' },
+      {
+        thrust: -0.05,
+        grants: 'mine',
+        slots: 1,
+        cost: 38,
+        note: 'Harder again — enough to cost a ship its split.',
+      },
+    ],
+  },
+  {
+    id: 'tractor-beam',
+    name: 'Tractor beam',
+    category: 'weapons',
+    arrows: 'holds the ship ahead back',
+    levels: [
+      {
+        thrust: -0.05,
+        grants: 'tractor',
+        slots: 1,
+        cost: 28,
+        note: 'Pulls back on the ship ahead. It costs them speed, not their line.',
+      },
+      { thrust: -0.05, grants: 'tractor', slots: 1, cost: 24, note: 'Pulls harder.' },
+      {
+        thrust: -0.06,
+        grants: 'tractor',
+        slots: 2,
+        cost: 40,
+        note: 'Harder and further, and takes a second slot.',
+      },
+    ],
+  },
+  {
+    id: 'crew-mercenaries',
+    name: 'Mercenaries',
+    category: 'crew',
+    arrows: 'endurance · weapons↑',
+    levels: [
+      {
+        endurance: 0.6,
+        repair: 1.1,
+        weaponPower: 1.3,
+        slots: 1,
+        cost: 30,
+        note: 'Regular endurance. Every weapon aboard reaches further and hits harder.',
+      },
+      {
+        endurance: 0.7,
+        repair: 1.2,
+        weaponPower: 1.55,
+        slots: 1,
+        cost: 26,
+        note: 'Better with them again.',
+      },
+      {
+        endurance: 0.8,
+        repair: 1.3,
+        weaponPower: 1.85,
+        slots: 1,
+        cost: 38,
+        note: 'Nobody gets more out of a weapon.',
+      },
+    ],
+  },
 ];
 
 /** The rest of the catalogue, and what each is waiting for. Shown, not sold. */
 export const NOT_STOCKED: readonly { name: string; waiting: string }[] = [
-  { name: 'Weapons', waiting: 'ships that can reach each other' },
-  { name: 'Collection', waiting: 'an economy to collect into' },
   { name: 'Deflector shields', waiting: 'hazards as objects, not as ground' },
-  { name: 'Collector shield', waiting: 'dark matter to collect' },
-  { name: 'Mercenaries', waiting: 'weapons for them to be good with' },
-  { name: 'Dark matter engine', waiting: 'black holes on the track' },
+  { name: 'Augments', waiting: 'a track that can be built from pieces' },
 ];
 
 export function componentById(id: string): Component | undefined {
@@ -397,6 +581,10 @@ export function resolveBuild(
   let repair = BASE_REPAIR;
   let nav = BASE_NAV;
   let navBonus = 0;
+  let weaponPower = 1;
+  let captures = false;
+  let readsHoles = false;
+  let collects = 0;
   fitted.forEach((item, i) => {
     const level = levelOf(item);
     if (level === undefined) return;
@@ -414,6 +602,13 @@ export function resolveBuild(
     // ship. A broken one reads less far, so damage can cost you a split.
     nav = Math.max(nav, Math.floor((level.nav ?? 0) * worth));
     navBonus = Math.max(navBonus, (level.navBonus ?? 0) * worth);
+    // Weapons crews do not stack either: the best of them works every weapon.
+    weaponPower = Math.max(weaponPower, (level.weaponPower ?? 1) * worth);
+    // What a part *is* rather than what it adds: a broken one stops being it.
+    const working = worth >= ABILITY_WORKS;
+    captures = captures || (level.captures === true && working);
+    readsHoles = readsHoles || (level.readsHoles === true && working);
+    collects = Math.max(collects, working ? (level.collects ?? 0) : 0);
   });
   const clamp = (v: number): number => Math.min(STAT_MAX, Math.max(STAT_MIN, v));
   return {
@@ -425,6 +620,10 @@ export function resolveBuild(
     repair,
     // A crew that reads navigation well is worth nothing without one to read.
     nav: nav > 0 ? nav + Math.floor(navBonus) : 0,
+    weaponPower,
+    captures,
+    readsHoles,
+    collects,
   };
 }
 
@@ -441,6 +640,10 @@ export function bareShip(thrust: number, handling: number): ShipStats {
     shieldRegen: 1,
     repair: BASE_REPAIR,
     nav: BASE_NAV,
+    weaponPower: 1,
+    captures: false,
+    readsHoles: false,
+    collects: 0,
   };
 }
 

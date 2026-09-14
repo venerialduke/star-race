@@ -10,10 +10,16 @@ import type { Track } from '../sim/track';
 import { drawChase, newChase, type Chase } from './chase';
 import { drawMap } from './map';
 import { skyFor, type Sky } from './sky';
-import { SHIP_COLOURS, type Rect, type RouteView, type ShipView } from './view';
+import {
+  SHIP_COLOURS,
+  type FixtureView,
+  type Rect,
+  type RouteView,
+  type ShipView,
+} from './view';
 
 export { SHIP_COLOURS, newChase };
-export type { Rect, RouteView, ShipView, Chase };
+export type { FixtureView, Rect, RouteView, ShipView, Chase };
 
 /** How much of the short edge the small view takes. */
 const INSET_SHARE = 0.34;
@@ -54,6 +60,7 @@ export function drawField(
   track: Track,
   ships: readonly ShipView[],
   routes: RouteView,
+  fixtures: readonly FixtureView[],
   scene: Scene,
   /** Wall-clock seconds since the last frame, so the camera eases by time. */
   seconds: number,
@@ -71,10 +78,21 @@ export function drawField(
   const inset = insetRect(width, height);
 
   if (scene.big === 'chase') {
-    drawChase(ctx, track, ships, routes, sky, scene.chase, seconds, width, height);
-    drawMap(ctx, track, ships, routes, inset);
+    drawChase(
+      ctx,
+      track,
+      ships,
+      routes,
+      fixtures,
+      sky,
+      scene.chase,
+      seconds,
+      width,
+      height,
+    );
+    drawMap(ctx, track, ships, routes, fixtures, inset);
   } else {
-    drawMap(ctx, track, ships, routes, { x: 0, y: 0, width, height });
+    drawMap(ctx, track, ships, routes, fixtures, { x: 0, y: 0, width, height });
     // The chase camera keeps running while it is small, so swapping back to it
     // picks up where the race is rather than snapping from where it was left.
     ctx.save();
@@ -87,6 +105,7 @@ export function drawField(
       track,
       ships,
       routes,
+      fixtures,
       sky,
       scene.chase,
       seconds,

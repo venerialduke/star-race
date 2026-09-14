@@ -5,13 +5,14 @@
 // Every decision it makes is an input, chosen before the lap that consumes it
 // — the same seam a real player's choices will arrive through.
 
-import type { Entrant, Orders } from './field';
+import { mineLevel, type Entrant, type Orders } from './field';
 import type { CornerPlan } from './race';
 import { makeRng, seedFrom } from './rng';
 import { buy, fit, newGarage, slotsFree, upgrade, type Garage } from './garage';
 import { resolveBuild } from './ship';
 import { holdingSpeed, legalRoutes, routeOf, type Route, type Track } from './track';
 import {
+  BOT_AGGRESSION,
   BOT_HANDLING_TILT,
   BOT_ROUTE_NERVE,
   BOT_THRIFT,
@@ -40,12 +41,16 @@ const NAMES = [
 /** What a bot fills its spare slots with, once the engines are chosen. */
 const SUPPORT = [
   'general-shields',
+  'collector-shield',
   'crew-androids',
   'crew-engineers',
   'crew-nanites',
   'crew-scientists',
   'nav-system',
 ] as const;
+
+/** What it arms itself with when it decides to be a problem for somebody. */
+const WEAPONS = ['missile-rack', 'gravity-mine', 'tractor-beam'] as const;
 
 const clamp = (v: number): number => Math.min(STAT_MAX, Math.max(STAT_MIN, v));
 
@@ -121,15 +126,23 @@ export function botShop(
     lean > 0.58 ? 'handling-engine' : lean < 0.34 ? 'speed-engine' : 'balanced-engine';
   const pick = (): string =>
     SUPPORT[Math.floor(rng.unitInterval() * SUPPORT.length)] as string;
+  // Some rivals race the track and some race you. A bot that arms itself is
+  // giving up a slot of pace for a slot of trouble, which is the same bet the
+  // player is offered — and it has to make it before it knows who it is drawn
+  // against, exactly as the player does.
+  const armed = rng.unitInterval() < BOT_AGGRESSION;
+  const weapon = WEAPONS[Math.floor(rng.unitInterval() * WEAPONS.length)] as string;
 
   let next = garage;
   // Engines first, then support, then whatever it fancies. Each buy is tried
   // and simply does not happen if the credits or the slots are not there.
   const wanted = [
     engine,
-    rng.unitInterval() < 0.5 ? engine : 'balanced-engine',
+    armed ? weapon : rng.unitInterval() < 0.5 ? engine : 'balanced-engine',
     pick(),
-    pick(),
+    // A crew that is good with weapons is only worth a slot to a ship that
+    // brought one, which is the kind of thing a rival ought to know.
+    armed && rng.unitInterval() < 0.5 ? 'crew-mercenaries' : pick(),
     pick(),
   ];
   for (const id of wanted) {
@@ -163,7 +176,24 @@ export function botOrders(
   return {
     plan: botPlan(entrant, seed, lap),
     routes: botRoutes(entrant, track, seed, lap),
+    place: botPlace(entrant, track, seed, lap),
   };
+}
+
+/**
+ * Where a bot lays the mine it brought, if it brought one. Seeded, so it is a
+ * decision rather than a habit — a rival that always mines the same sector is
+ * a sector you learn to avoid once.
+ */
+export function botPlace(
+  entrant: Entrant,
+  track: Track,
+  seed: number,
+  lap: number,
+): number | undefined {
+  if (mineLevel(entrant) === 0) return undefined;
+  const rng = makeRng(seed ^ seedFrom(entrant.id)).fork(lap * 977 + 23);
+  return Math.floor(rng.unitInterval() * track.sectors.length);
 }
 
 /**

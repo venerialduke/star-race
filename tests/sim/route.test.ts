@@ -24,10 +24,12 @@ import {
   type Sector,
   type Track,
 } from '../../src/sim/track';
-import { FORK_PULL, LAPS_PER_HEAT, PATH_HALF_WIDTH } from '../../src/sim/tuning';
-
-const tightest = (route: Route): number =>
-  route.bends.reduce((least, b) => Math.min(least, b.radius), Infinity);
+import {
+  FORK_PULL,
+  LAPS_PER_HEAT,
+  PATH_HALF_WIDTH,
+  TRACK_HALF_WIDTH,
+} from '../../src/sim/tuning';
 
 const lapTicks = (
   track: Track,
@@ -82,14 +84,40 @@ describe.each(TRACKS)('$name splits', (track: Track) => {
     }
   });
 
-  it('trades length against tightness, the same way round on every split', () => {
+  it('is a fork, not a wobble: the two roads do not share a corridor', () => {
+    // What makes a split a split. It used to deviate by 6 to 20 units from a
+    // path 18 wide, which on screen was one road with a kink in it. A split has
+    // to leave far enough that a ship on one line is nowhere near the other —
+    // and since a ship can be thrown TRACK_HALF_WIDTH either way, "nowhere
+    // near" means further apart than two of those.
     for (const sector of track.sectors) {
       const main = sector.routes[0] as Route;
       for (const route of sector.routes.slice(1)) {
-        const shorter = route.length < main.length;
-        // The point of following the turn: a split is never both at once.
-        if (shorter) expect(tightest(route)).toBeLessThan(tightest(main));
-        else expect(tightest(route)).toBeGreaterThan(tightest(main));
+        let apart = 0;
+        for (let i = 0; i <= 40; i += 1) {
+          const at = sector.start + ((sector.end - sector.start) * i) / 40;
+          const a = sampleOn(main, alongOf(track, sector, main, at));
+          const b = sampleOn(route, alongOf(track, sector, route, at));
+          apart = Math.max(apart, Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y));
+        }
+        expect(apart).toBeGreaterThan(PATH_HALF_WIDTH * 2);
+      }
+    }
+  });
+
+  it('meets the golden path only at the checkpoints', () => {
+    // A fork parts and rejoins; it does not touch in between.
+    for (const sector of track.sectors) {
+      const main = sector.routes[0] as Route;
+      for (const route of sector.routes.slice(1)) {
+        for (let i = 8; i <= 32; i += 1) {
+          const at = sector.start + ((sector.end - sector.start) * i) / 40;
+          const a = sampleOn(main, alongOf(track, sector, main, at));
+          const b = sampleOn(route, alongOf(track, sector, route, at));
+          expect(Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y)).toBeGreaterThan(
+            PATH_HALF_WIDTH,
+          );
+        }
       }
     }
   });
@@ -123,23 +151,28 @@ describe('what a split is worth', () => {
   it('changes the lap, and which way depends on what the ship can hold', () => {
     // The Kestrel's dark split is the sharpest case: a shorter, tighter line
     // that a ship with handling to spare wins on and one without it loses on.
+    //
+    // Averaged over seeds, not measured on one. Taking a split changes which
+    // seeded stream its bends draw from, so any single seed can flatter or damn
+    // a line by a swing it happened to get — worth about thirty ticks, which is
+    // more than the effect being measured here.
+    const seeds = Array.from({ length: 16 }, (_, i) => `worth${i}`);
+    const over = (routes: readonly number[], handling: number): number =>
+      seeds.reduce(
+        (sum, seed) => sum + lapTicks(KESTREL_LOOP, routes, handling, 'carry', seed),
+        0,
+      ) / seeds.length;
+
     const main = [0, 0, 0, 0];
     const needle = [0, 0, 0, 1];
-    expect(lapTicks(KESTREL_LOOP, needle, 0.7)).toBeGreaterThan(
-      lapTicks(KESTREL_LOOP, main, 0.7),
-    );
-    expect(lapTicks(KESTREL_LOOP, needle, 1.4)).toBeLessThan(
-      lapTicks(KESTREL_LOOP, main, 1.4),
-    );
+    expect(over(needle, 0.7)).toBeGreaterThan(over(main, 0.7));
+    expect(over(needle, 1.4)).toBeLessThan(over(main, 1.4));
   });
 
-  it('puts the ship somewhere else on the track, not just on a different clock', () => {
+  it('puts the ship on a different road, not just on a different clock', () => {
     const sector = KESTREL_LOOP.sectors[3] as Sector;
     const split = routeOf(sector, 1);
     const main = routeOf(sector, 0);
-    // Measured at its widest, not at the sector's midpoint: this sector turns
-    // one way and then the other, and the line crosses the golden path between
-    // the two, which is the whole point of following the turn.
     let apart = 0;
     for (let i = 0; i <= 40; i += 1) {
       const at = sector.start + ((sector.end - sector.start) * i) / 40;
@@ -147,7 +180,8 @@ describe('what a split is worth', () => {
       const b = sampleOn(split, alongOf(KESTREL_LOOP, sector, split, at));
       apart = Math.max(apart, Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y));
     }
-    expect(apart).toBeGreaterThan(PATH_HALF_WIDTH);
+    // Wider than both corridors put together: neither road can reach the other.
+    expect(apart).toBeGreaterThan(TRACK_HALF_WIDTH * 2);
   });
 
   it('maps a point on a route back to where it is round the lap', () => {
@@ -201,8 +235,8 @@ describe('navigation, and what it lets you plan', () => {
     // Sector 1 is dim and sector 3 dark on the Kestrel: neither is readable.
     expect(flown[1]).toBe(0);
     expect(flown[3]).toBe(0);
-    // Sector 2's split is clear, so a ship with no navigation still gets it.
-    expect(flown[2]).toBe(1);
+    // Sector 0's split is clear, so a ship with no navigation still gets it.
+    expect(flown[0]).toBe(1);
   });
 
   it('only lets the best system re-plan the route at a pit stop', () => {
@@ -220,14 +254,15 @@ describe('navigation, and what it lets you plan', () => {
     let field = startField(entrants, opening, KESTREL_LOOP);
     field = { ...field, phase: 'pit' };
 
+    // Sector 0's split is the clear one, so nav is not what is being tested.
     const changed = [
-      { plan: 'carry' as const, routes: [0, 0, 1, 0] },
-      { plan: 'carry' as const, routes: [0, 0, 1, 0] },
+      { plan: 'carry' as const, routes: [1, 0, 0, 0] },
+      { plan: 'carry' as const, routes: [1, 0, 0, 0] },
     ];
     const out = leavePit(field, changed, KESTREL_LOOP);
 
-    expect((out.ships[0] as { routes: readonly number[] }).routes[2]).toBe(0);
-    expect((out.ships[1] as { routes: readonly number[] }).routes[2]).toBe(1);
+    expect((out.ships[0] as { routes: readonly number[] }).routes[0]).toBe(0);
+    expect((out.ships[1] as { routes: readonly number[] }).routes[0]).toBe(1);
   });
 
   it('is worth nothing to a crew that reads it well if there is nothing to read', () => {

@@ -87,6 +87,14 @@ export interface Track {
   readonly bounds: { readonly min: Vec; readonly max: Vec };
 }
 
+/* Reading a split's own curvature. Structural, like the sample step. */
+/** How many samples either side curvature is measured across. About 12 units. */
+const CURVE_WINDOW = 2;
+/** Above this radius a line is running straight, whatever the arithmetic says. */
+const STRAIGHT_RADIUS = 320;
+/** A turn shorter than this is the line easing, not a corner. */
+const MIN_BEND_ARC = 16;
+
 /** Arc length between centreline samples. Structural: the resolution of the polyline. */
 const SAMPLE_STEP = 3;
 
@@ -282,40 +290,57 @@ type Split = { bulge: number; name: string; grade: Grade };
 
 /**
  * The splits on each track: for every sector, the ways through it besides the
- * golden path. A positive bulge hugs the inside of the sector's bends — shorter
- * and tighter; a negative one runs round the outside — longer, but it opens the
- * corners up, so it is the line to take when you cannot afford to be thrown.
+ * golden path. A bulge is how far the line leaves the golden path, and which
+ * side — positive is left of travel — held for the whole sector.
+ *
+ * These are **forks, not racing lines**. A bulge of 50 against an 18-wide path
+ * puts the two roads far enough apart that neither is in the other's corridor:
+ * two ways through, meeting at the checkpoints and nowhere in between. The
+ * earlier version deviated by 6 to 20 units, which on screen was one road with
+ * a wobble in it.
  *
  * The grades are not sprinkled at random. **A split you need a navigation
  * system to read is a better split than one anybody can see**, or the system
  * would not be worth its slot.
  */
 const KESTREL_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: -8, name: 'The long way round', grade: 'clear' }],
-  [{ bulge: 8, name: 'The cut', grade: 'dim' }],
-  [{ bulge: 20, name: 'The inside', grade: 'clear' }],
-  [{ bulge: 12, name: 'The needle', grade: 'dark' }],
-];
-
-const MERIDIAN_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: 16, name: 'The shortcut', grade: 'clear' }],
-  [{ bulge: -12, name: 'The wide sweep', grade: 'clear' }],
-  [
-    { bulge: 20, name: 'The tight line', grade: 'dim' },
-    { bulge: -16, name: 'The outer arc', grade: 'dark' },
-  ],
-  [{ bulge: 16, name: 'The late apex', grade: 'dim' }],
+  [{ bulge: -40, name: 'The long way round', grade: 'clear' }],
+  [{ bulge: 42, name: 'The cut', grade: 'dim' }],
+  // Sector 2 has no fork. It is three-quarters straight, so every way through
+  // it other than the straight one is simply longer — measured at five bulges
+  // and three handlings, and not one of them was ever worth taking.
+  [],
+  [{ bulge: 46, name: 'The needle', grade: 'dark' }],
 ];
 
 /**
- * The Coil is half bends, so its inside lines are a gamble that only a ship
- * with handling to spare wins — and its dark split is the opposite, the wide
- * line that is worth most to the ship that cannot corner at all.
+ * The Meridian's bends barely bind — a stock ship takes its r85 sweepers at
+ * almost top speed — so cutting inside one is close to free and running wide
+ * round it buys nothing. That makes it the track where the route is a question
+ * about navigation rather than handling: the good lines are real, and they are
+ * behind a system.
+ */
+const MERIDIAN_SPLITS: readonly (readonly Split[])[] = [
+  [{ bulge: 70, name: 'The late apex', grade: 'clear' }],
+  [{ bulge: 70, name: 'The shortcut', grade: 'dim' }],
+  [
+    { bulge: -40, name: 'The outer arc', grade: 'clear' },
+    { bulge: 35, name: 'The tight line', grade: 'dim' },
+  ],
+  [{ bulge: 70, name: 'The inside sweep', grade: 'dark' }],
+];
+
+/**
+ * The Coil is half bends, so leaving the golden path costs in length far
+ * faster than it pays in speed. Nearly every line off it is worth nothing to a
+ * ship that can corner and nothing much to one that cannot — which makes its
+ * two wide lines an inversion, free to a slow ship and dear to a quick one,
+ * and its one real prize the thing you need the best system to see.
  */
 const CINDER_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: 6, name: 'The squeeze', grade: 'clear' }],
-  [{ bulge: 6, name: 'The inside', grade: 'dim' }],
-  [{ bulge: -10, name: 'The relief road', grade: 'dark' }],
+  [{ bulge: 35, name: 'The squeeze', grade: 'dark' }],
+  [{ bulge: -40, name: 'The relief road', grade: 'dim' }],
+  [{ bulge: 35, name: 'The needle', grade: 'clear' }],
 ];
 
 /** A middling circuit: a sweeper, a tight right, a hairpin. Where the game started. */
@@ -388,36 +413,6 @@ function profileAt(t: number): number {
   return 1;
 }
 
-/**
- * Turn a sector's turn directions into a continuous "which way is inside"
- * signal: the turn itself inside a bend, and a straight blend between one bend
- * and the next across the straight between them, easing to nothing at the
- * sector's own ends so every route starts and finishes on the checkpoint.
- */
-function insideDirection(turns: readonly number[]): number[] {
-  const n = turns.length;
-  const dir = turns.map((t) => t);
-  let i = 0;
-  while (i < n) {
-    if ((dir[i] as number) !== 0) {
-      i += 1;
-      continue;
-    }
-    let end = i;
-    while (end < n && (dir[end] as number) === 0) end += 1;
-    // Ends of the sector count as nothing: a route leaves and arrives on the line.
-    const from = i === 0 ? 0 : (dir[i - 1] as number);
-    const to = end >= n ? 0 : (dir[end] as number);
-    const steps = end - i + 1;
-    for (let k = i; k < end; k += 1) {
-      const f = (k - i + 1) / steps;
-      dir[k] = from * (1 - f) + to * f;
-    }
-    i = end;
-  }
-  return dir;
-}
-
 /** Where a polyline points and how long it is. Curvature does not come from here. */
 function measureLine(points: readonly Vec[]): {
   headings: number[];
@@ -442,6 +437,60 @@ function measureLine(points: readonly Vec[]): {
     headings.push(Math.atan2(b.y - a.y, b.x - a.x));
   }
   return { headings, cum, length: cum[n - 1] as number };
+}
+
+/**
+ * Read the bends off a curve, rather than being told them.
+ *
+ * This is only ever used for a split, and that matters: reading curvature back
+ * off a polyline smears a short, sharp, authored arc — a 40-unit r42 hairpin
+ * came back as r60 when this was tried on the main line. A split is a smooth
+ * generated curve with no sharp arcs in it, so there is nothing to smear, and
+ * there is no authored truth for it to disagree with. The main line still
+ * keeps the bends the track wrote down.
+ *
+ * Curvature is measured over a window rather than between neighbours: one
+ * sample step is 3 units and the headings either side of it differ by very
+ * little, so the ratio is mostly rounding.
+ */
+function bendsOfCurve(headings: readonly number[], cum: readonly number[]): Bend[] {
+  const n = headings.length;
+  const radius: number[] = [];
+  const turn: number[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = Math.max(0, i - CURVE_WINDOW);
+    const b = Math.min(n - 1, i + CURVE_WINDOW);
+    const swing = shortestTurn(headings[a] as number, headings[b] as number);
+    const arc = (cum[b] as number) - (cum[a] as number);
+    const r = arc <= 0 || Math.abs(swing) < 1e-9 ? Infinity : arc / Math.abs(swing);
+    radius.push(r);
+    turn.push(r > STRAIGHT_RADIUS ? 0 : Math.sign(swing));
+  }
+
+  const bends: Bend[] = [];
+  let i = 0;
+  while (i < n) {
+    if (turn[i] === 0) {
+      i += 1;
+      continue;
+    }
+    let end = i;
+    while (end < n && turn[end] === turn[i]) end += 1;
+    const from = cum[i] as number;
+    const to = cum[end - 1] as number;
+    if (to - from >= MIN_BEND_ARC) {
+      let total = 0;
+      for (let k = i; k < end; k += 1) total += radius[k] as number;
+      bends.push({
+        start: from,
+        end: to,
+        radius: total / (end - i),
+        turn: turn[i] as number,
+      });
+    }
+    i = end;
+  }
+  return bends;
 }
 
 /**
@@ -480,13 +529,10 @@ function routeFrom(
   for (let i = 0; i <= steps; i += 1)
     base.push(sampleAt(track, start + (i / steps) * span));
 
-  // Which way "inside" points at each step: the turn itself through a bend,
-  // and a straight swing between the two on the straight in between, so the
-  // line crosses over rather than kinking.
-  const inside = insideDirection(base.map((sample) => sample.turn));
-
+  // One side, the whole way. A split leaves the golden path, runs out wide and
+  // comes back — it does not weave.
   const points: Vec[] = base.map((sample, i) => {
-    const off = bulge * (inside[i] as number) * profileAt(i / steps);
+    const off = bulge * profileAt(i / steps);
     const n = normalOf(sample);
     return { x: sample.pos.x + n.x * off, y: sample.pos.y + n.y * off };
   });
@@ -501,21 +547,27 @@ function routeFrom(
     return (cum[low] as number) * (1 - frac) + (cum[high] as number) * frac;
   };
 
-  const bends: Bend[] = [];
-  for (const bend of track.bends) {
-    const from = Math.max(bend.start, start);
-    const to = Math.min(bend.end, end);
-    if (to - from <= 1e-9) continue;
-    const t0 = (from - start) / span;
-    const t1 = (to - start) / span;
-    bends.push({
-      start: alongAt(t0),
-      end: alongAt(t1),
-      // The bulge is toward the inside here, so it comes straight off the radius.
-      radius: Math.max(4, bend.radius - bulge * profileAt((t0 + t1) / 2)),
-      turn: bend.turn,
-    });
-  }
+  // The golden path keeps the bends the track authored, exactly. A split reads
+  // its own: it leaves the main line far enough that "the same bend, moved
+  // sideways" stops being true — offset a 42-radius bend by 60 and the
+  // arithmetic gives a negative radius, because at that distance the offset
+  // curve is a different curve, not a parallel one.
+  const bends: Bend[] =
+    bulge === 0
+      ? track.bends.flatMap((bend) => {
+          const from = Math.max(bend.start, start);
+          const to = Math.min(bend.end, end);
+          if (to - from <= 1e-9) return [];
+          return [
+            {
+              start: alongAt((from - start) / span),
+              end: alongAt((to - start) / span),
+              radius: bend.radius,
+              turn: bend.turn,
+            },
+          ];
+        })
+      : bendsOfCurve(headings, cum);
 
   // Samples take their curvature from the bends, so the line the ship flies and
   // the corners it meets are the same object.

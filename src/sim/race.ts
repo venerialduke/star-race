@@ -45,6 +45,9 @@ import {
   HAZARD_FULL_EXPOSURE,
   EXCURSION_CLEAR,
   FORK_PULL,
+  TRACK_HALF_WIDTH,
+  WALL_CLEAR,
+  WALL_SCRUB,
   RECOVER_FLOOR,
   REPAIR_PER_TICK,
   RECOVER_PER_HANDLING,
@@ -133,6 +136,8 @@ export interface RaceState {
   readonly lastBroken: string | undefined;
   /** Gravity the crew is carrying, 0 to 1. At 1 they are spent. */
   readonly worn: number;
+  /** The ship is against the corridor wall, and has not yet come back inside it. */
+  readonly onWall: boolean;
   /**
    * An excursion is in progress: the ship crossed the edge and has not yet
    * settled back well inside it. Without this the ship pays for the same
@@ -199,6 +204,7 @@ export function startRace(
     lastBroken: undefined,
     worn: 0,
     outside: false,
+    onWall: false,
     bendKey: undefined,
     swingTarget: 0,
     trail: [],
@@ -254,9 +260,18 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   // 1. Speed. The corner plan decides what happens about a bend.
   let speed = state.speed;
   if (onBend) {
-    if (plan === 'lift') speed = Math.min(speed, holding * LIFT_MARGIN);
-    else if (plan === 'charge') speed = Math.min(topSpeed, speed + accel);
-    else if (speed > holding) speed = Math.max(holding, speed - CARRY_SCRUB);
+    // What this plan is willing to take the bend at. Charge ignores it.
+    const cap = plan === 'lift' ? holding * LIFT_MARGIN : holding;
+    if (plan === 'charge') speed = Math.min(topSpeed, speed + accel);
+    else if (speed > cap) {
+      speed = plan === 'lift' ? cap : Math.max(cap, speed - CARRY_SCRUB);
+    } else {
+      // Below what the bend allows, a ship still gets on with it. Without this
+      // Lift and Carry did nothing at all on a bend they were already slow
+      // enough for — which never mattered while every route began on a
+      // straight, and stalled a ship at a standstill the moment one did not.
+      speed = Math.min(Math.min(topSpeed, cap), speed + accel);
+    }
   } else {
     const ahead = lookAhead(track, sector, route, along, config.routes);
     let braking = false;
@@ -342,6 +357,17 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     );
     offset = Math.abs(offset) <= pull ? 0 : offset - Math.sign(offset) * pull;
   }
+  // The corridor. Off the golden path is ground you can fly over; past the
+  // corridor there is something solid, and the ship does not go through it.
+  //
+  // Capping the position without charging for it would make a huge swing safer
+  // than a merely big one, which is the opposite of the bet the game rests on.
+  // So the swing's own reach — how far it *wanted* to throw the ship — still
+  // decides what the excursion costs, and riding the wall scrubs speed on top.
+  const walled = Math.abs(offset) > TRACK_HALF_WIDTH;
+  if (walled) offset = Math.sign(offset) * TRACK_HALF_WIDTH;
+  const hitWall = walled && !state.onWall;
+  const onWall = walled || Math.abs(offset) > TRACK_HALF_WIDTH * WALL_CLEAR;
   const over = Math.abs(offset) - PATH_HALF_WIDTH;
   const wide = over > 0;
 
@@ -380,6 +406,11 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const keep = wide
     ? Math.max(WIDE_SPEED_FLOOR, WIDE_SPEED_AT_EDGE - over * WIDE_SPEED_PER_UNIT)
     : 1;
+  if (hitWall) {
+    // How much further the swing wanted to throw it than the corridor allows.
+    const past = Math.max(0, Math.abs(swingTarget) - TRACK_HALF_WIDTH) / TRACK_HALF_WIDTH;
+    speed = Math.max(0.1, speed * (1 - WALL_SCRUB * Math.min(1, 0.5 + past)));
+  }
   // A short line buys canonical distance faster than a long one: that, and
   // the bends it hands you, is the whole of what a split is worth.
   const distance = state.distance + speed * keep * rateOf(sector, route);
@@ -416,6 +447,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     lastBroken: broken ?? state.lastBroken,
     worn,
     outside,
+    onWall,
     bendKey,
     swingTarget,
     trail: [...state.trail, { distance, offset, route: nextRoute }].slice(-TRAIL_LENGTH),
@@ -504,10 +536,17 @@ export function chooseRoute(
   // Thrown further than that, the ship goes where it is pointing — but only if
   // another line is clearly nearer than the one it planned, or a ship would
   // lose its route to every stray wobble.
+  // A split commits further off the line than a ship can physically be thrown,
+  // so what is compared is the direction each line leads in, brought back
+  // inside the corridor. Comparing raw commitments would put every split out
+  // of reach and the fork would never fire at all.
+  const reach = (line: { entryOffset: number }): number =>
+    Math.max(-TRACK_HALF_WIDTH, Math.min(TRACK_HALF_WIDTH, line.entryOffset));
+
   let best = planned;
-  let bestGap = Math.abs(routeOf(sector, planned).entryOffset - offset);
+  let bestGap = Math.abs(reach(routeOf(sector, planned)) - offset);
   sector.routes.forEach((line, i) => {
-    const gap = Math.abs(line.entryOffset - offset);
+    const gap = Math.abs(reach(line) - offset);
     if (gap < bestGap - FORK_PULL) {
       best = i;
       bestGap = gap;

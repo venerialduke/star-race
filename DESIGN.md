@@ -212,19 +212,25 @@ checkpoint and arrives at the next one, so a ship on any of them is in the same
 place at both ends — what differs in between is how long the line is and how
 tight its bends are.
 
-A split is authored as **one number: a lateral bulge**, measured toward the
-inside of whatever the sector's bends are doing. Everything else falls out of
-that geometry rather than being chosen to agree with it:
+A split is authored as **one number: a lateral bulge** — how far the line
+leaves the golden path, and which side, held for the whole sector. Everything
+else falls out of that geometry rather than being chosen to agree with it: its
+length, its bends, and where it is drawn.
 
-| Bulge    | The line                       | What it costs and buys            |
-| -------- | ------------------------------ | --------------------------------- |
-| positive | hugs the inside of every bend  | shorter, and tighter              |
-| negative | runs the outside of every bend | longer, and it opens the bends up |
+**A split is a fork, not a racing line.** A bulge of 40 or more against a path
+18 across puts the two roads far enough apart that neither is inside the
+other's corridor: two ways through, meeting at the checkpoints and nowhere in
+between. Deviating by six or twenty units was the first version, and on screen
+it was one road with a wobble in it.
 
-Following the turn is load-bearing. Pushing to a fixed side of the screen was
-the first version, and on any sector that turns both ways it tightened one
-corner and opened the next, so half the splits came out longer _and_ tighter —
-which is nobody's choice.
+That size is what decides the rest of the construction. A split that leaves by
+50 is not "the same bend moved sideways" — offset a 42-radius bend that far and
+the arithmetic hands back a negative radius, because at that distance the
+offset curve is a different curve. So **the golden path keeps the bends the
+track authored, and a split reads its own off the curve it actually is.** That
+is safe here and was not when it was tried on the main line: a split is a
+smooth generated curve with no sharp arcs to smear, and no authored truth to
+disagree with.
 
 **Canonical distance stays on the main line.** Laps, checkpoints and standings
 are all measured there, so none of them has to care which way anyone went. What
@@ -258,6 +264,34 @@ The grades are not sprinkled at random: a split you need a system to read is a
 better split than one anybody can see, or the system would not be worth its
 slot.
 
+## The corridor
+
+Off the golden path is ground a ship can be thrown across. Past the **corridor**
+there is something solid — call it a field, call it a rail — and the ship does
+not go through it.
+
+Before it, a swing could throw a ship any distance at all: on the Cinder Coil a
+low-handling ship charging its hairpins wanted to go 128 units off the line,
+which is seven times the width of the path and nowhere that could reasonably be
+called a track. The corridor is about three times the path's half-width, so a
+ship still has room to go properly wide — that is the whole bet — and only the
+extremes ever find the wall. A capable ship never touches it at all.
+
+**The position is capped; the cost is not.** Damage is charged on how far the
+swing _wanted_ to throw the ship rather than on how far it got, and hitting the
+wall scrubs speed on top, scaled the same way. Without that, the worst swing in
+the game would be cheaper than a merely bad one, which is the opposite of what
+the swing is for.
+
+The wall charges **once per contact, not per tick**. Per tick was a death
+spiral: a ship pinned through a long bend scrubbed every tick, reached the speed
+floor and could not finish the lap at all. Damage learned the same lesson first,
+and for the same reason.
+
+**Later:** a swing extreme enough to carry a ship out of its corridor and onto
+another split — as something a player chooses to fit, not something that happens
+to them.
+
 ## Being swung into the wrong split
 
 The route is a plan, not a guarantee. At a fork the ship takes the line it
@@ -266,9 +300,14 @@ pointing at another one, in which case it takes that instead.
 
 The threshold sits **just outside the golden path**, deliberately: losing your
 line is something that happens to a ship that went wide, never to one wobbling
-inside the path. That makes a big swing at the bend before a fork cost a route
-rather than only cost time, which is the swing reaching into the part of the
-game the player plans.
+inside the path. What is compared is the direction each line leads in, brought
+back inside the corridor — a split commits further off the path than a ship can
+physically be thrown, so comparing raw commitments would put every one of them
+out of reach and the fork would never fire at all.
+
+That makes a big swing at the bend before a fork cost a route rather than only
+cost time, which is the swing reaching into the part of the game the player
+plans.
 
 ## Damage, shields and what it breaks
 
@@ -376,12 +415,15 @@ Three ships fly it, each in its own colour, each nudged into its own drawing
 lane so they do not sit on top of each other — a drawing trick only, in both
 views: the simulation has no lanes and no ship can touch another.
 
-The **splits** are drawn as the lines they are: the one you planned in gold, a
-line you could plan but did not in green, and a split one grade beyond your
-navigation as a faint dash — you can see something turns off there, and no more
-than that. A split further out than that is not drawn at all. Green, and not a
-colour any ship uses: a line you could take and a line a ship left behind have
-to be tellable apart at a glance.
+The **splits** are drawn as the roads they are, not as lines beside one: the
+fork peels away, runs its own way through the sector and comes back. A road your
+navigation can plan is drawn plainly; one a grade beyond it is drawn faintly —
+you can see a road turns off there and no more than that — and anything further
+out is not drawn at all.
+
+The **corridor walls** are drawn where they are: a field either side of every
+road, fading upward rather than stopping at a rail, so it reads as something
+holding the ship in and not as scenery.
 
 The **tracking bar** is the thing that says who is winning: a lane per ship with
 its place, how far round the lap it is, and what it is giving away on total

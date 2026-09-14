@@ -22,7 +22,7 @@ import {
   type Place,
   type Track,
 } from '../sim/track';
-import { PATH_HALF_WIDTH } from '../sim/tuning';
+import { PATH_HALF_WIDTH, TRACK_HALF_WIDTH } from '../sim/tuning';
 import {
   horizonY,
   lensFor,
@@ -48,8 +48,8 @@ const AHEAD = 460;
 const BEHIND = 70;
 const STEP = 6;
 
-/** The ground either side of the golden path, as a multiple of its half-width. */
-const SHOULDER = 3.4;
+/** How high the corridor wall is drawn. A field, not a fence: it has no top edge. */
+const WALL_HEIGHT = 13;
 
 /**
  * Ships fly the same line, so from behind they would sit exactly on top of one
@@ -189,7 +189,6 @@ export function drawChase(
   // colour there and fades from there to the horizon.
   const underMe = toScreen(lens, toEye(lens, me.x, me.y, 0)).y;
   drawRoad(ctx, lens, track, routes, player, underMe);
-  drawSplits(ctx, lens, track, routes, player);
   drawGates(ctx, lens, track, player);
   drawMarks(ctx, lens, track, player);
 
@@ -237,133 +236,183 @@ function drawRoad(
   nearY: number,
 ): void {
   const from = player.distance - BEHIND;
-  const steps = Math.ceil((AHEAD + BEHIND) / STEP);
+  const to = player.distance + AHEAD;
 
-  const rail: { left: Eye; right: Eye; shoulderL: Eye; shoulderR: Eye; fade: number }[] =
-    [];
+  // The other roads first, then the one the ship is on, so its own line is
+  // never painted over by a fork running alongside it.
+  for (const other of otherRoads(track, lens, routes, player, from, to)) {
+    drawSurface(ctx, lens, other.rail, nearY, other.readable ? 0.6 : 0.24);
+  }
+
+  const mine = railAlong(track, lens, from, to, (d) => lineAt(track, routes, player, d));
+  drawSurface(ctx, lens, mine, nearY, 1);
+  drawCentreLine(ctx, lens, mine);
+}
+
+/** One step of a road: its path edges, its corridor walls, and how far off it is. */
+interface Rung {
+  readonly left: Eye;
+  readonly right: Eye;
+  readonly wallL: Eye;
+  readonly wallR: Eye;
+  readonly topL: Eye;
+  readonly topR: Eye;
+  readonly centre: Eye;
+  readonly fade: number;
+}
+
+/** Walk a stretch of canonical distance and measure the road across it. */
+function railAlong(
+  track: Track,
+  lens: Lens,
+  from: number,
+  to: number,
+  routeAt: (distance: number) => number,
+): Rung[] {
+  const steps = Math.max(2, Math.ceil((to - from) / STEP));
+  const rail: Rung[] = [];
   for (let i = 0; i <= steps; i += 1) {
-    const distance = from + i * STEP;
-    const at = placeSmooth(track, distance, lineAt(track, routes, player, distance));
+    const distance = from + ((to - from) * i) / steps;
+    const at = placeSmooth(track, distance, routeAt(distance));
     const n = normalOfHeading(at.heading);
-    const point = (out: number): Eye =>
-      toEye(lens, at.pos.x + n.x * out, at.pos.y + n.y * out);
+    const point = (out: number, up = 0): Eye =>
+      toEye(lens, at.pos.x + n.x * out, at.pos.y + n.y * out, up);
     rail.push({
       left: point(PATH_HALF_WIDTH),
       right: point(-PATH_HALF_WIDTH),
-      shoulderL: point(PATH_HALF_WIDTH * SHOULDER),
-      shoulderR: point(-PATH_HALF_WIDTH * SHOULDER),
+      wallL: point(TRACK_HALF_WIDTH),
+      wallR: point(-TRACK_HALF_WIDTH),
+      topL: point(TRACK_HALF_WIDTH, WALL_HEIGHT),
+      topR: point(-TRACK_HALF_WIDTH, WALL_HEIGHT),
+      centre: point(0, 0.05),
       fade: Math.pow(Math.min(1, Math.max(0, (i * STEP - BEHIND) / AHEAD)), 0.65),
     });
   }
+  return rail;
+}
+
+/**
+ * Every other way through the sectors in view. A split is a road now rather
+ * than a line drawn beside one, so it is drawn the way a road is — dimmer when
+ * your navigation can only tell you it is there.
+ */
+function otherRoads(
+  track: Track,
+  lens: Lens,
+  routes: RouteView,
+  player: ShipView,
+  from: number,
+  to: number,
+): { rail: Rung[]; readable: boolean }[] {
+  const out: { rail: Rung[]; readable: boolean }[] = [];
+  for (const sector of track.sectors) {
+    // The copy of this sector nearest the ship: the lap keeps counting up.
+    const laps = Math.round((player.distance - sector.start) / track.length);
+    const start = sector.start + laps * track.length;
+    const end = start + (sector.end - sector.start);
+    if (end < from || start > to) continue;
+
+    sector.routes.forEach((route, index) => {
+      if (index === lineAt(track, routes, player, start + 1)) return;
+      const need = navFor(route.grade);
+      if (need > routes.nav + 1) return;
+      out.push({
+        rail: railAlong(track, lens, start, end, () => index),
+        readable: need <= routes.nav,
+      });
+    });
+  }
+  return out;
+}
+
+/** The road surface, its corridor walls, and the two edges of the golden path. */
+function drawSurface(
+  ctx: CanvasRenderingContext2D,
+  lens: Lens,
+  rail: readonly Rung[],
+  nearY: number,
+  alpha: number,
+): void {
+  const horizon = horizonY(lens);
+  const foot = Math.max(horizon + 40, nearY);
 
   // Each surface is one polygon, not a strip of quads. Quads were the first
   // version and every seam between two of them showed as a diagonal scar
   // across the road, because neighbours were filled at slightly different
   // distances. One polygon has no seams; the fade comes from a gradient down
   // the screen instead, which is near enough since the track recedes upward.
-  const surface = (
-    left: readonly Eye[],
-    right: readonly Eye[],
-    near: string,
-    far: string,
-  ): void => {
+  const surface = (left: readonly Eye[], right: readonly Eye[], near: string): void => {
     if (!tracePolygon(ctx, lens, [...left, ...[...right].reverse()])) return;
-    const horizon = horizonY(lens);
-    const foot = Math.max(horizon + 40, nearY);
-    const wash = ctx.createLinearGradient(0, horizon, 0, foot);
-    wash.addColorStop(0, far);
-    wash.addColorStop(0.4, mix(near, far, 0.6));
-    wash.addColorStop(1, near);
-    ctx.fillStyle = wash;
+    const g = ctx.createLinearGradient(0, horizon, 0, foot);
+    g.addColorStop(0, VOID);
+    g.addColorStop(0.4, mix(near, VOID, 0.6));
+    g.addColorStop(1, near);
+    ctx.fillStyle = g;
     ctx.fill();
   };
 
+  ctx.globalAlpha = alpha;
   surface(
-    rail.map((r) => r.shoulderL),
-    rail.map((r) => r.shoulderR),
+    rail.map((r) => r.wallL),
+    rail.map((r) => r.wallR),
     GROUND,
-    VOID,
   );
   surface(
     rail.map((r) => r.left),
     rail.map((r) => r.right),
     ROAD,
-    VOID,
   );
 
-  // The two edges — the lines a swing throws the ship across, so crossing one
-  // has to read as an event from in here too.
-  for (const side of ['left', 'right'] as const) {
-    if (
-      traceLine(
-        ctx,
-        lens,
-        rail.map((r) => r[side]),
-      )
-    ) {
-      ctx.strokeStyle = 'rgba(255, 209, 102, 0.5)';
-      ctx.lineWidth = 2;
-      ctx.lineJoin = 'round';
+  // The corridor walls: what a ship cannot be thrown through. A field rather
+  // than a fence — it fades out upward instead of stopping at a rail, so it
+  // reads as something holding the ship in and not as scenery.
+  for (const side of [0, 1] as const) {
+    const foots = rail.map((r) => (side === 0 ? r.wallL : r.wallR));
+    const tops = rail.map((r) => (side === 0 ? r.topL : r.topR));
+    if (tracePolygon(ctx, lens, [...foots, ...[...tops].reverse()])) {
+      const g = ctx.createLinearGradient(0, horizon - 70, 0, foot);
+      g.addColorStop(0, 'rgba(126, 224, 255, 0)');
+      g.addColorStop(1, 'rgba(126, 224, 255, 0.15)');
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+    if (traceLine(ctx, lens, foots)) {
+      ctx.strokeStyle = 'rgba(126, 224, 255, 0.4)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     }
   }
 
-  // The golden path itself, dashed along its length so speed has something to
-  // run past.
-  const centre = rail.map((_, i) => {
-    const distance = from + i * STEP;
-    const at = placeSmooth(track, distance, lineAt(track, routes, player, distance));
-    return toEye(lens, at.pos.x, at.pos.y, 0.05);
-  });
+  // The two edges of the golden path — the lines a swing throws the ship
+  // across, so crossing one has to read as an event from in here too.
+  for (const side of ['left', 'right'] as const) {
+    for (let i = 0; i < rail.length - 1; i += 1) {
+      const a = rail[i] as Rung;
+      if (!traceLine(ctx, lens, [a[side], (rail[i + 1] as Rung)[side]])) continue;
+      ctx.strokeStyle = `rgba(255, 209, 102, ${(0.55 * (1 - a.fade)).toFixed(3)})`;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** The golden path itself, dashed so speed has something to run past. */
+function drawCentreLine(
+  ctx: CanvasRenderingContext2D,
+  lens: Lens,
+  rail: readonly Rung[],
+): void {
   ctx.setLineDash([13, 11]);
-  for (let i = 0; i < centre.length - 1; i += 1) {
-    if (!traceLine(ctx, lens, [centre[i] as Eye, centre[i + 1] as Eye])) continue;
-    const fade = (rail[i] as (typeof rail)[number]).fade;
-    ctx.strokeStyle = `rgba(255, 209, 102, ${(0.6 * (1 - fade)).toFixed(3)})`;
+  for (let i = 0; i < rail.length - 1; i += 1) {
+    const a = rail[i] as Rung;
+    if (!traceLine(ctx, lens, [a.centre, (rail[i + 1] as Rung).centre])) continue;
+    ctx.strokeStyle = `rgba(255, 209, 102, ${(0.6 * (1 - a.fade)).toFixed(3)})`;
     ctx.lineWidth = 2.5;
     ctx.stroke();
   }
   ctx.setLineDash([]);
-}
-
-/**
- * The other ways through the sectors in view, on the same terms as the map:
- * solid if your navigation can plan it, dashed if you can only see it is
- * there. Green, because cyan is a ship's colour and a wake in the middle
- * distance looked exactly like a line you could have taken.
- */
-function drawSplits(
-  ctx: CanvasRenderingContext2D,
-  lens: Lens,
-  track: Track,
-  routes: RouteView,
-  player: ShipView,
-): void {
-  const mine = lineAt.bind(null, track, routes, player);
-  for (const sector of track.sectors) {
-    sector.routes.forEach((route, index) => {
-      if (index === mine(sector.start + 1)) return;
-      const need = navFor(route.grade);
-      if (need > routes.nav + 1) return;
-      const readable = need <= routes.nav;
-
-      const points: Eye[] = [];
-      const steps = Math.ceil(route.length / STEP);
-      for (let i = 0; i <= steps; i += 1) {
-        const along = Math.min(route.length, i * STEP);
-        const at = placeOn(track, canonicalOf(sector, route, along), index);
-        points.push(toEye(lens, at.pos.x, at.pos.y, 0.05));
-      }
-      if (!traceLine(ctx, lens, points)) return;
-      ctx.setLineDash(readable ? [] : [7, 9]);
-      ctx.strokeStyle = readable
-        ? 'rgba(143, 216, 176, 0.6)'
-        : 'rgba(143, 216, 176, 0.24)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.setLineDash([]);
-    });
-  }
 }
 
 /** The checkpoints, as gates you fly through. */

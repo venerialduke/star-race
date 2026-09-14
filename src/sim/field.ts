@@ -2,6 +2,8 @@
 // touching. Each carries its own race state and its own seeded draws, so one
 // ship's luck can never shift another's.
 //
+// Every ship finishes. Damage costs a ship its pace, never its race.
+//
 // The clock never resets. A lap ends when every ship has finished it; the pit
 // stop then restarts them level, and total time is the sum of their laps —
 // which is why being ahead on the track is not the same as leading.
@@ -102,11 +104,6 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
       plan: ship.plan,
       seed: seedFor(config.seed, i, state.lap),
     });
-    // A ship whose hull is gone stops where it is: it is out of the heat, and
-    // the standings place it behind everyone who finished.
-    if (next.lost) {
-      return { ...ship, state: next, waiting: true };
-    }
     if (next.distance < config.track.length) return { ...ship, state: next };
     return {
       ...ship,
@@ -144,9 +141,8 @@ export function leavePit(state: FieldState, plans: readonly CornerPlan[]): Field
       state: {
         ...startRace(ship.entrant.stats, ship.entrant.build ?? []),
         condition: ship.state.condition,
-        lost: ship.state.lost,
       },
-      waiting: ship.state.lost,
+      waiting: false,
     })),
   };
 }
@@ -157,8 +153,6 @@ export function leavePit(state: FieldState, plans: readonly CornerPlan[]): Field
  * is not the same as leading, so this is what the tracking bar reads.
  */
 export function projectedTicks(state: FieldState, ship: ShipProgress): number {
-  // A lost ship is behind everyone, however good its time was up to then.
-  if (ship.state.lost) return Number.MAX_SAFE_INTEGER;
   if (ship.waiting || state.phase === 'done') return ship.totalTicks;
   const furthest = Math.max(...state.ships.map((s) => s.state.distance));
   const behind = Math.max(0, furthest - ship.state.distance);

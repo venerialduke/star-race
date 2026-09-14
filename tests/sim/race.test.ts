@@ -118,10 +118,17 @@ describe('hazards, shields and the crew', () => {
   });
 
   it('hurts a ship that is thrown off the path, and not one that stays on it', () => {
-    const wild = simulate(base({ stats: shipWith({}), plan: 'charge' }), 3000);
-    const safe = simulate(base({ stats: shipWith({}), plan: 'lift' }), 3000);
-    expect(integrity(wild.condition)).toBeLessThan(1);
-    expect(integrity(safe.condition)).toBe(1);
+    // Damage only has components to break, so this needs a ship with some.
+    const build = [
+      { componentId: 'speed-engine', level: 1 },
+      { componentId: 'speed-engine', level: 1 },
+    ];
+    const raced = (plan: 'lift' | 'charge'): number =>
+      integrity(
+        simulate(base({ stats: resolveBuild(build), build, plan }), 3000).condition,
+      );
+    expect(raced('charge')).toBeLessThan(1);
+    expect(raced('lift')).toBe(1);
   });
 
   it('bills an excursion once, not once per tick spent outside', () => {
@@ -135,13 +142,20 @@ describe('hazards, shields and the crew', () => {
     // Compared over one lap, not a fixed number of ticks: a shielded ship
     // stays quicker, so by any tick count it has met more bends than the bare
     // one and the comparison flips for the wrong reason.
-    const overALap = (shields: number): number => {
-      let state = startRace(shipWith({ shields }));
-      const config = base({ stats: shipWith({ shields }), plan: 'charge' });
+    const overALap = (extra: readonly { componentId: string; level: number }[]): number => {
+      const build = [
+        { componentId: 'speed-engine', level: 1 },
+        { componentId: 'speed-engine', level: 1 },
+        ...extra,
+      ];
+      const config = base({ stats: resolveBuild(build), build, plan: 'charge' });
+      let state = startRace(config.stats, build);
       while (state.lap < 1 && state.tick < 20000) state = stepRace(state, config);
       return integrity(state.condition);
     };
-    expect(overALap(60)).toBeGreaterThan(overALap(0));
+    expect(overALap([{ componentId: 'general-shields', level: 3 }])).toBeGreaterThan(
+      overALap([{ componentId: 'crew-androids', level: 1 }]),
+    );
   });
 
   it('wears a crew on a track of tight bends, and a better crew resists it', () => {

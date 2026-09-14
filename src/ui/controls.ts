@@ -185,9 +185,6 @@ export function mountControls(
               : `P${mine.place} of ${rows.length} — ${seconds(mine.ticks - (leader?.ticks ?? 0))} off the win.`;
         rState.textContent = `${result} +1 slot. Race again to spend it.`;
         rState.className = 'state done';
-      } else if (me?.state.lost === true) {
-        rState.textContent = 'THE FRAME HAS GONE — out of the heat.';
-        rState.className = 'state wide';
       } else if (me?.state.wide === true) {
         rState.textContent = `WIDE — off the path${condition(me)}`;
         rState.className = 'state wide';

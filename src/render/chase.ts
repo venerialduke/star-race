@@ -36,7 +36,8 @@ import {
   type Lens,
 } from './camera';
 import { drawSky, type Sky } from './sky';
-import type { RouteView, ShipView } from './draw';
+import type { FixtureView, RouteView, ShipView } from './draw';
+import { HOLE, MINE } from './view';
 
 /** Where the camera sits relative to the ship it is following. */
 const BACK = 32;
@@ -145,6 +146,7 @@ export function drawChase(
   track: Track,
   ships: readonly ShipView[],
   routes: RouteView,
+  fixtures: readonly FixtureView[],
   sky: Sky,
   chase: Chase,
   seconds: number,
@@ -191,6 +193,8 @@ export function drawChase(
   drawRoad(ctx, lens, track, routes, player, underMe);
   drawGates(ctx, lens, track, player);
   drawMarks(ctx, lens, track, player);
+  // On the road, before the ships, so a rival is never hidden behind a mine.
+  for (const fixture of fixtures) drawFixture(ctx, lens, track, fixture);
 
   // Far ships first, so a rival close behind never paints over one in front.
   const drawn = ships
@@ -208,6 +212,42 @@ export function drawChase(
   for (const row of drawn) {
     drawShip(ctx, lens, track, row.ship, row.point, row.colour, row.lane);
   }
+}
+
+/**
+ * A mine or a black hole, standing on the road ahead. Drawn as a ring lying on
+ * the plane, because the thing that matters is whether your line goes through
+ * it — a marker floating above the track would not answer that.
+ */
+function drawFixture(
+  ctx: CanvasRenderingContext2D,
+  lens: Lens,
+  track: Track,
+  fixture: FixtureView,
+): void {
+  const at = placeOn(track, fixture.distance, fixture.route);
+  const n = normalOf(at);
+  const cx = at.pos.x + n.x * fixture.offset;
+  const cy = at.pos.y + n.y * fixture.offset;
+  const eye = toEye(lens, cx, cy, 0);
+  if (eye.depth <= 0) return;
+  const radius = fixture.kind === 'mine' ? 5 : 9;
+  const ring: { x: number; y: number }[] = [];
+  for (let i = 0; i <= 16; i += 1) {
+    const a = (i / 16) * Math.PI * 2;
+    const point = toEye(lens, cx + Math.cos(a) * radius, cy + Math.sin(a) * radius, 0);
+    if (point.depth <= 0) return;
+    ring.push(toScreen(lens, point));
+  }
+  ctx.beginPath();
+  ring.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.closePath();
+  const colour = fixture.kind === 'mine' ? MINE : HOLE;
+  ctx.fillStyle = withAlpha(colour, fixture.kind === 'mine' ? 0.22 : 0.4);
+  ctx.fill();
+  ctx.strokeStyle = withAlpha(colour, fixture.mine ? 0.5 : 0.95);
+  ctx.lineWidth = Math.max(1, scaleAt(lens, eye.depth) * 0.6);
+  ctx.stroke();
 }
 
 /** One colour per lane of the field. The player is always the first. */

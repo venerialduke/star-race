@@ -13,7 +13,9 @@
 // which the film already has.
 
 import { stepField, type FieldConfig, type FieldState } from './field';
+import type { AbilityId } from './ability';
 import type { SwingEvent } from './race';
+import type { Fixture } from './world';
 
 /** One ship at one tick: everything the screen needs and nothing it does not. */
 export interface Frame {
@@ -27,6 +29,10 @@ export interface Frame {
   readonly integrity: number;
   readonly worn: number;
   readonly shields: number;
+  /** What it has to spend, 0 to 1. */
+  readonly charge: number;
+  /** The ability it fired on this tick, if it fired one. */
+  readonly fired: AbilityId | undefined;
 }
 
 export interface Segment {
@@ -38,6 +44,8 @@ export interface Segment {
   readonly swings: readonly (readonly SwingEvent[])[];
   /** Each ship's total time, in ticks, as it entered the segment. */
   readonly carried: readonly number[];
+  /** What was lying on the track at each tick, so the road is drawn as it was. */
+  readonly fixtures: readonly (readonly Fixture[])[];
   /** How long the lap is, so a frame's distance can be read as progress. */
   readonly lapLength: number;
   /** The field as it stands afterwards: the standings, and where the next segment starts from. */
@@ -47,7 +55,7 @@ export interface Segment {
 /** How long a segment is allowed to run before we call it stuck. */
 const RUNAWAY = 40000;
 
-const frameOf = (ship: FieldState['ships'][number]): Frame => ({
+const frameOf = (ship: FieldState['ships'][number], tick: number): Frame => ({
   distance: ship.state.distance,
   route: ship.state.route,
   offset: ship.state.offset,
@@ -60,6 +68,8 @@ const frameOf = (ship: FieldState['ships'][number]): Frame => ({
         ship.state.condition.parts.length,
   worn: ship.state.worn,
   shields: ship.state.shields,
+  charge: ship.state.charge,
+  fired: ship.state.lastFiredTick === tick ? ship.state.lastFired : undefined,
 });
 
 /**
@@ -69,12 +79,16 @@ const frameOf = (ship: FieldState['ships'][number]): Frame => ({
  */
 export function recordSegment(start: FieldState, config: FieldConfig): Segment {
   const frames: Frame[][] = start.ships.map(() => []);
+  const fixtures: (readonly Fixture[])[] = [];
   let state = start;
 
-  start.ships.forEach((ship, i) => frames[i]?.push(frameOf(ship)));
+  start.ships.forEach((ship, i) => frames[i]?.push(frameOf(ship, start.tick)));
+  fixtures.push(start.fixtures);
   for (let i = 0; i < RUNAWAY && state.phase === 'racing'; i += 1) {
     state = stepField(state, config);
-    state.ships.forEach((ship, s) => frames[s]?.push(frameOf(ship)));
+    const at = state.tick;
+    state.ships.forEach((ship, s) => frames[s]?.push(frameOf(ship, at)));
+    fixtures.push(state.fixtures);
   }
 
   return {
@@ -82,6 +96,7 @@ export function recordSegment(start: FieldState, config: FieldConfig): Segment {
     frames,
     swings: state.ships.map((ship) => ship.state.swings),
     carried: start.ships.map((ship) => ship.totalTicks),
+    fixtures,
     lapLength: config.track.length,
     end: state,
   };

@@ -20,7 +20,13 @@
 // by the same simulation with nobody looking, which is what makes a standings
 // table mean anything.
 
-import { drawField, insetRect, newScene, type ShipView } from './render/draw';
+import {
+  drawField,
+  insetRect,
+  newScene,
+  type FixtureView,
+  type ShipView,
+} from './render/draw';
 import { botOrders } from './sim/bot';
 import type { Garage } from './sim/garage';
 import {
@@ -54,7 +60,7 @@ import {
   type Finish,
   type Season,
 } from './sim/season';
-import { carryCondition, resolveBuild } from './sim/ship';
+import { carryCondition, resolveBuild, type Fitted } from './sim/ship';
 import { TICK_HZ } from './sim/tuning';
 import { mountBoard } from './ui/board';
 import { mountControls } from './ui/controls';
@@ -106,6 +112,8 @@ const board = mountBoard(
     seasonPanel.render(season);
     // Fitting a navigation system changes what the route planner can read.
     controls.setNav(resolveBuild(next.fitted).nav);
+    // Fitting a mine rack is what makes a place to lay one worth showing.
+    controls.setMines(rackLevel(next.fitted));
   },
 );
 
@@ -123,6 +131,14 @@ function setGarage(next: Garage): void {
   };
 }
 
+/** How deep a mine rack the player has fitted, or 0 for none. */
+function rackLevel(fitted: readonly Fitted[]): number {
+  return fitted.reduce(
+    (best, item) => (item.componentId === 'gravity-mine' ? Math.max(best, item.level) : best),
+    0,
+  );
+}
+
 /** The player's ship as the garage has it, carrying whatever damage it has. */
 function playerEntrant(): Entrant {
   const me = racerById(season, 'player');
@@ -134,7 +150,11 @@ function playerEntrant(): Entrant {
 function ordersFor(lap: number): Command[] {
   return entrants.map((entrant) =>
     entrant.isPlayer
-      ? { plan: controls.settings.plan, routes: controls.settings.routes }
+      ? {
+          plan: controls.settings.plan,
+          routes: controls.settings.routes,
+          place: controls.settings.place,
+        }
       : botOrders(entrant, config.track, config.seed, lap),
   );
 }
@@ -200,6 +220,7 @@ function startNext(): void {
 
   controls.setTrack(up.track);
   controls.setNav(resolveBuild(garageOf().fitted).nav);
+  controls.setMines(rackLevel(garageOf().fitted));
   controls.setSeason(up.kind, false);
   controls.toGarage();
   board.render(garageOf());
@@ -341,6 +362,23 @@ function views(): readonly ShipView[] {
   });
 }
 
+/**
+ * What is lying on the track at the tick being watched. Read off the film like
+ * everything else, so the road shows the mines that had been laid by then and
+ * not the ones that are coming.
+ */
+function fixtureViews(): readonly FixtureView[] {
+  if (segment === undefined) return [];
+  const at = Math.max(0, Math.min(segment.fixtures.length - 1, cursor));
+  return (segment.fixtures[at] ?? []).map((fixture) => ({
+    kind: fixture.kind,
+    distance: fixture.distance,
+    route: fixture.route,
+    offset: fixture.offset,
+    mine: fixture.owner === 'player',
+  }));
+}
+
 function frame(now: number): void {
   const elapsed = now - previousTime;
   accumulator += elapsed;
@@ -374,6 +412,7 @@ function frame(now: number): void {
     config.track,
     views(),
     { planned: controls.settings.routes, nav: resolveBuild(garageOf().fitted).nav },
+    fixtureViews(),
     scene,
     // Clamped: a backgrounded tab comes back with a huge gap, and the camera
     // must ease in from where it was rather than teleport.

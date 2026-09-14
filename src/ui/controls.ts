@@ -7,6 +7,7 @@
 // opened it, so nothing you do there reaches the ship until the next decision
 // point. The garage says so.
 
+import type { AbilityId } from '../sim/ability';
 import { standings, type FieldState } from '../sim/field';
 import type { CornerPlan } from '../sim/race';
 import { frameAt, orderAt, type Segment } from '../sim/segment';
@@ -19,6 +20,8 @@ export interface Settings {
   plan: CornerPlan;
   /** The way through each sector the player means to take, one index per sector. */
   routes: number[];
+  /** The sector to lay a mine in before the heat, if the ship has a rack. */
+  place: number | undefined;
   seed: string;
 }
 
@@ -52,6 +55,8 @@ export interface Controls {
   setTrack(track: Track): void;
   /** How far the build's navigation reads. Changes as parts are fitted. */
   setNav(nav: number): void;
+  /** How deep a mine rack is fitted, which is whether a mine can be laid at all. */
+  setMines(level: number): void;
   /** The heat has started. Without Nav 3 the route is now fixed. */
   seal(): void;
   /** What the season is waiting for, so the Go button can say it. */
@@ -69,11 +74,23 @@ const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
 
 const seconds = (ticks: number): string => `${(ticks / TICK_HZ).toFixed(2)}s`;
 
+/** What to say when an ability goes off. Held for a moment so it can be read. */
+const FIRED_HOLD = 40;
+const FIRED: Record<AbilityId, string> = {
+  boost: 'BOOST',
+  'dark-boost': 'BOOST — and a black hole left behind it',
+  'three-bends': 'THREE PERFECT BENDS',
+  missile: 'MISSILE AWAY',
+  tractor: 'TRACTOR — holding the ship ahead',
+  mine: 'MINE LAID',
+};
+
 export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   const settings: Settings = {
     track: TRACKS[0] as Track,
     plan: 'carry',
     routes: (TRACKS[0] as Track).sectors.map(() => 0),
+    place: undefined,
     seed: 'kestrel',
   };
 
@@ -97,6 +114,11 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       <h3 class="routes-head">The route</h3>
       <p id="route-note" class="hint"></p>
       <div id="routes" class="routes"></div>
+      <div id="mines" hidden>
+        <h3 class="routes-head">The mine</h3>
+        <p class="hint">Laid before the start, so everyone in the heat can see it. It drags whoever flies near it further off their line — including you.</p>
+        <div id="mine-row" class="routes"></div>
+      </div>
       <p id="staged" class="staged" hidden></p>
       <div id="board-slot"></div>
     </div>
@@ -127,6 +149,8 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   const staged = byId<HTMLElement>('staged');
   const routeBox = byId<HTMLElement>('routes');
   const routeNote = byId<HTMLElement>('route-note');
+  const mineBox = byId<HTMLElement>('mines');
+  const mineRow = byId<HTMLElement>('mine-row');
   const go = byId<HTMLButtonElement>('b-go');
   const skip = byId<HTMLButtonElement>('b-skip');
 
@@ -165,6 +189,8 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
 
   /** How far the player's navigation reads, as the last render knew it. */
   let nav = 0;
+  /** How deep a mine rack is fitted. Zero means there is nothing to lay. */
+  let mines = 0;
   /** True once the heat has started: without Nav 3 the route is then fixed. */
   let sealed = false;
 
@@ -212,6 +238,33 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
     }
   };
 
+  /**
+   * Where to lay the mine. One button per sector and one for laying none —
+   * because not laying it is a real choice: a mine is on the board before the
+   * start, so it tells the rest of the heat something about you.
+   */
+  const renderMines = (): void => {
+    mineBox.hidden = mines === 0;
+    if (mines === 0) {
+      settings.place = undefined;
+      return;
+    }
+    const button = (index: number | undefined, label: string): string =>
+      `<button type="button" class="route${settings.place === index ? ' on' : ''}"
+        data-mine="${index ?? ''}"${sealed ? ' disabled' : ''}><b>${label}</b></button>`;
+    mineRow.innerHTML = `<div class="sector"><div class="route-choices">${[
+      button(undefined, 'None'),
+      ...settings.routes.map((_, index) => button(index, `Sector ${index + 1}`)),
+    ].join('')}</div></div>`;
+    for (const element of mineRow.querySelectorAll<HTMLButtonElement>('[data-mine]')) {
+      element.addEventListener('click', () => {
+        const raw = element.dataset['mine'];
+        settings.place = raw === undefined || raw === '' ? undefined : Number(raw);
+        renderMines();
+      });
+    }
+  };
+
   showScreen('garage');
 
   return {
@@ -226,17 +279,24 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       settings.track = next;
       if (changed || settings.routes.length !== next.sectors.length) {
         settings.routes = next.sectors.map(() => 0);
+        settings.place = undefined;
       }
       sealed = false;
       renderRoutes();
+      renderMines();
     },
     setNav(next) {
       nav = next;
       renderRoutes();
     },
+    setMines(level) {
+      mines = level;
+      renderMines();
+    },
     seal() {
       sealed = true;
       renderRoutes();
+      renderMines();
     },
     setSeason(next, out) {
       stage = next;
@@ -319,6 +379,17 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
 
       const me = field.ships.findIndex((s) => s.entrant.isPlayer);
       const frame = frameAt(live.segment, me, live.cursor);
+      // An ability is over in a tick, so it is held on screen for long enough
+      // to read: what the player wants to know is that the thing they bought
+      // just did something, not exactly which tick it did it on.
+      let recentlyFired: AbilityId | undefined;
+      for (let back = 0; back <= FIRED_HOLD; back += 1) {
+        const was = frameAt(live.segment, me, live.cursor - back)?.fired;
+        if (was !== undefined) {
+          recentlyFired = was;
+          break;
+        }
+      }
 
       if (settled && done && note !== undefined) {
         rState.textContent = note;
@@ -337,6 +408,9 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       } else if (settled) {
         rState.textContent = `Pit stop — everyone restarts level, the clock keeps running. Change the plan, then Go.`;
         rState.className = 'state pit';
+      } else if (recentlyFired !== undefined) {
+        rState.textContent = `${FIRED[recentlyFired]}${condition(frame)}`;
+        rState.className = 'state fired';
       } else if (frame?.wide === true) {
         rState.textContent = `WIDE — off the path${condition(frame)}`;
         rState.className = 'state wide';

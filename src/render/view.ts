@@ -23,6 +23,16 @@ export interface ShipView {
   readonly swings: readonly SwingEvent[];
 }
 
+/** Something somebody left on the track, as the screen needs it. */
+export interface FixtureView {
+  readonly kind: 'mine' | 'black-hole';
+  readonly distance: number;
+  readonly route: number;
+  readonly offset: number;
+  /** True for a fixture the player laid, which is drawn as theirs. */
+  readonly mine: boolean;
+}
+
 /** What the player knows about the route, which decides how the splits are drawn. */
 export interface RouteView {
   /** The way through each sector the player means to take. */
@@ -44,6 +54,10 @@ export const SHIP_COLOURS = ['#7ee0ff', '#f0a868', '#b48cff'] as const;
 
 export const SHIP_WIDE = '#ff7a6b';
 export const PATH = '#ffd166';
+
+/** A mine reads as a warning; a black hole reads as a hole. */
+export const MINE = '#ff5f7a';
+export const HOLE = '#9b6bff';
 
 /** A hex colour at an alpha, so one palette serves lines and fills. */
 export function withAlpha(hex: string, alpha: number): string {

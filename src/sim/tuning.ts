@@ -292,3 +292,94 @@ export const BOT_ROUTE_NERVE = 0.55;
 /** Ship stats are clamped to this range, so a slider cannot break the sim. */
 export const STAT_MIN = 0.5;
 export const STAT_MAX = 1.6;
+
+// S6 — interaction. Ships still never touch: everything below reaches another
+// ship through the track, and lands on the tick after it was fired, so no
+// ship's move can depend on where another one got to this tick.
+
+/** Charge gained per tick on the golden path, as a share of a full charge. */
+export const CHARGE_PER_TICK = 0.0042;
+
+/**
+ * Charge is only gathered on the path. Off it a ship is surviving, not
+ * charging — which is the second reason to stay on the line, after speed.
+ */
+export const CHARGE_OFF_PATH = 0;
+
+/** How long a boost runs, and what it adds to top speed while it does. */
+export const BOOST_TICKS = 70;
+export const BOOST_SPEED = 0.3;
+
+/** A boost wants a straight at least this long ahead of it to be worth firing. */
+export const BOOST_WANTS_CLEAR = 150;
+
+/** How many bends the handling engine's chain takes perfectly. */
+export const PERFECT_BENDS = 3;
+
+/** A bend reached within this many ticks of the last pays extra speed. */
+export const PERFECT_WINDOW = 180;
+
+/** What that extra is, as a share of top speed. */
+export const PERFECT_BONUS = 0.08;
+
+/** The chain wants this many bends close together ahead before it fires. */
+export const PERFECT_WANTS_BENDS = 3;
+
+// Weapons. A weapon displaces a ship rather than hitting it: what it costs you
+// is the line you were on, which is the same currency the swing is paid in.
+
+/** How far up the road a missile reaches, in track units, per level. */
+export const MISSILE_RANGE = [260, 340, 420] as const;
+
+/** What a missile carries. Shields soak it; what gets through pushes. */
+export const MISSILE_POWER = [16, 26, 38] as const;
+
+/** Track units of lateral push per point of weapon power that beats the shields. */
+export const PUSH_PER_POWER = 0.55;
+
+/** How far a tractor beam reaches, and the share of speed it takes off. */
+export const TRACTOR_RANGE = [200, 280, 360] as const;
+export const TRACTOR_SCRUB = [0.06, 0.09, 0.13] as const;
+
+/** A mine sits this far back down the road from where it was dropped. */
+export const MINE_DROP_BACK = 40;
+
+/** How close a ship must pass a fixture for it to bite, along and across. */
+export const FIXTURE_REACH = 30;
+export const FIXTURE_ACROSS = 20;
+
+/** What a mine and a black hole carry when a ship passes one. */
+export const MINE_POWER = [20, 30, 42] as const;
+export const BLACK_HOLE_POWER = 30;
+
+/** Ticks a dropped fixture lasts before it fades. A placed one lasts the heat. */
+export const FIXTURE_LIFE = 3600;
+
+/** A ship built for black holes takes this much more speed through one. */
+export const BLACK_HOLE_CARRY = 0.12;
+
+// Collection. What a heat gathers, and what it is worth in the garage.
+
+/** Credits a captured weapon sells for, per point of power it was carrying. */
+export const SALVAGE_PER_POWER = 0.9;
+
+/** Dark matter gathered by passing through a black hole with a collector. */
+export const DARK_MATTER_PER_HOLE = 12;
+
+/** Credits a unit of dark matter turns into, with a level 3 collector. */
+export const DARK_MATTER_VALUE = 1.4;
+
+/** How often a bot fits a weapon when it can afford one. */
+export const BOT_AGGRESSION = 0.45;
+
+/**
+ * How whole a part must still be to grant its ability. A badly broken engine
+ * flies on, worth less; it does not also hand you a boost.
+ */
+export const ABILITY_WORKS = 0.5;
+
+/** How far ahead the three-bend chain looks for a run of bends to spend itself on. */
+export const PERFECT_LOOKAHEAD = 420;
+
+/** How far back a mine rack notices somebody chasing, per level. */
+export const MINE_SEE_BACK = [180, 240, 300] as const;

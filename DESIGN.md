@@ -97,7 +97,7 @@ refitting it does not launder the damage off it.
 ## What is built
 
 **S1 — the swing**, **S2 — the heat**, **S3 — the ship and the shop**,
-**S4 — the route**, and **S5 — the season**.
+**S4 — the route**, **S5 — the season**, and **S6 — interaction**.
 Three ships fly one of three authored loops for two laps, with a pit stop
 between them. The player fits components into slots in the garage between laps,
 sets the corner plan and the route, and races; the rivals are bots that read the
@@ -106,7 +106,9 @@ a build adds up to. Each lap is resolved before it is played back, on its own
 screen. Sectors offer more than one way through them, and what the player may
 plan is what their navigation can read. A heat is no longer the whole game: nine
 racers run a season of phases, a cut at the end of each, and what a heat pays is
-what you take into the next one.
+what you take into the next one. And the ships can now reach each other: weapons
+push a rival off their line, mines wait on the road, and an engine's boost can
+leave a black hole behind it.
 
 ## The track
 
@@ -449,6 +451,17 @@ hidden, because knowing that a better system would buy you something is the
 reason to buy one. Once the heat starts the route is sealed, and the panel says
 so — unless you fitted the system that can re-plan at a pit stop.
 
+**What is on the road is drawn where it is.** A mine is a ring you can see your
+line going through or past; a black hole is a bigger one, filled. Both are drawn
+under the ships in both views, because a ship must never be hidden by the thing
+that is about to hit it. When an ability goes off, the state line says so and
+holds it long enough to read — what the player wants to know is that the thing
+they bought just did something.
+
+**The mine** is placed in the garage, a button per sector, and only when a rack is
+fitted. Laying none is a real choice: a placed mine is on the board before the
+start, so it tells the rest of the heat something about you.
+
 **The standings** sit at the top of the garage, because between heats there are
 only two questions worth a glance: am I going to survive the cut, and who am I
 racing next. So the panel is points, the cut line drawn across the table where
@@ -463,9 +476,13 @@ running, and anything bought or fitted waits for the next decision point.
 ## The heat
 
 A **heat** is `LAPS_PER_HEAT` laps of one track by three ships, stepped in
-lockstep. Ships never touch, and none of them can see another: each carries its
-own race state and draws its swings from its own seeded stream, keyed by which
-ship it is and which lap this is. One ship's luck can never shift another's.
+lockstep. Ships never touch. Each carries its own race state and draws its swings
+from its own seeded stream, keyed by which ship it is and which lap this is, so
+**one ship's luck can never shift another's**.
+
+Since S6 a ship's *choices* can. That is the whole of "Interaction" below, and it
+does not weaken the rule above: what reaches you is never somebody else's dice,
+it is something they bought and something they aimed.
 
 A lap ends for a ship when it crosses the line; it then waits. When the last
 ship is in, the heat goes to the **pit stop** — or to the finish, if that was
@@ -501,6 +518,12 @@ to commit before it knows how the bends fall.
 
 Its plan follows its own build: a ship with Handling to spare can afford to
 Charge, and one without it usually Carries. It re-picks each lap.
+
+Some rivals race the track and some race you. A bot that arms itself is giving up
+a slot of pace for a slot of trouble — the same bet the player is offered, made
+before it knows who it is drawn against, exactly as the player makes it. If it
+brought a mine rack it picks a sector to lay one in, seeded, because a rival that
+always mines the same sector is a sector you learn to avoid once.
 
 Nothing about a bot is privileged. It decides from the track and its own state,
 before the lap, and hands the result in as an input — which is exactly the seam
@@ -555,6 +578,102 @@ against the same shelf, holding back `BOT_THRIFT` of what they have. Nothing
 about a rival is privileged: it decides from the track and its own garage, and
 hands the result in as an input.
 
+## Interaction
+
+**What another ship bought changes your race.** Everything here reaches you
+through the track — nothing is a collision, and the sim still has no way for two
+ships to occupy the same place.
+
+**The rule that makes it safe: nothing lands on the tick it was fired.** Every
+ship reads a world built from the state *before* the tick, and whatever it sends
+out is resolved into impulses that arrive on the tick after. So no ship's move
+can depend on where another one got to this tick, and the order the ships happen
+to sit in the array cannot change the race. It is the same rule the whole sim
+already runs on — a decision is an input, fixed before the tick that consumes it
+— applied to ships instead of to players. It is also what lets a heat be resolved
+on one machine and watched on three.
+
+### Charge
+
+A ship gathers **charge** on the golden path and nowhere else, at a rate its crew
+improves — Engineers make shields *and* abilities recharge faster, which is one
+number doing both. Off the path it gathers nothing. So a lap spent being thrown
+wide arrives at the last bend with nothing to spend, which is the second reason to
+hold the line after speed itself.
+
+### Abilities
+
+**They fire themselves.** An ability reads a condition the ship can see for
+itself and spends the charge when that condition holds. The player's decision was
+made in the garage, when they fitted the part. Nothing asks the player anything
+mid-race, which is what keeps the third rule true when the rival is one day a
+person rather than a bot.
+
+| Ability | From | Fires when |
+| --- | --- | --- |
+| **Boost** | speed engine L3 | a straight with `BOOST_WANTS_CLEAR` of clear road on it |
+| **Boost, dark** | dark matter engine L2 | the same — and it leaves a black hole where it fired |
+| **Three perfect bends** | handling engine L3 | `PERFECT_WANTS_BENDS` bends lie close together ahead |
+| **Missile** | missile rack | a rival is within reach up the road |
+| **Tractor beam** | tractor beam | the same, and it takes their speed rather than their line |
+| **Mine** | gravity mines | somebody is close behind — the one ability aimed backwards |
+
+The order they are offered in is fixed, so two ships with the same build in the
+same moment always do the same thing. A ship fires one ability per charge.
+
+**Three perfect bends** takes its bends at top speed with no swing at all, and a
+bend reached within `PERFECT_WINDOW` of the last pays extra speed — which is what
+makes the chain want a coil of bends rather than three stray ones.
+
+A part broken past `ABILITY_WORKS` still flies and still adds what it adds; it
+just no longer has the ability in it. That is how damage costs a ship a weapon.
+
+### Weapons displace, they do not damage
+
+A weapon costs you **the line you were on**, which is the currency the swing is
+already paid in. A missile shoves a rival further off whatever line they are on;
+what the shields do not soak is what moves the ship; the corridor holds it in the
+same way it holds a swing. A tractor beam is the exception in the other
+direction — it takes speed straight off, and no shield answers a pull.
+
+Being shot at a fork can therefore cost you a split, exactly as being thrown wide
+can. Nothing else about it is new.
+
+### What is on the track
+
+A **fixture** is something somebody left on the road. It bites **once per ship per
+lap** — not once per tick it is near, which is the mistake damage made in S3.6,
+the corridor wall made in V1.2, and this layer made again on its first run, where
+it doubled a lap time. It never bites the ship that laid it.
+
+- **Gravity mines** throw a ship further off whatever line it was on, which is why
+  they cost most to a ship that meets one already out of shape. A mine may be
+  **laid before the heat**, in a sector chosen in the garage, and is then on the
+  board for all three ships to see — the one piece of interaction nobody is
+  surprised by. A mine rack also drops them mid-race, for whoever is behind.
+- **Black holes** are the odd one. They are made mid-race by a dark matter
+  engine's boost, they are not announced, and **they discriminate by build**: a
+  ship with a dark matter engine reads the hole as a corner — through it faster,
+  unharmed, and gathering what it sheds — and everybody else meets a hazard.
+
+Fixtures laid before the heat survive the pit stop. Ones dropped during a lap do
+not: the lap restarts and the road is clear again.
+
+### Collection
+
+**Salvage** is a weapon a collector shield kept. At level 3 a collector keeps
+whatever hits it at full shields — the weapon never lands at all — and sells it
+when the race ends. It is the only way a ship profits from being shot at.
+
+**Dark matter** is gathered by flying through a black hole with a collector
+aboard. At level 3 that collector cashes it in for credits; below that it is fuel
+and nothing else.
+
+Both are paid at the end of the heat, on top of the purse. So a ship can come
+third and leave the heat richer than the ship that beat it — which is the first
+income in the game that does not come from beating somebody, and the first reason
+to spend late-season credits on something that is not a stat.
+
 ## Tuning
 
 Every balance number lives in `src/sim/tuning.ts`, with a one-line comment
@@ -565,8 +684,8 @@ midpoint).
 
 ## Later
 
-Everything else in `design/catalogue/framework.md`: weapons and fixtures,
-collection and the economy it needs, and everything the ships do to each other.
+Everything else in `design/catalogue/framework.md`: augments, declarations,
+pools, the track growing between phases, and real players.
 `BACKLOG.md` says the order.
 
 Three directions are recorded rather than built, because each says something

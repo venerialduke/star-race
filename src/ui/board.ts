@@ -119,12 +119,20 @@ export function mountBoard(
               )
               .join('')}`;
 
-      const CATEGORIES: readonly Category[] = ['engine', 'shields', 'crew', 'navigation'];
+      const CATEGORIES: readonly Category[] = [
+        'engine',
+        'shields',
+        'crew',
+        'navigation',
+        'weapons',
+      ];
       const CATEGORY_NAMES: Record<Category, string> = {
         engine: 'Engines',
         shields: 'Shields',
         crew: 'Crew',
         navigation: 'Navigation',
+        weapons: 'Weapons',
+        collection: 'Collection',
       };
       const shopRows = CATEGORIES.map((category) => {
         const rows = COMPONENTS.filter((c) => c.category === category)
@@ -138,6 +146,7 @@ export function mountBoard(
             </div>`;
           })
           .join('');
+        if (rows === '') return '';
         return `<h4>${CATEGORY_NAMES[category]}</h4>${rows}`;
       }).join('');
 

@@ -174,6 +174,37 @@ numbers.
 - **Lift still wins nothing.** Damage was the obvious candidate to rescue it
   and did not: Lift survives, but it is so slow it loses on time anyway.
 
+## S3.6 — damage breaks things, and the crew fixes them — **done**
+
+Dictated: damage should cost the ship its effectiveness for the rest of the
+race, break one or more components depending on how big the hit was, be
+repaired by the crew as you fly at a rate that differs by crew, and be put
+right entirely between races.
+
+That replaces the hull pool. There is no hull: a hit past the shields breaks
+the **frame** or a **component**, each carries its own **condition**, and a
+part in poor condition gives proportionally less of whatever it gives. The
+frame gives way more slowly than a component, so a ship with parts fitted
+spreads its damage instead of taking it all in one place.
+
+**It does the balancing job it was asked to do.** 24 seeded heats a cell:
+
+| Meridian Run, a speed build | Carry | Charge |
+| --- | --- | --- |
+| three engines, no crew | 58% | 50% |
+| two engines + nanites | **75%** | 58% |
+| two engines + shields | **75%** | 54% |
+
+Giving up an engine for a crew or a shield is now worth about seventeen points
+of win rate on the track a speed build belongs on. On the Cinder Coil a crew is
+worth a similar amount to a balanced build — 42/50% against 25/25% without one.
+Before this, shields and crew never paid for their slot at all.
+
+**Lift still wins nothing**, on any track, with any build. Damage was the
+second thing tried on it and it did not work either: over two laps the
+degradation never compounds enough to beat what Lift gives away in speed. The
+plan probably needs either longer races or something of its own.
+
 ## S4 — the route
 
 **S4 is done when:** a sector offers more than one way through it, the player's

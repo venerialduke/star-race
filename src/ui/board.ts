@@ -148,13 +148,14 @@ export function mountBoard(
           <span>Handling <b>${stats.handling.toFixed(2)}</b></span>
           <span>Shields <b>${stats.shields}</b></span>
           <span>Crew <b>${stats.endurance.toFixed(2)}</b></span>
+          <span>Repair <b>${stats.repair.toFixed(1)}</b></span>
         </div>
         <h3>Fitted</h3>
         ${fittedRows}
         ${shelfRows}
         <h3>Shop</h3>
         ${shopRows}
-        <p class="waiting">Not stocked yet, and why: ${NOT_STOCKED.map((n) => `<b>${n.name}</b> — ${n.waiting}`).join(' · ')}.</p>`;
+        <p class="waiting">Damage breaks whatever it hits and the part is worth less for the rest of the race; the crew patches it as you fly, and the garage puts everything right between races. Not stocked yet, and why: ${NOT_STOCKED.map((n) => `<b>${n.name}</b> — ${n.waiting}`).join(' · ')}.</p>`;
     },
   };
 }

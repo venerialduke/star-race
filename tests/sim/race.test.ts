@@ -4,8 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { seedFrom } from '../../src/sim/rng';
-import { bareShip } from '../../src/sim/ship';
-import { simulate, type RaceConfig } from '../../src/sim/race';
+import { bareShip, integrity, resolveBuild } from '../../src/sim/ship';
+import { simulate, startRace, stepRace, type RaceConfig } from '../../src/sim/race';
 import {
   CINDER_COIL,
   KESTREL_LOOP,
@@ -50,13 +50,15 @@ describe.each(TRACKS)('$name', (track: Track) => {
     expect(new Set(track.bends.map((b) => b.radius)).size).toBeGreaterThan(1);
   });
 
-  it('can be lapped, and its laps differ by plan', () => {
-    const lap = (plan: 'lift' | 'charge'): number => {
-      const state = simulate(base({ track, plan }), 9000);
-      return state.lastLapTicks ?? Infinity;
-    };
-    expect(lap('lift')).toBeLessThan(Infinity);
-    expect(lap('charge')).toBeLessThan(lap('lift'));
+  it('can be lapped, and the corner plan changes the lap', () => {
+    // Which plan is quickest is the track's business, not this test's: since
+    // damage degrades the ship for the rest of the race, Lift is the fastest
+    // way round a track tight enough to keep throwing you off the path.
+    const lap = (plan: 'lift' | 'carry' | 'charge'): number =>
+      simulate(base({ track, plan }), 9000).lastLapTicks ?? Infinity;
+    const laps = [lap('lift'), lap('carry'), lap('charge')];
+    expect(Math.max(...laps)).toBeLessThan(Infinity);
+    expect(new Set(laps).size).toBeGreaterThan(1);
   });
 });
 
@@ -118,21 +120,28 @@ describe('hazards, shields and the crew', () => {
   it('hurts a ship that is thrown off the path, and not one that stays on it', () => {
     const wild = simulate(base({ stats: shipWith({}), plan: 'charge' }), 3000);
     const safe = simulate(base({ stats: shipWith({}), plan: 'lift' }), 3000);
-    expect(wild.hull).toBeLessThan(100);
-    expect(safe.hull).toBe(100);
+    expect(integrity(wild.condition)).toBeLessThan(1);
+    expect(integrity(safe.condition)).toBe(1);
   });
 
   it('bills an excursion once, not once per tick spent outside', () => {
     // The ship crosses the edge a handful of times a lap. If damage were
     // charged by the tick, a low-handling build would be dead long before this.
     const state = simulate(base({ stats: shipWith({}), plan: 'charge' }), 3000);
-    expect(state.hull).toBeGreaterThan(20);
+    expect(integrity(state.condition)).toBeGreaterThan(0.2);
   });
 
-  it('spends shields before hull, and regrows them on the path', () => {
-    const bare = simulate(base({ stats: shipWith({}), plan: 'charge' }), 3000);
-    const shielded = simulate(base({ stats: shipWith({ shields: 60 }), plan: 'charge' }), 3000);
-    expect(shielded.hull).toBeGreaterThan(bare.hull);
+  it('spends shields before the ship itself, over the same ground', () => {
+    // Compared over one lap, not a fixed number of ticks: a shielded ship
+    // stays quicker, so by any tick count it has met more bends than the bare
+    // one and the comparison flips for the wrong reason.
+    const overALap = (shields: number): number => {
+      let state = startRace(shipWith({ shields }));
+      const config = base({ stats: shipWith({ shields }), plan: 'charge' });
+      while (state.lap < 1 && state.tick < 20000) state = stepRace(state, config);
+      return integrity(state.condition);
+    };
+    expect(overALap(60)).toBeGreaterThan(overALap(0));
   });
 
   it('wears a crew on a track of tight bends, and a better crew resists it', () => {
@@ -154,5 +163,60 @@ describe('hazards, shields and the crew', () => {
       3000,
     );
     expect(state.worn).toBeLessThan(0.2);
+  });
+});
+
+describe('damage that breaks things', () => {
+  const kit = ['speed-engine', 'speed-engine', 'general-shields'].map((id) => ({
+    componentId: id,
+    level: 1,
+  }));
+
+  const heatOf = (build: typeof kit, plan: 'lift' | 'charge', ticks = 4000) =>
+    simulate(
+      {
+        track: CINDER_COIL,
+        stats: resolveBuild(build),
+        build,
+        plan,
+        seed: seedFrom('damage'),
+      },
+      ticks,
+    );
+
+  it('breaks parts rather than draining one pool', () => {
+    const state = heatOf(kit, 'charge');
+    expect(state.condition.parts).toHaveLength(kit.length);
+    const hurt = state.condition.parts.filter((c) => c < 1);
+    expect(hurt.length).toBeGreaterThan(0);
+    expect(state.lastBroken).toBeDefined();
+  });
+
+  it('makes a damaged ship worth less for the rest of the race', () => {
+    const state = heatOf(kit, 'charge');
+    const whole = resolveBuild(kit);
+    expect(state.stats.thrust).toBeLessThan(whole.thrust);
+  });
+
+  it('leaves an undamaged ship at full worth', () => {
+    const state = heatOf(kit, 'lift');
+    expect(integrity(state.condition)).toBe(1);
+    expect(state.stats.thrust).toBe(resolveBuild(kit).thrust);
+  });
+
+  it('repairs faster with a crew that is good at it', () => {
+    const withNanites = [...kit.slice(0, 2), { componentId: 'crew-nanites', level: 1 }];
+    const withAndroids = [...kit.slice(0, 2), { componentId: 'crew-androids', level: 1 }];
+    expect(integrity(heatOf(withNanites, 'charge').condition)).toBeGreaterThan(
+      integrity(heatOf(withAndroids, 'charge').condition),
+    );
+  });
+
+  it('spreads a bigger hit across more of the ship', () => {
+    // Every part of a four-part ship should be able to take a hit, given a
+    // race long enough to be thrown off the path a few times.
+    const four = [...kit, { componentId: 'crew-androids', level: 1 }];
+    const state = heatOf(four, 'charge', 9000);
+    expect(state.condition.parts.filter((c) => c < 1).length).toBeGreaterThan(1);
   });
 });

@@ -1415,14 +1415,14 @@ is a spread of ordinary parts for it to be a selection from.</p>
 </details>
 <details class="element" id="abilities" open>
 <summary><span class="t">Abilities</span><span class="status partial">partial</span><span class="rows">4 rows</span><span class="w">Charged moves, if components have them: boost, teleport, others — unresolved</span></summary>
-<div class="body"><p><strong>They exist; what is unresolved is who fires them.</strong> Dictating components
-settled the first half of the question: abilities are granted by a component&#39;s
-upgrade path, usually at level 3 — an engine grants a boost, another grants
-three perfect bends, a collector shield starts keeping what hits it. What is
-still open is the trigger. Round 7 had the crew fire them when it judged the
-moment; a later note had the player place where each charge is spent before
-the run — two charges placed, a third that fires only if enough energy has
-been collected by then. Nothing has decided between those.</p>
+<div class="body"><p><strong>They exist, and they fire themselves.</strong> Abilities are granted by a
+component&#39;s upgrade path, usually at level 3 — an engine grants a boost,
+another grants three perfect bends, a collector shield starts keeping what hits
+it. As of the build call on 2026-09-13 they fire <strong>automatically</strong>, on
+proximity to a rival, on track conditions, on the moment being right. The
+exception is an ability that is specifically a <strong>placed</strong> one: for those, the
+player sets before the run where the charge is spent. Both kinds may exist;
+<code>fires</code> says which an ability is.</p>
 
 <details class="schema"><summary>Schema</summary><div class="scroll"><table>
 <thead>
@@ -1456,12 +1456,16 @@ been collected by then. Nothing has decided between those.</p>
 <td>which component category grants it, if said: <code>engine</code>, <code>shields</code>, <code>weapons</code>, <code>collection</code>, <code>navigation</code> — and the level it arrives at</td>
 </tr>
 <tr>
+<td><code>fires</code></td>
+<td><code>auto</code> — the ship judges it, from proximity, track conditions or the moment · <code>placed</code> — the player sets before the run where the charge is spent</td>
+</tr>
+<tr>
 <td><code>status</code></td>
 <td><code>stub</code> · <code>seeded</code> · <code>cut</code></td>
 </tr>
 </tbody></table>
 </div></details>
-<h3>Abilities</h3><div class="rows"><div class="row seeded"><div class="t">Boost<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A burst of speed. The speed engine&#39;s version costs no gravity while it runs; the dark matter engine&#39;s leaves a small black hole behind it, which throws ships without a dark matter engine off course.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a straight</span></div><div class="f"><span class="l">from</span><span class="v">engine — speed engine L3, dark matter engine L2</span></div></div><div class="row seeded"><div class="t">Three perfect bends<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">The next three bends are taken perfectly at top speed, and a bend reached within three seconds of the last pays extra speed — again on the third if it too comes in time.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a run of bends close together</span></div><div class="f"><span class="l">from</span><span class="v">engine — handling engine L3</span></div></div><div class="row seeded"><div class="t">Capture<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A weapon or moving fixture that hits the ship at full shields is kept, and sells for credits when the race ends.</span></div><div class="f"><span class="l">spends</span><span class="v">nothing said; storage scales with total shield capacity</span></div><div class="f"><span class="l">wants</span><span class="v">a rival who shoots at you</span></div><div class="f"><span class="l">from</span><span class="v">shields — collector shield L3</span></div></div><div class="row stub"><div class="t">Teleport<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">Jump to a different split of the sector you are in.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a split</span></div></div></div>
+<h3>Abilities</h3><div class="rows"><div class="row seeded"><div class="t">Boost<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A burst of speed. The speed engine&#39;s version costs no gravity while it runs; the dark matter engine&#39;s leaves a small black hole behind it, which throws ships without a dark matter engine off course.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a straight</span></div><div class="f"><span class="l">from</span><span class="v">engine — speed engine L3, dark matter engine L2</span></div><div class="f"><span class="l">fires</span><span class="v">auto</span></div></div><div class="row seeded"><div class="t">Three perfect bends<span class="status seeded">auto</span></div><div class="f"><span class="l">does</span><span class="v">The next three bends are taken perfectly at top speed, and a bend reached within three seconds of the last pays extra speed — again on the third if it too comes in time.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a run of bends close together</span></div><div class="f"><span class="l">from</span><span class="v">engine — handling engine L3</span></div><div class="f"><span class="l">fires</span><span class="v">auto</span></div></div><div class="row seeded"><div class="t">Capture<span class="status seeded">seeded</span></div><div class="f"><span class="l">does</span><span class="v">A weapon or moving fixture that hits the ship at full shields is kept, and sells for credits when the race ends.</span></div><div class="f"><span class="l">spends</span><span class="v">nothing said; storage scales with total shield capacity</span></div><div class="f"><span class="l">wants</span><span class="v">a rival who shoots at you</span></div><div class="f"><span class="l">from</span><span class="v">shields — collector shield L3</span></div><div class="f"><span class="l">fires</span><span class="v">auto</span></div></div><div class="row stub"><div class="t">Teleport<span class="status stub">stub</span></div><div class="f"><span class="l">does</span><span class="v">Jump to a different split of the sector you are in.</span></div><div class="f"><span class="l">spends</span><span class="v">charge</span></div><div class="f"><span class="l">wants</span><span class="v">a split</span></div></div></div>
 <h3>Notes</h3><p><strong>2026-09-13.</strong> Round 7 names four example abilities — Brace, Rake, Burn,
 Scoop — as examples, not a fixed set. They are not in these notes and are left
 off this table until the owner names them. Boost and Teleport are the two the
@@ -1474,6 +1478,12 @@ dictated names: the owner named the effect, not the ability. Boost is one row
 though two engines grant it, because what differs is the engine, not the move.
 Note that the dark matter engine&#39;s boost creates a <strong>fixture</strong> mid-race, which
 is the first ability that changes the track.</p>
+<p><strong>2026-09-13, the build call.</strong> Abilities fire automatically unless an ability
+is specifically a placed one. Boost, the three-bend chain and Capture are all
+<code>auto</code>: each has a condition the ship can read for itself — a straight ahead, a
+run of bends, a hit landing at full shields. Teleport is left blank because
+nothing says when it would fire, and it is the one candidate that reads like it
+might want placing.</p>
 </div>
 </details>
 <details class="element" id="ship-stats">
@@ -1935,6 +1945,18 @@ changed on it.</p>
 <td>adds</td>
 <td><strong>Opponents are bots in the initial build; real players are the destination.</strong></td>
 <td>A build decision, not a design one, but it constrains the sim: nothing may assume an opponent&#39;s decisions are available locally at a given moment, because one day they will arrive over a wire. Inputs stay data; the race stays a pure function of them.</td>
+</tr>
+<tr>
+<td>2026-09-14</td>
+<td>supersedes</td>
+<td><strong>Damage breaks components, and repairs between races.</strong> A hit past the shields breaks the frame or one or more fitted components depending on its size; a damaged component is worth less of whatever it gives for the rest of the race; the crew patches damage as the ship flies, at a rate that differs by crew; everything is repaired between races.</td>
+<td>Round 7 had three layers — shields, then hull, then crew — with hull as the thing that ends your race, and the framework pointed at hull becoming run health across a season. There is now no hull pool at all, and damage is explicitly a within-race system. It is what makes shields and crew worth a slot: measured, giving up an engine for either is worth about seventeen points of win rate on the right track.</td>
+</tr>
+<tr>
+<td>2026-09-14</td>
+<td>adds</td>
+<td><strong>Repair is a crew stat.</strong> Nanites rebuild almost anything, engineers patch well, androids are strong but no mechanics, and a ship with nobody aboard barely mends.</td>
+<td>Nothing in round 7 or the catalogue gave crews a repair rating — they had endurance, and one other effect each. This is a second job for the category, and the reason a crew is worth fitting on a track that hurts you.</td>
 </tr>
 </tbody></table>
 </div>

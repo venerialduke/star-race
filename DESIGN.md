@@ -509,7 +509,24 @@ midpoint).
 
 ## Later
 
-Everything else in `design/catalogue/framework.md`: three ships in a heat over
-two laps, pit stops, splits and navigation, components and slots, the shop as
-an inventory, weapons and fixtures, pools and the purse, points and the cut.
+Everything else in `design/catalogue/framework.md`: pools and the purse, points
+and the cut, weapons and fixtures, collection and the economy it needs.
 `BACKLOG.md` says the order.
+
+Three directions are recorded rather than built, because each says something
+about what would have to change first:
+
+- **A split need not be balanced on lap time.** It may be worth taking because
+  it holds resources, because it is safer, or it may be a bad route whose job is
+  to make a navigation system worth its slot. The blocker is not the split: a
+  safer line is worth nothing while the golden path is free of danger, so
+  hazards that sit _on_ the track have to land before "safer" can be a reason to
+  go anywhere.
+- **Tracks that snap together**, and a tool to build them with. Today closure is
+  a global constraint on one authored piece list — `loopFromHalf` refuses a half
+  that does not sweep exactly 180° — which is the opposite of snapping. Each
+  section would have to carry its own entry and exit pose, and closure become a
+  property of the assembled set.
+- **A swing extreme enough to leave the corridor**, carrying a ship onto another
+  split — as something a player chooses to fit, not something that happens to
+  them.

@@ -506,4 +506,36 @@ and the standings are worth protecting.
 `DESIGN.md`. Nothing above blocks it; it is a project of its own.
 
 **A closer view of the terrain.** Parked in the brief: the top-down view is
-functional, and the systems matter more until they are proven.
+functional, and the systems matter more until they are proven. _Done — the
+chase camera landed in V1, and the loop from above is the mini-map._
+
+**Tracks that snap together.** A tool the owner uses to design and build
+tracks, and — later — sections players add themselves. What that needs is a
+catalogue of sector shapes where **any sector snaps onto any other and the
+circuit still closes**.
+
+It is worth writing down now what stands in the way, because it is not the
+tool. A track today is one authored piece list walked into a loop, and
+`loopFromHalf` refuses a half that does not sweep exactly 180°: **closure is a
+global constraint on the whole list.** That is the opposite of snapping. For
+sections to click together each has to carry its own entry and exit pose, and
+closure has to become a property of an assembled set — something the tool
+checks, or something the catalogue guarantees by construction — rather than a
+rule the author obeys by hand.
+
+The route work already pushes the same way: a sector owns its routes, and every
+route of a sector leaves and arrives on its checkpoint. That is most of a snap
+joint already. What is missing is that the sectors themselves are still cut out
+of one continuous walk rather than being things with ends.
+
+**More reasons for a split than the clock.** S4 balanced every split on lap
+time because lap time was the only thing measurable, which made every wide
+line a trap — the Meridian's are 26 to 48 ticks slower with no upside a one-lap
+measurement can see. A split should also be worth taking because it holds
+resources, or because it is safer, or be a genuinely bad route whose whole job
+is to make a navigation system worth its slot.
+
+**The blocker is not the split, it is the golden path.** A safer line is worth
+nothing while the golden path is free: damage today comes only from being
+thrown off it, so there is no danger on it to buy safety from. Hazards that sit
+*on* the track have to land before "safer" is a reason to go anywhere.

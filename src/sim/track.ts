@@ -78,6 +78,12 @@ export interface Track {
   readonly name: string;
   /** A few words for the player: how long it is and what kind of bends it has. */
   readonly shape: string;
+  /**
+   * The benchmark lap, in ticks — what the pacing lap is paid against. Level
+   * data, measured: a ship that spends its opening budget well and carries
+   * speed through the bends beats it, and one that does neither does not.
+   */
+  readonly par: number;
   readonly samples: readonly Sample[];
   readonly bends: readonly Bend[];
   /** Distance of each checkpoint from the start line; the first is 0. */
@@ -248,6 +254,7 @@ export function buildTrack(
   const bare: Track = {
     name,
     shape: '',
+    par: 0,
     samples,
     bends,
     checkpoints,
@@ -269,6 +276,7 @@ export function buildTrack(
 function loopFromHalf(
   name: string,
   shape: string,
+  par: number,
   half: readonly Piece[],
   sectorCount: number,
   splits: readonly (readonly Split[])[] = [],
@@ -278,7 +286,7 @@ function loopFromHalf(
     throw new Error(`${name}: a half must sweep 180°, not ${sweep}°`);
   }
   const track = buildTrack(name, [...half, ...half], sectorCount);
-  return { ...withSplits(track, splits), shape };
+  return { ...withSplits(track, splits), shape, par };
 }
 
 /**
@@ -347,6 +355,7 @@ const CINDER_SPLITS: readonly (readonly Split[])[] = [
 export const KESTREL_LOOP = loopFromHalf(
   'Kestrel Loop',
   'medium · mixed bends',
+  2100,
   [
     { kind: 'straight', length: 260 },
     { kind: 'bend', radius: 70, sweep: 70 },
@@ -363,6 +372,7 @@ export const KESTREL_LOOP = loopFromHalf(
 export const MERIDIAN_RUN = loopFromHalf(
   'Meridian Run',
   'long · open sweepers',
+  3250,
   [
     { kind: 'straight', length: 420 },
     { kind: 'bend', radius: 85, sweep: 60 },
@@ -379,6 +389,7 @@ export const MERIDIAN_RUN = loopFromHalf(
 export const CINDER_COIL = loopFromHalf(
   'Cinder Coil',
   'short · tight and busy',
+  1320,
   [
     { kind: 'straight', length: 80 },
     { kind: 'bend', radius: 30, sweep: 90 },

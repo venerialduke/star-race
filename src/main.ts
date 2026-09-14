@@ -12,10 +12,17 @@
 // every decision. You can open the garage while a segment plays, but nothing
 // you buy or fit reaches the ship until the next decision point — the segment
 // on screen was settled before you opened it.
+//
+// Around both sits a **season**. A heat is no longer the whole game: the
+// season says which track you are on and who you are racing, and it is the
+// thing that carries credits, points, slots and parts from one heat to the
+// next. Only the player's own group is watched — every other group is resolved
+// by the same simulation with nobody looking, which is what makes a standings
+// table mean anything.
 
 import { drawField, insetRect, newScene, type ShipView } from './render/draw';
-import { botOrders, makeBot } from './sim/bot';
-import { finishRace, newGarage, type Garage } from './sim/garage';
+import { botOrders } from './sim/bot';
+import type { Garage } from './sim/garage';
 import {
   leavePit,
   startField,
@@ -31,10 +38,27 @@ import {
   wakeAt,
   type Segment,
 } from './sim/segment';
+import {
+  applyCut,
+  entrantFor,
+  finishesOf,
+  heatConfig,
+  newSeason,
+  nextUp,
+  playerIsOut,
+  racerById,
+  resolveHeat,
+  settleHeat,
+  pacingPay,
+  settlePacing,
+  type Finish,
+  type Season,
+} from './sim/season';
 import { carryCondition, resolveBuild } from './sim/ship';
-import { LAPS_PER_HEAT, TICK_HZ } from './sim/tuning';
+import { TICK_HZ } from './sim/tuning';
 import { mountBoard } from './ui/board';
 import { mountControls } from './ui/controls';
+import { mountSeason } from './ui/season';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -43,9 +67,13 @@ const panel = document.getElementById('panel') as HTMLElement;
 /** How many frames of film the wake is drawn from. */
 const WAKE = 60;
 
-let garage: Garage = newGarage();
+let season: Season = newSeason(seedFrom('kestrel'));
 let config: FieldConfig;
 let entrants: readonly Entrant[];
+/** One lap alone against par, rather than a heat against anyone. */
+let pacing = false;
+/** What to say about a result the standings cannot describe. */
+let note: string | undefined;
 
 /** The segment being played, and how far through it we are. */
 let segment: Segment | undefined;
@@ -60,33 +88,46 @@ let blend = 0;
 let paid = false;
 
 const controls = mountControls(panel, {
-  onGo: () => nextSegment(),
-  onNewHeat: () => startHeat(),
+  onGo: () => step(),
+  onNewHeat: () => startSeason(),
   onSkip: () => {
     if (segment !== undefined) cursor = segment.ticks - 1;
   },
 });
 
+const seasonPanel = mountSeason(controls.seasonSlot);
+
 const board = mountBoard(
   controls.boardSlot,
-  () => garage,
+  () => garageOf(),
   (next) => {
-    garage = next;
-    board.render(garage);
+    setGarage(next);
+    board.render(next);
+    seasonPanel.render(season);
     // Fitting a navigation system changes what the route planner can read.
-    controls.setNav(resolveBuild(garage.fitted).nav);
+    controls.setNav(resolveBuild(next.fitted).nav);
   },
 );
 
+/** The player's garage, which the season owns and everything else borrows. */
+function garageOf(): Garage {
+  return racerById(season, 'player')?.garage ?? newSeason(0).racers[0]!.garage;
+}
+
+function setGarage(next: Garage): void {
+  season = {
+    ...season,
+    racers: season.racers.map((racer) =>
+      racer.isPlayer ? { ...racer, garage: next } : racer,
+    ),
+  };
+}
+
 /** The player's ship as the garage has it, carrying whatever damage it has. */
 function playerEntrant(): Entrant {
-  return {
-    id: 'player',
-    name: 'You',
-    stats: resolveBuild(garage.fitted),
-    build: garage.fitted,
-    isPlayer: true,
-  };
+  const me = racerById(season, 'player');
+  if (me === undefined) throw new Error('the season has no player');
+  return entrantFor(me);
 }
 
 /** Every ship's orders for a lap, decided before the lap that consumes it. */
@@ -98,19 +139,111 @@ function ordersFor(lap: number): Command[] {
   );
 }
 
-function startHeat(): void {
-  const track = controls.settings.track;
-  const seed = seedFrom(controls.settings.seed);
-  config = { track, laps: LAPS_PER_HEAT, seed };
-  entrants = [playerEntrant(), makeBot(track, seed, 1), makeBot(track, seed, 2)];
-  controls.setTrack(track);
-  controls.setNav(resolveBuild(garage.fitted).nav);
+/**
+ * The Go button. During a heat it starts the next lap; once the heat has been
+ * settled it moves the season on; once the season is over it starts another.
+ */
+function step(): void {
+  if (nextUp(season).kind === 'over') {
+    startSeason();
+    return;
+  }
+  const film = segment;
+  if (film !== undefined && film.end.phase === 'done' && paid) {
+    startNext();
+    return;
+  }
+  nextSegment();
+}
+
+/** Start a season from scratch, on whatever the seed box says. */
+function startSeason(): void {
+  season = newSeason(seedFrom(controls.settings.seed));
+  startNext();
+}
+
+/**
+ * Set the game up for whatever the season is waiting for: the pacing lap, a
+ * heat, the cut, or nothing because it is over.
+ */
+function startNext(): void {
+  const up = nextUp(season);
   segment = undefined;
   cursor = 0;
   blend = 0;
   paid = false;
+  note = undefined;
+
+  if (up.kind === 'cut') {
+    season = applyCut(season);
+    startNext();
+    return;
+  }
+  if (up.kind === 'over') {
+    controls.toGarage();
+    board.render(garageOf());
+    seasonPanel.render(season);
+    controls.setSeason(nextUp(season).kind, playerIsOut(season));
+    return;
+  }
+
+  // One heat's races all share a seed, so every group meets the same bends.
+  const seed = season.seed + season.phase * 9973 + season.heat * 131;
+  pacing = up.kind === 'pacing';
+  config = pacing
+    ? { track: up.track, laps: 1, seed }
+    : heatConfig(up.track, seed);
+  entrants =
+    up.kind === 'heat'
+      ? (up.groups[0] ?? []).map((id) => entrantOfId(id))
+      : [playerEntrant()];
+
+  controls.setTrack(up.track);
+  controls.setNav(resolveBuild(garageOf().fitted).nav);
+  controls.setSeason(up.kind, false);
   controls.toGarage();
-  board.render(garage);
+  board.render(garageOf());
+  seasonPanel.render(season);
+}
+
+/** A racer by id, as an entrant. Every id in a group is one of the roster. */
+function entrantOfId(id: string): Entrant {
+  const racer = racerById(season, id);
+  if (racer === undefined) throw new Error(`no racer ${id}`);
+  return entrantFor(racer);
+}
+
+/**
+ * The watched race is over. Everything the player did not see happens here:
+ * the other groups are resolved by the same simulation, and the season takes
+ * the lot — purse, points, a slot, interest, and a shopping trip per rival.
+ */
+function settleWatched(): void {
+  const film = segment;
+  if (film === undefined) return;
+  if (pacing) {
+    const ticks = film.end.ships[0]?.totalTicks ?? config.track.par;
+    const par = config.track.par;
+    const paid = pacingPay(ticks, par);
+    const margin = (Math.abs(par - ticks) / TICK_HZ).toFixed(2);
+    note =
+      ticks <= par
+        ? `Pacing lap — ${margin}s under par, and ${paid} credits for it.`
+        : `Pacing lap — ${margin}s over par. ${paid} credits for turning up.`;
+    season = settlePacing(season, ticks, par);
+  } else {
+    const up = nextUp(season);
+    const others =
+      up.kind === 'heat'
+        ? up.groups
+            .slice(1)
+            .map((ids) => resolveHeat(ids.map(entrantOfId), config))
+        : [];
+    const watched: readonly Finish[] = finishesOf(film.end);
+    season = settleHeat(season, [watched, ...others]);
+  }
+  board.render(garageOf());
+  seasonPanel.render(season);
 }
 
 /**
@@ -151,7 +284,7 @@ function nextSegment(): void {
   controls.toRace();
 }
 
-startHeat();
+startSeason();
 
 /** What the two views keep between frames: the camera's lag, and the sky. */
 const scene = newScene();
@@ -230,9 +363,8 @@ function frame(now: number): void {
   const film = segment;
   const atRest = film !== undefined && cursor >= film.ticks - 1;
   if (atRest && film.end.phase === 'done' && !paid) {
-    garage = finishRace(garage);
     paid = true;
-    board.render(garage);
+    settleWatched();
   }
 
   const rect = canvas.getBoundingClientRect();
@@ -241,7 +373,7 @@ function frame(now: number): void {
     ctx,
     config.track,
     views(),
-    { planned: controls.settings.routes, nav: resolveBuild(garage.fitted).nav },
+    { planned: controls.settings.routes, nav: resolveBuild(garageOf().fitted).nav },
     scene,
     // Clamped: a backgrounded tab comes back with a huge gap, and the camera
     // must ease in from where it was rather than teleport.
@@ -253,6 +385,8 @@ function frame(now: number): void {
     field: segment?.end,
     live: segment === undefined ? undefined : { segment, cursor },
     settled: atRest,
+    done: atRest && film?.end.phase === 'done',
+    note,
   });
   requestAnimationFrame(frame);
 }

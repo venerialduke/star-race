@@ -467,3 +467,30 @@ export const MINE_SEE_BACK = [180, 240, 300] as const;
  * twelve times over, not variety within a category.
  */
 export const STACK_FALLOFF = 0.6;
+
+/**
+ * A tractor beam is a tether, so it pulls both ways: the ship ahead is held
+ * back and the ship holding it is towed along. This is what the beam is *for* —
+ * it is the only weapon that helps its owner directly rather than only hurting
+ * somebody, and without it it had no answer to "why this instead of a missile
+ * or a mine". Measured at 0 season wins in 72 before it had one.
+ */
+export const TRACTOR_TOW_TICKS = 90;
+
+/**
+ * A tow does two things, because doing only the first is doing nothing. Raising
+ * the ceiling is worth nothing to a ship still climbing toward it — the same
+ * flaw that made a 70-tick boost worth seven ticks a heat — so the tether also
+ * pulls, every tick, which is what being dragged along actually feels like.
+ */
+export const TRACTOR_TOW = 0.1;
+export const TRACTOR_TOW_PULL = 0.004;
+
+/**
+ * What a collector shield keeps from a weapon it could not capture outright, as
+ * a share of what a capture would have paid. Capture needs level 3 and full
+ * shields, so without this the first two levels of the part collected nothing
+ * at all and were strictly worse than plain shielding — a part whose opening
+ * levels do nothing is a part nobody buys twice.
+ */
+export const COLLECT_SHARE = [0.3, 0.5, 0.75] as const;

@@ -8,7 +8,9 @@
 // whole shop collapsed into bolting on cheap engines until the stats capped.
 
 import { describe, expect, it } from 'vitest';
+import { startRace, stepRace } from '../../src/sim/race';
 import { COMPONENTS, componentById, resolveBuild, type Fitted } from '../../src/sim/ship';
+import { MERIDIAN_RUN } from '../../src/sim/track';
 import { STACK_FALLOFF } from '../../src/sim/tuning';
 
 const fit = (componentId: string, level: number, n = 0): Fitted => ({
@@ -116,5 +118,78 @@ describe('each further copy of the same part is worth less', () => {
     // Eleven copies are worth well under half what eleven of them would be.
     const stacked = spam.handling - resolveBuild([fit('balanced-engine', 3)]).handling;
     expect(stacked).toBeLessThan(naive * 0.5);
+  });
+});
+
+describe('every part has a reason to be bought', () => {
+  it('tows the ship that fires a tractor beam, which is why you fit one', () => {
+    // Its whole job: a tether pulls both ways. Without that it does nothing a
+    // missile or a mine does not do better, and it won 0 seasons in 72.
+    const build = [fit('tractor-beam', 2), fit('balanced-engine', 2, 2)];
+    const stats = resolveBuild(build);
+    const config = {
+      track: MERIDIAN_RUN,
+      stats,
+      build,
+      plan: 'carry' as const,
+      seed: 4,
+      id: 'a',
+      world: {
+        ships: [
+          { id: 'a', distance: 0, offset: 0, sector: 0, route: 0, speed: 0 },
+          { id: 'b', distance: 150, offset: 0, sector: 0, route: 0, speed: 0.5 },
+        ],
+        fixtures: [],
+      },
+    };
+    const fired = stepRace({ ...startRace(stats, build), charge: 1 }, config);
+    expect(fired.lastFired).toBe('tractor');
+    expect(fired.towLeft).toBeGreaterThan(0);
+
+    // Held side by side against the same ship with no charge to spend, the
+    // towed one pulls ahead.
+    let towed = fired;
+    let alone = stepRace(startRace(stats, build), config);
+    for (let i = 0; i < 60; i += 1) {
+      towed = stepRace(towed, config);
+      alone = stepRace({ ...alone, charge: 0 }, config);
+    }
+    expect(towed.speed).toBeGreaterThan(alone.speed);
+  });
+
+  it('collects at every level, not only at the one that captures', () => {
+    const paid = [1, 2, 3].map((level) => {
+      const build = [fit('collector-shield', level)];
+      const stats = resolveBuild(build);
+      // A weapon too big for the shield, so it lands rather than being caught.
+      const hit = stepRace(startRace(stats, build), {
+        track: MERIDIAN_RUN,
+        stats,
+        build,
+        plan: 'carry',
+        seed: 1,
+        id: 'a',
+        incoming: [{ from: 'b', side: 1, power: stats.shields + 60, scrub: 0 }],
+      });
+      return hit.salvage;
+    });
+    expect(paid[0]).toBeGreaterThan(0);
+    expect(paid[1]).toBeGreaterThan(paid[0] as number);
+    expect(paid[2]).toBeGreaterThan(paid[1] as number);
+  });
+
+  it('pays a plain shield nothing for the same hit', () => {
+    const build = [fit('general-shields', 3)];
+    const stats = resolveBuild(build);
+    const hit = stepRace(startRace(stats, build), {
+      track: MERIDIAN_RUN,
+      stats,
+      build,
+      plan: 'carry',
+      seed: 1,
+      id: 'a',
+      incoming: [{ from: 'b', side: 1, power: stats.shields + 60, scrub: 0 }],
+    });
+    expect(hit.salvage).toBe(0);
   });
 });

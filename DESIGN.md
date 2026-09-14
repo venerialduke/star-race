@@ -637,7 +637,7 @@ person rather than a bot.
 | **Boost, dark** | dark matter engine L2 | the same — and it leaves a black hole where it fired |
 | **Three perfect bends** | handling engine L3 | `PERFECT_WANTS_BENDS` bends lie close together ahead |
 | **Missile** | missile rack | a rival is within reach up the road |
-| **Tractor beam** | tractor beam | the same, and it takes their speed rather than their line |
+| **Tractor beam** | tractor beam | the same — and a tether pulls both ways, so it tows you too |
 | **Mine** | gravity mines | somebody is close behind — the one ability aimed backwards |
 
 The order they are offered in is fixed, so two ships with the same build in the
@@ -655,8 +655,16 @@ just no longer has the ability in it. That is how damage costs a ship a weapon.
 A weapon costs you **the line you were on**, which is the currency the swing is
 already paid in. A missile shoves a rival further off whatever line they are on;
 what the shields do not soak is what moves the ship; the corridor holds it in the
-same way it holds a swing. A tractor beam is the exception in the other
-direction — it takes speed straight off, and no shield answers a pull.
+same way it holds a swing.
+
+**The tractor beam is the exception twice over.** It takes speed straight off,
+and no shield answers a pull — and because a tether pulls both ways, holding the
+ship ahead back also tows the ship holding it. That is the only reason to fit
+one: it is the single weapon that helps its owner directly rather than only
+hurting somebody, and without that it had no answer to "why this instead of a
+missile or a mine". The tow both lifts the ceiling and pulls every tick, because
+lifting the ceiling alone is worth nothing to a ship still climbing toward it —
+the same flaw that made a short boost worth almost nothing.
 
 Being shot at a fork can therefore cost you a split, exactly as being thrown wide
 can. Nothing else about it is new.
@@ -683,9 +691,13 @@ not: the lap restarts and the road is clear again.
 
 ### Collection
 
-**Salvage** is a weapon a collector shield kept. At level 3 a collector keeps
-whatever hits it at full shields — the weapon never lands at all — and sells it
-when the race ends. It is the only way a ship profits from being shot at.
+**Salvage** is what a collector shield keeps of whatever hits it. At level 3 and
+full shields it keeps the weapon **whole** — it never lands at all — and sells it
+when the race ends. Below that it keeps a piece of every weapon that does land,
+more of it the deeper the collector. That is the part's job at every level: it
+turns being shot at into money. Needing level 3 *and* full shields to collect
+anything left the first two levels doing nothing, which is a part nobody buys
+twice.
 
 **Dark matter** is gathered by flying through a black hole with a collector
 aboard. At level 3 that collector cashes it in for credits; below that it is fuel

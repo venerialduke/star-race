@@ -205,6 +205,30 @@ second thing tried on it and it did not work either: over two laps the
 degradation never compounds enough to beat what Lift gives away in speed. The
 plan probably needs either longer races or something of its own.
 
+## S3.7 — one idea instead of three — **done**
+
+Dictated: now that damage is about what a component is still worth, hull and
+frame are not carrying anything, and every ship should finish regardless.
+
+Removed: the hull pool, the frame's own condition, and the **lost** state. A
+hit past the shields breaks fitted parts and nothing else, and a heat always
+ends with three ships across the line. Three concepts became one.
+
+**It did not cost the balance anything — damage bites harder, if anything**,
+because every hit now lands on a part rather than sometimes on a frame that
+shrugged most of it off. 24 seeded heats a cell:
+
+| | Kestrel | Meridian | Cinder |
+| --- | --- | --- | --- |
+| speed ×3, no crew — ship left | 52% | 96% | **30%** |
+| speed ×2 + nanites — ship left | 97% | 98% | 80% |
+| Meridian win rate, no crew → nanites | | 63% → **75%** | |
+| Cinder win rate, balanced → + nanites | | | 25% → **42/50%** |
+
+**A ship with nothing fitted cannot be damaged**, since there is nothing to
+break. That is a degenerate case rather than a strategy: an empty ship is far
+too slow to win anything.
+
 ## S4 — the route
 
 **S4 is done when:** a sector offers more than one way through it, the player's

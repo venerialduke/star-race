@@ -249,11 +249,10 @@ export function slotsOf(fitted: Fitted): number {
  */
 export function resolveBuild(
   fitted: readonly Fitted[],
-  condition: Condition = { frame: 1, parts: [] },
+  condition: Condition = { parts: [] },
 ): ShipStats {
-  const frame = condition.frame;
-  let thrust = BASE_THRUST * frame;
-  let handling = BASE_HANDLING * frame;
+  let thrust = BASE_THRUST;
+  let handling = BASE_HANDLING;
   let shields = BASE_SHIELDS;
   let endurance = BASE_ENDURANCE;
   let shieldRegen = 1;
@@ -299,23 +298,23 @@ export function bareShip(thrust: number, handling: number): ShipStats {
 }
 
 /**
- * How intact the ship is. The frame carries the base ship; each part carries
- * its own. Damage lands on these, not on a single pool, so what a hit costs
- * you depends on what it hit — and everything is repaired between races.
+ * How intact each fitted part is. Damage is only ever about what a part is
+ * still worth — there is no hull and no frame behind it, because a second
+ * pool of integrity was bookkeeping that changed nothing the player could
+ * see. Everything is repaired between races.
  */
 export interface Condition {
-  readonly frame: number;
   readonly parts: readonly number[];
 }
 
 export function fullCondition(fitted: readonly Fitted[]): Condition {
-  return { frame: 1, parts: fitted.map(() => 1) };
+  return { parts: fitted.map(() => 1) };
 }
 
-/** The average of everything, for a readout that has to be one number. */
+/** The average of every part, for a readout that has to be one number. */
 export function integrity(condition: Condition): number {
-  const all = [condition.frame, ...condition.parts];
-  return all.reduce((sum, c) => sum + c, 0) / all.length;
+  if (condition.parts.length === 0) return 1;
+  return condition.parts.reduce((sum, c) => sum + c, 0) / condition.parts.length;
 }
 
 /** The best discount fitted, as a share off. Discounts do not stack either. */

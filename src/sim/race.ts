@@ -38,8 +38,6 @@ import {
   HAZARD_DAMAGE,
   HAZARD_FULL_EXPOSURE,
   EXCURSION_CLEAR,
-  FRAME_FAILED,
-  FRAME_TOUGHNESS,
   RECOVER_FLOOR,
   REPAIR_PER_TICK,
   RECOVER_PER_HANDLING,
@@ -110,7 +108,7 @@ export interface RaceState {
   readonly swings: readonly SwingEvent[];
   /** What is left of the shields. */
   readonly shields: number;
-  /** How intact the frame and each fitted part are. Damage lands here. */
+  /** How intact each fitted part is. Damage lands here and nowhere else. */
   readonly condition: Condition;
   /** The ship's stats as they are right now, with damage counted. */
   readonly stats: ShipStats;
@@ -118,8 +116,6 @@ export interface RaceState {
   readonly lastBroken: string | undefined;
   /** Gravity the crew is carrying, 0 to 1. At 1 they are spent. */
   readonly worn: number;
-  /** The frame has failed. The ship stops where it is and is placed last. */
-  readonly lost: boolean;
   /**
    * An excursion is in progress: the ship crossed the edge and has not yet
    * settled back well inside it. Without this the ship pays for the same
@@ -166,7 +162,6 @@ export function startRace(stats?: ShipStats, build: readonly Fitted[] = []): Rac
     stats: stats ?? bareShip(BASE_THRUST, BASE_HANDLING),
     lastBroken: undefined,
     worn: 0,
-    lost: false,
     outside: false,
     inBend: undefined,
     swingTarget: 0,
@@ -190,15 +185,15 @@ function brakingDistance(from: number, to: number): number {
  */
 export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const { track, plan } = config;
-  if (state.lost) return { ...state, tick: state.tick + 1, speed: 0 };
-
   // What the ship is worth this tick: its build, less whatever is broken. A
   // damaged engine gives less thrust, a damaged crew repairs more slowly, and
   // a shot shield soaks less — so one bad excursion is felt for the rest of
   // the race.
+  // A ship with no build to break flies on its stats alone: there is nothing
+  // fitted for a hazard to take a piece out of.
   const stats =
     config.build === undefined
-      ? scaleByFrame(config.stats, state.condition.frame)
+      ? config.stats
       : resolveBuild(config.build, state.condition);
 
   const thrust = clampStat(stats.thrust);
@@ -327,14 +322,13 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     through > 0
       ? breakSomething(repaired, through, config.seed, state.tick, config.build)
       : { condition: repaired, broken: undefined };
-  const lost = condition.frame <= FRAME_FAILED;
 
   // 4. Move. Being off the golden path costs time, not damage — and the
   // further out the ship is thrown, the more of its speed it loses.
   const keep = wide
     ? Math.max(WIDE_SPEED_FLOOR, WIDE_SPEED_AT_EDGE - over * WIDE_SPEED_PER_UNIT)
     : 1;
-  const distance = lost ? state.distance : state.distance + speed * keep;
+  const distance = state.distance + speed * keep;
 
   // 5. Checkpoints and laps.
   const tick = state.tick + 1;
@@ -361,7 +355,6 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     stats,
     lastBroken: broken ?? state.lastBroken,
     worn,
-    lost,
     outside,
     inBend,
     swingTarget,
@@ -373,14 +366,13 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
 function repair(condition: Condition, rate: number): Condition {
   const step = REPAIR_PER_TICK * rate;
   if (step <= 0) return condition;
-  const mend = (c: number): number => (c <= 0 ? c : Math.min(1, c + step));
-  return { frame: mend(condition.frame), parts: condition.parts.map(mend) };
+  return { parts: condition.parts.map((c) => Math.min(1, c + step)) };
 }
 
 /**
- * Spread a hit across the ship. One part for a glancing blow, more for a bad
- * one — the frame counts as a target too, so a bare ship has something to
- * lose. A part already at nothing is skipped: it cannot break further.
+ * Spread a hit across the ship: one part for a glancing blow, more for a bad
+ * one. A ship with nothing fitted has nothing to break — it is also far too
+ * slow to be a build, so that costs nobody anything.
  */
 function breakSomething(
   condition: Condition,
@@ -389,35 +381,20 @@ function breakSomething(
   tick: number,
   build: readonly Fitted[] | undefined,
 ): { condition: Condition; broken: string | undefined } {
+  const parts = [...condition.parts];
+  if (parts.length === 0) return { condition, broken: undefined };
+
   const targets = 1 + Math.floor(damage / DAMAGE_PER_EXTRA_PART);
   const each = (damage / targets) * CONDITION_PER_DAMAGE;
   const rng = makeRng(seed).fork(tick * 31 + 7);
-
-  let frame = condition.frame;
-  const parts = [...condition.parts];
   let broken: string | undefined;
 
   for (let i = 0; i < targets; i += 1) {
-    const choice = Math.floor(rng.unitInterval() * (parts.length + 1)) - 1;
-    if (choice < 0 || parts.length === 0) {
-      frame = Math.max(0, frame - each * FRAME_TOUGHNESS);
-      broken ??= 'the frame';
-    } else {
-      parts[choice] = Math.max(0, (parts[choice] ?? 1) - each);
-      broken ??= build?.[choice]?.componentId;
-    }
+    const choice = Math.floor(rng.unitInterval() * parts.length);
+    parts[choice] = Math.max(0, (parts[choice] ?? 1) - each);
+    broken ??= build?.[choice]?.componentId;
   }
-  return { condition: { frame, parts }, broken };
-}
-
-/** A ship with no build to break: everything it has rides on its frame. */
-function scaleByFrame(stats: ShipStats, frame: number): ShipStats {
-  return {
-    ...stats,
-    thrust: stats.thrust * frame,
-    handling: stats.handling * frame,
-    shields: stats.shields * frame,
-  };
+  return { condition: { parts }, broken };
 }
 
 /** A stream of its own per bend per lap, so one bend's draw never shifts another's. */

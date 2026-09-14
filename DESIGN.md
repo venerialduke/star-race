@@ -174,19 +174,22 @@ build, not a risk.
 **Shields** take the hit first and regrow while the ship is on the path. They
 are refilled at every pit stop.
 
-**What the shields do not stop breaks something.** There is no hull pool. A hit
-that gets through is split across one or more targets — a bigger hit finds more
-to break — chosen by a seeded draw from the ship's **frame** and every fitted
-**component**. Each target loses **condition**, and a component in poor
-condition is worth proportionally less of whatever it gives: a broken engine
-gives less thrust, a shot shield soaks less, a hurt crew repairs more slowly.
-So one bad excursion is felt for the rest of the race.
+**What the shields do not stop breaks a component.** A hit that gets through is
+split across one or more fitted parts — a bigger hit finds more to break —
+chosen by a seeded draw. Each loses **condition**, and a part in poor condition
+is worth proportionally less of whatever it gives: a broken engine gives less
+thrust, a shot shield soaks less, a hurt crew repairs more slowly. So one bad
+excursion is felt for the rest of the race.
 
-The frame is the whole ship rather than one box bolted to it, so it gives way
-more slowly — `FRAME_TOUGHNESS` — and a ship with parts fitted spreads its
-damage rather than taking it all in one place. If the frame fails entirely the
-ship is **lost**: it stops where it is and the standings place it behind
-everyone who finished.
+**There is no hull, and no frame.** Damage is only ever about what a part is
+still worth. A second pool of integrity was bookkeeping the player could not
+see, and it duplicated the job the components already do. A ship with nothing
+fitted therefore has nothing to break — it is also far too slow to be a build,
+so that costs nobody anything.
+
+**Every ship finishes.** Damage costs a ship its pace, never its race. There is
+no way to be knocked out of a heat, which is one fewer outcome to think about
+on the board and one fewer rule to explain.
 
 **The crew repairs as you fly.** Every tick, condition is patched back toward
 whole at a rate set by the crew's `repair` — nanites are rebuilders and fix

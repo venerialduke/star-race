@@ -22,6 +22,7 @@ import { PATH_HALF_WIDTH } from '../sim/tuning';
 import {
   HOLE,
   MINE,
+  SHOT,
   SHIP_COLOURS,
   SHIP_WIDE,
   withAlpha,
@@ -187,11 +188,70 @@ export function drawMap(
       lane: (i - (ships.length - 1) / 2) * LANE_STEP,
     }))
     .sort((a, b) => Number(a.ship.isPlayer) - Number(b.ship.isPlayer));
+  // Shots first, so a tracer runs under the ships at both ends of it.
+  for (const shot of ships) {
+    if (shot.shotAt === undefined) continue;
+    const target = ships[shot.shotAt];
+    if (target === undefined) continue;
+    tracer(ctx, view, track, shot, target);
+  }
   for (const { ship, colour, lane } of order) {
+    if (ship.struck > 0) flash(ctx, view, track, ship, LANE_STEP);
     drawShip(ctx, view, track, ship, colour, lane);
   }
 
   ctx.restore();
+}
+
+/**
+ * Where a ship is on the map, offset and drawing lane and all. The interpolated
+ * place carries a heading rather than a sample, so the normal comes from the
+ * heading — the same left-of-travel vector `normalOf` gives a sample.
+ */
+function shipAt(track: Track, ship: ShipView, lane = 0): Vec {
+  const at = placeSmooth(track, ship.distance, ship.route);
+  const out = ship.offset + lane;
+  return {
+    x: at.pos.x - Math.sin(at.heading) * out,
+    y: at.pos.y + Math.cos(at.heading) * out,
+  };
+}
+
+/** The line a shot took, from whoever fired to whoever it was aimed at. */
+function tracer(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  track: Track,
+  from: ShipView,
+  to: ShipView,
+): void {
+  const a = project(view, shipAt(track, from));
+  const b = project(view, shipAt(track, to));
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.strokeStyle = withAlpha(SHOT, 0.55);
+  ctx.lineWidth = Math.max(1, view.scale * 0.7);
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/** A ring where something landed, fading out over the ticks after it. */
+function flash(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  track: Track,
+  ship: ShipView,
+  lane: number,
+): void {
+  const p = project(view, shipAt(track, ship, lane));
+  const size = Math.max(4, view.scale * 5) * (1 + (1 - ship.struck) * 1.6);
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+  ctx.strokeStyle = withAlpha(SHOT, 0.85 * ship.struck);
+  ctx.lineWidth = Math.max(1, view.scale * 0.9);
+  ctx.stroke();
 }
 
 /**

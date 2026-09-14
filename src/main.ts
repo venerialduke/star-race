@@ -27,6 +27,7 @@ import {
   type FixtureView,
   type ShipView,
 } from './render/draw';
+import { grantsOf } from './sim/ability';
 import { botOrders } from './sim/bot';
 import type { Garage } from './sim/garage';
 import {
@@ -38,6 +39,7 @@ import {
 } from './sim/field';
 import { seedFrom } from './sim/rng';
 import {
+  frameAt,
   frameBetween,
   recordSegment,
   swingsBy,
@@ -72,6 +74,15 @@ const panel = document.getElementById('panel') as HTMLElement;
 
 /** How many frames of film the wake is drawn from. */
 const WAKE = 60;
+
+/**
+ * How long a shot and a hit stay on screen. Both are one tick in the
+ * simulation, which is a sixtieth of a second — long enough to happen and far
+ * too short to see. These are drawing numbers, not tuning: nothing in the sim
+ * reads them.
+ */
+const SHOT_HOLD = 14;
+const HIT_HOLD = 26;
 
 let season: Season = newSeason(seedFrom('kestrel'));
 let config: FieldConfig;
@@ -114,6 +125,7 @@ const board = mountBoard(
     controls.setNav(resolveBuild(next.fitted).nav);
     // Fitting a mine rack is what makes a place to lay one worth showing.
     controls.setMines(rackLevel(next.fitted));
+    controls.setAbilities(grantsOf(next.fitted).map((g) => g.id));
   },
 );
 
@@ -221,6 +233,7 @@ function startNext(): void {
   controls.setTrack(up.track);
   controls.setNav(resolveBuild(garageOf().fitted).nav);
   controls.setMines(rackLevel(garageOf().fitted));
+  controls.setAbilities(grantsOf(garageOf().fitted).map((g) => g.id));
   controls.setSeason(up.kind, false);
   controls.toGarage();
   board.render(garageOf());
@@ -350,6 +363,18 @@ function views(): readonly ShipView[] {
   return segment.frames.map((_, ship) => {
     const wake = wakeAt(segment as Segment, ship, cursor, WAKE);
     const now = frameBetween(segment as Segment, ship, cursor, blend);
+    // A shot and a hit are one tick each. Look back over the last few so the
+    // screen can hold them long enough to be seen.
+    let shotAt: number | undefined;
+    let struck = 0;
+    for (let back = 0; back <= HIT_HOLD; back += 1) {
+      const was = frameAt(segment as Segment, ship, cursor - back);
+      if (shotAt === undefined && back <= SHOT_HOLD && was?.firedAt !== undefined) {
+        const lane = entrants.findIndex((e) => e.id === was.firedAt);
+        if (lane >= 0) shotAt = lane;
+      }
+      if (struck === 0 && was?.hit !== undefined) struck = 1 - back / HIT_HOLD;
+    }
     return {
       distance: now?.distance ?? 0,
       route: now?.route ?? 0,
@@ -358,6 +383,8 @@ function views(): readonly ShipView[] {
       isPlayer: entrants[ship]?.isPlayer ?? false,
       wake,
       swings: swingsBy(segment as Segment, ship, cursor),
+      shotAt,
+      struck,
     };
   });
 }

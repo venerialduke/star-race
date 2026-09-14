@@ -37,7 +37,7 @@ import {
 } from './camera';
 import { drawSky, type Sky } from './sky';
 import type { FixtureView, RouteView, ShipView } from './draw';
-import { HOLE, MINE } from './view';
+import { HOLE, MINE, SHOT, withAlpha as alpha } from './view';
 
 /** Where the camera sits relative to the ship it is following. */
 const BACK = 32;
@@ -209,9 +209,69 @@ export function drawChase(
     })
     .filter((row) => row.eye.depth > 0)
     .sort((a, b) => b.eye.depth - a.eye.depth);
+  // A shot runs between two ships, so it is drawn once both their points are
+  // known — under them, so neither end of it is hidden by what it connects.
+  const points = new Map(drawn.map((row) => [ships.indexOf(row.ship), row.point]));
   for (const row of drawn) {
+    const target = row.ship.shotAt === undefined ? undefined : points.get(row.ship.shotAt);
+    if (target !== undefined) tracer(ctx, lens, row.point, target);
+  }
+  for (const row of drawn) {
+    if (row.ship.struck > 0) flash(ctx, lens, row.point, row.ship.struck);
     drawShip(ctx, lens, track, row.ship, row.point, row.colour, row.lane);
   }
+}
+
+/** The line a shot took. Drawn on the plane, so it runs away with the road. */
+function tracer(
+  ctx: CanvasRenderingContext2D,
+  lens: Lens,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): void {
+  const a = toEye(lens, from.x, from.y, LIFT);
+  const b = toEye(lens, to.x, to.y, LIFT);
+  if (a.depth <= 0 || b.depth <= 0) return;
+  const pa = toScreen(lens, a);
+  const pb = toScreen(lens, b);
+  ctx.beginPath();
+  ctx.moveTo(pa.x, pa.y);
+  ctx.lineTo(pb.x, pb.y);
+  ctx.strokeStyle = alpha(SHOT, 0.5);
+  ctx.lineWidth = Math.max(1, scaleAt(lens, Math.min(a.depth, b.depth)) * 0.5);
+  ctx.setLineDash([5, 5]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/** A ring where something landed, opening out and fading as it goes. */
+function flash(
+  ctx: CanvasRenderingContext2D,
+  lens: Lens,
+  at: { x: number; y: number },
+  strength: number,
+): void {
+  const centre = toEye(lens, at.x, at.y, LIFT);
+  if (centre.depth <= 0) return;
+  const radius = 4 + (1 - strength) * 14;
+  const ring: { x: number; y: number }[] = [];
+  for (let i = 0; i <= 14; i += 1) {
+    const angle = (i / 14) * Math.PI * 2;
+    const point = toEye(
+      lens,
+      at.x + Math.cos(angle) * radius,
+      at.y + Math.sin(angle) * radius,
+      LIFT,
+    );
+    if (point.depth <= 0) return;
+    ring.push(toScreen(lens, point));
+  }
+  ctx.beginPath();
+  ring.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.closePath();
+  ctx.strokeStyle = alpha(SHOT, 0.9 * strength);
+  ctx.lineWidth = Math.max(1, scaleAt(lens, centre.depth) * 0.8);
+  ctx.stroke();
 }
 
 /**

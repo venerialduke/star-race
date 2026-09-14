@@ -15,7 +15,7 @@
 import { stepField, type FieldConfig, type FieldState } from './field';
 import type { AbilityId } from './ability';
 import type { SwingEvent } from './race';
-import type { Fixture } from './world';
+import type { Emission, Fixture } from './world';
 
 /** One ship at one tick: everything the screen needs and nothing it does not. */
 export interface Frame {
@@ -33,6 +33,11 @@ export interface Frame {
   readonly charge: number;
   /** The ability it fired on this tick, if it fired one. */
   readonly fired: AbilityId | undefined;
+  /** Who it fired at, so a shot can be drawn going somewhere. */
+  readonly firedAt: string | undefined;
+  /** What reached it on this tick, and who sent it. */
+  readonly hit: string | undefined;
+  readonly hitBy: string | undefined;
 }
 
 export interface Segment {
@@ -70,7 +75,19 @@ const frameOf = (ship: FieldState['ships'][number], tick: number): Frame => ({
   shields: ship.state.shields,
   charge: ship.state.charge,
   fired: ship.state.lastFiredTick === tick ? ship.state.lastFired : undefined,
+  firedAt: aimedAt(ship.state.emitted),
+  // Only on the tick it happened: the screen marks a moment, not a state.
+  hit: ship.state.lastHitTick === tick ? ship.state.lastHit : undefined,
+  hitBy: ship.state.lastHitTick === tick ? ship.state.lastHitBy : undefined,
 });
+
+/** Who this tick's emissions were aimed at, if anybody. */
+function aimedAt(emitted: readonly Emission[]): string | undefined {
+  for (const emission of emitted) {
+    if (emission.kind === 'push' || emission.kind === 'drag') return emission.target;
+  }
+  return undefined;
+}
 
 /**
  * Run a segment to its end — the next pit stop, or the finish — and record it.

@@ -218,6 +218,10 @@ export interface RaceState {
   readonly met: readonly string[];
   /** The last thing that reached it from outside, for the readout. */
   readonly lastHit: string | undefined;
+  /** Who sent it. Without this a ship is bounced by nobody in particular. */
+  readonly lastHitBy: string | undefined;
+  /** The tick it landed on, so the screen can mark the moment rather than the state. */
+  readonly lastHitTick: number | undefined;
   /** The ability it fired last, and when — what the player is watching for. */
   readonly lastFired: AbilityId | undefined;
   readonly lastFiredTick: number | undefined;
@@ -291,6 +295,8 @@ export function startRace(
     darkMatter: 0,
     met: [],
     lastHit: undefined,
+    lastHitBy: undefined,
+    lastHitTick: undefined,
     lastFired: undefined,
     lastFiredTick: undefined,
   };
@@ -616,6 +622,8 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     darkMatter: state.darkMatter + arrived.darkMatter,
     met: arrived.met.length === 0 ? state.met : [...state.met, ...arrived.met],
     lastHit: arrived.hit ?? state.lastHit,
+    lastHitBy: arrived.hit === undefined ? state.lastHitBy : arrived.hitBy,
+    lastHitTick: arrived.hit === undefined ? state.lastHitTick : tick,
     lastFired: fired?.id ?? state.lastFired,
     lastFiredTick: fired === undefined ? state.lastFiredTick : tick,
   };
@@ -662,6 +670,8 @@ interface Arrival {
   /** Fixtures met this tick, so they are not met again on the next one. */
   readonly met: readonly string[];
   readonly hit: string | undefined;
+  /** Whose it was, so the screen can say who did it to you. */
+  readonly hitBy: string | undefined;
 }
 
 /**
@@ -690,10 +700,17 @@ function arrivals(
   let darkMatter = 0;
   const met: string[] = [];
   let hit: string | undefined;
+  let hitBy: string | undefined;
   let left = state.shields;
   const full = stats.shields > 0 && state.shields >= stats.shields;
 
-  const take = (power: number, side: number, what: string, hazard: boolean): void => {
+  const take = (
+    power: number,
+    side: number,
+    what: string,
+    hazard: boolean,
+    from?: string,
+  ): void => {
     if (power <= 0) return;
     // A collector at full strength keeps the weapon: it never lands, and it
     // sells when the race ends. Catching it still costs the shielding, though —
@@ -711,6 +728,7 @@ function arrivals(
       left -= caught;
       spent += caught;
       hit = `captured ${what}`;
+      hitBy = from;
       return;
     }
     const soaked = Math.min(left, power);
@@ -719,15 +737,22 @@ function arrivals(
     const rest = power - soaked;
     if (hazard) damage += rest;
     else push += rest * PUSH_PER_POWER * side;
-    if (rest > 0) hit = what;
+    if (rest > 0) {
+      hit = what;
+      hitBy = from;
+    }
   };
 
   // Weapons fired at this ship a tick ago. A pull is taken straight off the
   // speed; a shove is answered by the shields and what beats them moves the
   // ship. Both were decided before this tick, by somebody else.
   for (const impulse of incoming) {
-    scrub += impulse.scrub;
-    take(impulse.power, impulse.side, 'a missile', false);
+    if (impulse.scrub > 0) {
+      scrub += impulse.scrub;
+      hit = 'a tractor beam';
+      hitBy = impulse.from;
+    }
+    take(impulse.power, impulse.side, 'a missile', false, impulse.from);
   }
 
   for (const fixture of fixturesHit(world, me, track.length)) {
@@ -751,15 +776,16 @@ function arrivals(
         Math.sign(fixture.offset - me.offset) || 1,
         'a black hole',
         true,
+        fixture.owner,
       );
       continue;
     }
     // A gravity mine throws the ship further off whatever line it was on,
     // which is why it costs most to a ship that meets it already out of shape.
-    take(fixture.power, Math.sign(me.offset) || 1, 'a gravity mine', false);
+    take(fixture.power, Math.sign(me.offset) || 1, 'a gravity mine', false, fixture.owner);
   }
 
-  return { push, scrub, carry, spent, damage, salvage, darkMatter, met, hit };
+  return { push, scrub, carry, spent, damage, salvage, darkMatter, met, hit, hitBy };
 }
 
 /** What this ship's fired ability sends out into the world. */

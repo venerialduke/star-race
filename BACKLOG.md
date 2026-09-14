@@ -656,6 +656,15 @@ now cost both — but the season pays by place and the cut is on points, so the
 measurement that decides this is seasons won, not ticks gained, and it has still
 never been run. That is S7.1, and it comes first for a reason.
 
+**The first build was correct and invisible.** Played rather than measured, the
+whole layer read as nothing: ships were bounced by nobody in particular, and
+there was no sign a charge existed, let alone that it was being spent. The sim
+was right and the screen said none of it. What fixed it was naming the cause — a
+charge meter, a shot drawn going somewhere, a flash where it lands, and a state
+line that says *whose* mine that was. Worth remembering before the next system
+lands: a mechanic the player cannot attribute to a decision they made is a
+mechanic they do not have.
+
 **Smaller things left standing**, recorded rather than fixed:
 
 - **The tractor beam may want rewriting rather than retuning.** Doubling its

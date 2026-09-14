@@ -21,6 +21,10 @@ export interface ShipView {
   readonly wake: readonly { distance: number; offset: number; route: number }[];
   /** The bends that threw it, for the marks left behind. */
   readonly swings: readonly SwingEvent[];
+  /** The lane it has just shot at, so the shot can be drawn going somewhere. */
+  readonly shotAt: number | undefined;
+  /** How recently something landed on it, 1 at the moment of the hit down to 0. */
+  readonly struck: number;
 }
 
 /** Something somebody left on the track, as the screen needs it. */
@@ -58,6 +62,9 @@ export const PATH = '#ffd166';
 /** A mine reads as a warning; a black hole reads as a hole. */
 export const MINE = '#ff5f7a';
 export const HOLE = '#9b6bff';
+
+/** A shot in flight, and the flash where it lands. */
+export const SHOT = '#ffe08a';
 
 /** A hex colour at an alpha, so one palette serves lines and fills. */
 export function withAlpha(hex: string, alpha: number): string {

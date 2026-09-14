@@ -185,6 +185,36 @@ export const BOT_STAT_SPREAD = 0.22;
 export const FORK_PULL = 11;
 
 /**
+ * The drivable corridor: how far off the golden path a ship can physically be
+ * pushed, either side. Past this there is something solid — call it a field,
+ * call it a rail; the ship does not go through it.
+ *
+ * Before this a swing could throw a ship any distance at all, and the only
+ * thing that brought it back was the recovery pulling on an offset that had no
+ * ceiling. A bend taken far too fast put the ship somewhere that was not a
+ * track any more.
+ */
+export const TRACK_HALF_WIDTH = 26;
+
+/**
+ * The share of its speed a ship loses when it hits the corridor wall.
+ *
+ * Charged once per contact, not per tick. Per tick was the first version and
+ * it was a death spiral: a ship pinned through a long bend scrubbed every tick,
+ * reached the speed floor, and then could not finish the lap at all. Damage
+ * learned this lesson first — a hit lands once per excursion for the same
+ * reason.
+ *
+ * This is what stops the wall making a huge swing *safer* than a merely big
+ * one. The position is capped; the cost must not be, so the loss scales with
+ * how far past the wall the swing was trying to throw the ship.
+ */
+export const WALL_SCRUB = 0.22;
+
+/** How far back inside the corridor a ship must come before it can hit the wall again. */
+export const WALL_CLEAR = 0.9;
+
+/**
  * A bare ship's navigation: none. Nav is what turns a dark split dim and a dim
  * split clear, so a ship without a system plans only the splits anyone can see.
  */
@@ -197,8 +227,16 @@ export const NAV_FOR_DARK = 2;
 /** Nav at which the route may be re-planned at a pit stop rather than only before the heat. */
 export const NAV_FOR_REPLAN = 3;
 
-/** How much of a sector the fan-out either side of a fork takes up. */
-export const FORK_SHARE = 0.22;
+/**
+ * How much of a sector the fan-out either side of a fork takes up.
+ *
+ * Generous on purpose. A split now leaves the golden path by tens of units
+ * rather than a few, and moving that far sideways in a short run is a tighter
+ * corner than anything the track authors — at 0.22 the fork itself was the
+ * hardest bend on the Kestrel. Spread over most of the sector it reads as two
+ * roads parting and meeting again, which is what a fork is.
+ */
+export const FORK_SHARE = 0.4;
 
 /** How far a bot leans toward the shorter line when its handling can take one. */
 export const BOT_ROUTE_NERVE = 0.55;

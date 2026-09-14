@@ -407,6 +407,76 @@ camera twice as tight as a 60Hz one.
 and after**, which is the check that says a drawing fix stayed a drawing fix.
 `tests/sim/smooth.test.ts` pins all of it.
 
+## V1.2 — splits become forks, and the track gets edges — **done**
+
+Two asks. Splits were, visually, small deviations from one road; they should be
+a fork with two genuinely separate paths. And a swing could be too wide, so
+there should be a drivable width with something at the edge of it.
+
+**A split is a fork now.** The bulges went from 6–20 units to 35–70 against a
+path 18 across, which puts the two roads out of each other's corridors: they
+meet at the checkpoints and nowhere in between. Three things had to change to
+let them grow that far.
+
+- **The bulge no longer follows the turn.** Following it was right for a racing
+  line and nonsense for a fork: a big one weaving in and out of an S-bend came
+  out 93% longer than the road beside it. A split leaves the path, runs one way,
+  and comes back.
+- **A split reads its own bends off its own curve.** "The same bend moved
+  sideways" stops being true at this distance — offset a 42-radius bend by 60
+  and the arithmetic returns a negative radius. The golden path still keeps the
+  bends the track authored; deriving those from curvature was tried in S4 and it
+  turned an r42 hairpin into r60.
+- **The fan-out is gentle** — 40% of the sector at each end, up from 22%. Moving
+  50 units sideways in a short run is a tighter corner than anything the track
+  authors, and at 22% the fork itself was the hardest bend on the Kestrel.
+
+**The corridor.** A ship can now be thrown about three path-widths either side
+and no further. It was needed: on the Cinder Coil a low-handling ship charging
+its hairpins wanted to go **128 units** off the line, seven times the width of
+the path. A capable ship never touches the wall at all — measured across three
+tracks, three plans and twelve seeds, handling 1.5 finds it 0.0–0.3 times a lap
+while handling 0.6 finds it up to 4.5.
+
+The position is capped and the cost is not: damage was already charged on how
+far the swing *wanted* to go, and the wall scrubs speed the same way. **Once per
+contact, not per tick** — per tick was a death spiral that could not finish a
+lap, which is the same lesson damage learned in S3.6.
+
+**A latent bug the new geometry exposed.** On a bend, Carry and Lift never
+accelerated: they only ever scrubbed speed *down* toward the limit. It never
+showed because every route began on a straight. The moment a split's fan-out
+counted as a bend at distance 0, a ship sat at a standstill forever.
+
+**What the splits are worth now**, best readable route against the golden path,
+24 fresh seeds, tuned on 8 others:
+
+| | Kestrel | Meridian | Cinder |
+| --- | --- | --- | --- |
+| handling 0.7 — Nav 0 → 2 | 0 → **0** | −10 → **−151** | 0 → **−132** |
+| handling 1.0 — Nav 0 → 2 | 0 → **−25** | 0 → **−115** | 0 → **−80** |
+| handling 1.4 — Nav 0 → 2 | 0 → **−25** | −2 → **−119** | 0 → **−51** |
+
+Each track now has its own answer to what the route is for. **The Kestrel gates
+on handling**: its splits are shorter, tighter lines that cost a weak ship a
+second a lap and pay a strong one, so navigation buys nothing at handling 0.7
+and 25 ticks above it. **The Meridian is the navigation track** — its bends
+barely bind, so cutting inside one is nearly free and the good lines are simply
+behind a system, worth 1 to 2.5 seconds a lap. **The Coil is hostile to
+leaving the line at all**: its wide lines are an inversion, cheap to a slow ship
+and dear to a quick one, and its one real prize needs the best system to see.
+
+**Two findings worth keeping.**
+
+- **A sector that is three-quarters straight has no fork worth taking.** Kestrel
+  sector 2 was measured at five bulges and three handlings and not one was ever
+  better than going straight. It has no split now, and that is the honest answer
+  rather than a decoy.
+- **An outside line only pays where the bend actually binds.** On the Meridian a
+  stock ship takes its r85 sweepers at almost top speed, so opening them up buys
+  nothing and costs 7–11% in length. Every wide line on that track is a safety
+  option, and a one-lap clock cannot see safety.
+
 ## S5 — the season
 
 **S5 is done when:** a run is several heats with a cut at the end of a phase,

@@ -24,7 +24,13 @@ import {
   type FieldConfig,
 } from './sim/field';
 import { seedFrom } from './sim/rng';
-import { recordSegment, wakeAt, swingsBy, type Segment } from './sim/segment';
+import {
+  frameBetween,
+  recordSegment,
+  swingsBy,
+  wakeAt,
+  type Segment,
+} from './sim/segment';
 import { carryCondition, resolveBuild } from './sim/ship';
 import { LAPS_PER_HEAT, TICK_HZ } from './sim/tuning';
 import { mountBoard } from './ui/board';
@@ -44,6 +50,12 @@ let entrants: readonly Entrant[];
 /** The segment being played, and how far through it we are. */
 let segment: Segment | undefined;
 let cursor = 0;
+/**
+ * How far past that tick the wall clock has got, 0 to 1. The screen never
+ * refreshes in step with the tick, so without this the leftover time is thrown
+ * away and the ship advances one tick on some frames and none on others.
+ */
+let blend = 0;
 /** Set once a finished heat has been paid for, so it pays only once. */
 let paid = false;
 
@@ -95,6 +107,7 @@ function startHeat(): void {
   controls.setNav(resolveBuild(garage.fitted).nav);
   segment = undefined;
   cursor = 0;
+  blend = 0;
   paid = false;
   controls.toGarage();
   board.render(garage);
@@ -133,6 +146,7 @@ function nextSegment(): void {
     segment = recordSegment({ ...carried, ships }, config);
   }
   cursor = 0;
+  blend = 0;
   controls.seal();
   controls.toRace();
 }
@@ -181,7 +195,7 @@ function views(): readonly ShipView[] {
   if (segment === undefined) return [];
   return segment.frames.map((_, ship) => {
     const wake = wakeAt(segment as Segment, ship, cursor, WAKE);
-    const now = wake[wake.length - 1];
+    const now = frameBetween(segment as Segment, ship, cursor, blend);
     return {
       distance: now?.distance ?? 0,
       route: now?.route ?? 0,
@@ -195,7 +209,8 @@ function views(): readonly ShipView[] {
 }
 
 function frame(now: number): void {
-  accumulator += now - previousTime;
+  const elapsed = now - previousTime;
+  accumulator += elapsed;
   previousTime = now;
 
   const playing = segment !== undefined && cursor < segment.ticks - 1;
@@ -208,6 +223,8 @@ function frame(now: number): void {
     }
   }
   if (accumulator > MS_PER_TICK * MAX_TICKS_PER_FRAME) accumulator = 0;
+  // Whatever is left over is where between two ticks the ship actually is.
+  blend = playing ? Math.min(1, accumulator / MS_PER_TICK) : 0;
 
   // The segment has played out: its end is the decision point.
   const film = segment;
@@ -226,6 +243,9 @@ function frame(now: number): void {
     views(),
     { planned: controls.settings.routes, nav: resolveBuild(garage.fitted).nav },
     scene,
+    // Clamped: a backgrounded tab comes back with a huge gap, and the camera
+    // must ease in from where it was rather than teleport.
+    Math.min(0.1, elapsed / 1000),
     rect.width,
     rect.height,
   );

@@ -95,6 +95,37 @@ export function frameAt(segment: Segment, ship: number, tick: number): Frame | u
   return film[index];
 }
 
+/**
+ * Where a ship was **between** two ticks of the film.
+ *
+ * The film is one frame per tick; the screen refreshes on its own schedule and
+ * never lines up with that. Drawing the nearest whole tick means some display
+ * frames advance the ship by one tick and some by none, which is a stutter even
+ * when the race itself is perfectly smooth. Blending the two neighbouring
+ * frames spends the leftover time instead of dropping it.
+ *
+ * Only position blends. Whether a ship is wide, and which way it went at a
+ * fork, are states rather than places — half of either is not a thing.
+ */
+export function frameBetween(
+  segment: Segment,
+  ship: number,
+  tick: number,
+  blend: number,
+): Frame | undefined {
+  const here = frameAt(segment, ship, tick);
+  if (here === undefined) return undefined;
+  const next = frameAt(segment, ship, tick + 1);
+  if (next === undefined || next === here) return here;
+  const t = Math.min(1, Math.max(0, blend));
+  return {
+    ...here,
+    distance: here.distance + (next.distance - here.distance) * t,
+    offset: here.offset + (next.offset - here.offset) * t,
+    speed: here.speed + (next.speed - here.speed) * t,
+  };
+}
+
 /** The last few frames before a tick, which is what a wake is. */
 export function wakeAt(
   segment: Segment,

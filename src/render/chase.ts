@@ -14,10 +14,12 @@ import {
   navFor,
   normalOf,
   placeOn,
+  placeSmooth,
+  shortestTurn,
   routeOf,
   sampleAt,
   sectorAt,
-  type Sample,
+  type Place,
   type Track,
 } from '../sim/track';
 import { PATH_HALF_WIDTH } from '../sim/tuning';
@@ -66,9 +68,13 @@ const SHIP_SIZE = 2;
 /** How far above the track it flies. */
 const LIFT = 1.8;
 
-/** How much of the way to its target the camera moves each frame. */
-const FOLLOW = 0.16;
-const TURN = 0.1;
+/**
+ * How long the camera takes to close most of the gap to where it should be, in
+ * seconds. Expressed as a time rather than a share per frame: a share per frame
+ * means a 120Hz screen has a camera twice as tight as a 60Hz one.
+ */
+const FOLLOW_TIME = 0.09;
+const TURN_TIME = 0.13;
 
 const PATH = '#ffd166';
 const GROUND = '#1b2854';
@@ -96,13 +102,9 @@ export const newChase = (): Chase => ({
   settled: false,
 });
 
-/** The shortest way round from one angle to another. */
-function towards(from: number, to: number, share: number): number {
-  const tau = Math.PI * 2;
-  let delta = (to - from) % tau;
-  if (delta > Math.PI) delta -= tau;
-  if (delta <= -Math.PI) delta += tau;
-  return from + delta * share;
+/** How much of the remaining gap to close in this much time. */
+function easeShare(seconds: number, over: number): number {
+  return 1 - Math.exp(-Math.max(0, seconds) / over);
 }
 
 /**
@@ -126,11 +128,16 @@ function shipPoint(
   track: Track,
   ship: ShipView,
   lane = 0,
-): { at: Sample; x: number; y: number } {
-  const at = placeOn(track, ship.distance, ship.route);
-  const n = normalOf(at);
+): { at: Place; x: number; y: number } {
+  const at = placeSmooth(track, ship.distance, ship.route);
+  const n = normalOfHeading(at.heading);
   const out = ship.offset + lane;
   return { at, x: at.pos.x + n.x * out, y: at.pos.y + n.y * out };
+}
+
+/** Left of travel, from a heading alone. */
+function normalOfHeading(heading: number): { x: number; y: number } {
+  return { x: -Math.sin(heading), y: Math.cos(heading) };
 }
 
 export function drawChase(
@@ -140,6 +147,7 @@ export function drawChase(
   routes: RouteView,
   sky: Sky,
   chase: Chase,
+  seconds: number,
   width: number,
   height: number,
 ): void {
@@ -161,12 +169,14 @@ export function drawChase(
     yaw,
     pitch: PITCH,
   };
+  const follow = easeShare(seconds, FOLLOW_TIME);
+  const turn = easeShare(seconds, TURN_TIME);
   chase.camera = chase.settled
     ? {
-        x: chase.camera.x + (target.x - chase.camera.x) * FOLLOW,
-        y: chase.camera.y + (target.y - chase.camera.y) * FOLLOW,
+        x: chase.camera.x + (target.x - chase.camera.x) * follow,
+        y: chase.camera.y + (target.y - chase.camera.y) * follow,
         height: HEIGHT,
-        yaw: towards(chase.camera.yaw, yaw, TURN),
+        yaw: chase.camera.yaw + shortestTurn(chase.camera.yaw, yaw) * turn,
         pitch: PITCH,
       }
     : target;
@@ -233,8 +243,8 @@ function drawRoad(
     [];
   for (let i = 0; i <= steps; i += 1) {
     const distance = from + i * STEP;
-    const at = placeOn(track, distance, lineAt(track, routes, player, distance));
-    const n = normalOf(at);
+    const at = placeSmooth(track, distance, lineAt(track, routes, player, distance));
+    const n = normalOfHeading(at.heading);
     const point = (out: number): Eye =>
       toEye(lens, at.pos.x + n.x * out, at.pos.y + n.y * out);
     rail.push({
@@ -302,7 +312,7 @@ function drawRoad(
   // run past.
   const centre = rail.map((_, i) => {
     const distance = from + i * STEP;
-    const at = placeOn(track, distance, lineAt(track, routes, player, distance));
+    const at = placeSmooth(track, distance, lineAt(track, routes, player, distance));
     return toEye(lens, at.pos.x, at.pos.y, 0.05);
   });
   ctx.setLineDash([13, 11]);
@@ -427,7 +437,7 @@ function drawShip(
   lens: Lens,
   track: Track,
   ship: ShipView,
-  point: { at: Sample; x: number; y: number },
+  point: { at: Place; x: number; y: number },
   colour: string,
   lane: number,
 ): void {
@@ -440,8 +450,8 @@ function drawShip(
   // Its wake, lying flat on the track: the line it actually took.
   if (ship.wake.length > 1) {
     const trail = ship.wake.slice(-46).map((step) => {
-      const at = placeOn(track, step.distance, step.route);
-      const n = normalOf(at);
+      const at = placeSmooth(track, step.distance, step.route);
+      const n = normalOfHeading(at.heading);
       const out = step.offset + lane;
       return toEye(lens, at.pos.x + n.x * out, at.pos.y + n.y * out, 0.1);
     });

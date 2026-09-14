@@ -431,13 +431,16 @@ function measureLine(points: readonly Vec[]): {
     const b = points[i] as Vec;
     cum.push((cum[i - 1] as number) + Math.hypot(b.x - a.x, b.y - a.y));
   }
+  // Central differences: the direction from the point before to the point
+  // after is the tangent *at* this point. A forward difference is the tangent
+  // half a step later, which leaves every heading lagging its own sample and
+  // makes the joins between routes worse than they need to be.
   const headings: number[] = [];
-  for (let i = 0; i < n - 1; i += 1) {
-    const a = points[i] as Vec;
-    const b = points[i + 1] as Vec;
+  for (let i = 0; i < n; i += 1) {
+    const a = points[Math.max(0, i - 1)] as Vec;
+    const b = points[Math.min(n - 1, i + 1)] as Vec;
     headings.push(Math.atan2(b.y - a.y, b.x - a.x));
   }
-  headings.push(headings[n - 2] ?? 0);
   return { headings, cum, length: cum[n - 1] as number };
 }
 
@@ -516,12 +519,25 @@ function routeFrom(
 
   // Samples take their curvature from the bends, so the line the ship flies and
   // the corners it meets are the same object.
+  //
+  // Both ends take the main line's own heading rather than an estimate. Every
+  // route of a sector leaves and arrives on the checkpoint, and the lateral
+  // profile is flat there — its slope at both ends is zero — so the route
+  // really is tangent to the main line at each end, and saying so exactly is
+  // what keeps a ship from flicking as it crosses from one sector's route to
+  // the next one's.
   const samples: Sample[] = points.map((pos, i) => {
     const at = cum[i] as number;
     const bend = bends.find((b) => at >= b.start && at < b.end);
+    const ends =
+      i === 0
+        ? sampleAt(track, start).heading
+        : i === points.length - 1
+          ? sampleAt(track, end - 1e-6).heading
+          : undefined;
     return {
       pos,
-      heading: headings[i] as number,
+      heading: ends ?? (headings[i] as number),
       radius: bend?.radius ?? 0,
       turn: bend?.turn ?? 0,
     };
@@ -543,6 +559,66 @@ export function sampleOn(route: Route, along: number): Sample {
     else high = mid - 1;
   }
   return route.samples[low] as Sample;
+}
+
+/**
+ * Where a route is at a distance along it, **between** samples.
+ *
+ * `sampleOn` snaps to the sample it lands in, which is what the simulation
+ * wants — a bend's radius is a fact about the bend, not something to average
+ * across its edge. It is not what a camera wants. Samples are 3 units apart and
+ * a ship covers 0.85 in a tick, so a snapped position holds still for three
+ * ticks and then jumps the whole 3 units, and a snapped heading does not turn
+ * at all and then snaps 0.043 radians. Followed by a camera that is a visible
+ * shake.
+ *
+ * So this exists alongside `sampleOn` rather than replacing it: position and
+ * heading are the only things any view needs, and they are the only things
+ * here. Nothing in `src/sim` outside this file calls it.
+ */
+export function placeSmooth(track: Track, distance: number, routeIndex: number): Place {
+  const sector = sectorOf(track, distance);
+  const route = routeOf(sector, routeIndex);
+  const along = alongOf(track, sector, route, distance);
+  const cum = route.cum;
+  const samples = route.samples;
+
+  let low = 0;
+  let high = cum.length - 1;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if ((cum[mid] as number) <= along) low = mid;
+    else high = mid - 1;
+  }
+  const here = samples[low] as Sample;
+  const next = samples[low + 1];
+  if (next === undefined) return { pos: here.pos, heading: here.heading };
+
+  const span = (cum[low + 1] as number) - (cum[low] as number);
+  const t =
+    span <= 0 ? 0 : Math.min(1, Math.max(0, (along - (cum[low] as number)) / span));
+  return {
+    pos: {
+      x: here.pos.x + (next.pos.x - here.pos.x) * t,
+      y: here.pos.y + (next.pos.y - here.pos.y) * t,
+    },
+    heading: here.heading + shortestTurn(here.heading, next.heading) * t,
+  };
+}
+
+/** Just the position and heading — what a view needs and nothing else. */
+export interface Place {
+  readonly pos: Vec;
+  readonly heading: number;
+}
+
+/** The shortest way round from one heading to another, in (-π, π]. */
+export function shortestTurn(from: number, to: number): number {
+  const tau = Math.PI * 2;
+  let delta = (to - from) % tau;
+  if (delta > Math.PI) delta -= tau;
+  if (delta <= -Math.PI) delta += tau;
+  return delta;
 }
 
 /** The bend a route is in at a distance along it, if any. */

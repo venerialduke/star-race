@@ -368,6 +368,15 @@
         color: var(--warn);
         font-weight: 700;
       }
+      /* A part that would add nothing to the build as it stands. Dimmed rather
+         than hidden: knowing a second crew is worthless is worth knowing. */
+      .part.idle {
+        opacity: 0.45;
+      }
+      .part .gain {
+        color: var(--gold);
+        font-weight: 700;
+      }
       .state.fired {
         color: #7ee0ff;
         font-weight: 700;

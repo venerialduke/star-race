@@ -17,7 +17,8 @@ import {
 } from './race';
 import { makeRng } from './rng';
 import type { Fitted } from './ship';
-import type { Track } from './track';
+import { legalRoutes, type Track } from './track';
+import { NAV_FOR_REPLAN } from './tuning';
 
 export interface Entrant {
   readonly id: string;
@@ -28,10 +29,35 @@ export interface Entrant {
   readonly isPlayer: boolean;
 }
 
+/**
+ * What a ship was told to do before a lap: how to take its bends, and which
+ * way to go at every fork. Both are fixed before the lap that consumes them.
+ */
+export interface Orders {
+  readonly plan: CornerPlan;
+  /** One route index per sector. Anything the ship's nav cannot read is ignored. */
+  readonly routes: readonly number[];
+}
+
+/**
+ * Orders may be given as a bare corner plan, which means the golden path at
+ * every fork — the route a ship with no navigation and no opinion would fly.
+ */
+export type Command = Orders | CornerPlan;
+
+const asOrders = (command: Command | undefined): Orders =>
+  command === undefined
+    ? { plan: 'carry', routes: [] }
+    : typeof command === 'string'
+      ? { plan: command, routes: [] }
+      : command;
+
 export interface ShipProgress {
   readonly entrant: Entrant;
   /** The plan this ship is flying this lap. Chosen before the lap, never during. */
   readonly plan: CornerPlan;
+  /** The route it planned for this lap, already cut down to what its nav can read. */
+  readonly routes: readonly number[];
   readonly state: RaceState;
   /** Ticks taken by each lap already completed. */
   readonly lapTicks: readonly number[];
@@ -69,21 +95,44 @@ function seedFor(seed: number, entrantIndex: number, lap: number): number {
 
 export function startField(
   entrants: readonly Entrant[],
-  plans: readonly CornerPlan[],
+  commands: readonly Command[],
+  track?: Track,
 ): FieldState {
   return {
     tick: 0,
     lap: 0,
     phase: 'racing',
-    ships: entrants.map((entrant, i) => ({
-      entrant,
-      plan: plans[i] ?? 'carry',
-      state: startRace(entrant.stats, entrant.build ?? []),
-      lapTicks: [],
-      totalTicks: 0,
-      waiting: false,
-    })),
+    ships: entrants.map((entrant, i) => {
+      const routes = readable(track, entrant, asOrders(commands[i]).routes);
+      return {
+        entrant,
+        plan: asOrders(commands[i]).plan,
+        routes,
+        state: startRace(entrant.stats, entrant.build ?? [], routes[0] ?? 0),
+        lapTicks: [],
+        totalTicks: 0,
+        waiting: false,
+      };
+    }),
   };
+}
+
+/**
+ * A route plan cut down to what this ship's navigation can actually read. A
+ * split above its grade is not a choice it gets to make, so it takes the
+ * golden path there — the sim decides this, not the screen that drew it.
+ */
+function readable(
+  track: Track | undefined,
+  entrant: Entrant,
+  routes: readonly number[] | undefined,
+): readonly number[] {
+  if (track === undefined || routes === undefined) return [];
+  const allowed = legalRoutes(track, entrant.stats.nav);
+  return track.sectors.map((sector) => {
+    const want = routes[sector.index] ?? 0;
+    return (allowed[sector.index] ?? []).includes(want) ? want : 0;
+  });
 }
 
 /**
@@ -102,6 +151,7 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
       stats: ship.entrant.stats,
       build: ship.entrant.build,
       plan: ship.plan,
+      routes: ship.routes,
       seed: seedFor(config.seed, i, state.lap),
     });
     if (next.distance < config.track.length) return { ...ship, state: next };
@@ -128,22 +178,35 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
  * Leave the pit stop. Everyone restarts level, on a fresh lap, carrying their
  * total time and nothing else — the line resets, the clock does not.
  */
-export function leavePit(state: FieldState, plans: readonly CornerPlan[]): FieldState {
+export function leavePit(
+  state: FieldState,
+  commands: readonly Command[],
+  track?: Track,
+): FieldState {
   return {
     tick: 0,
     lap: state.lap + 1,
     phase: 'racing',
-    ships: state.ships.map((ship, i) => ({
-      ...ship,
-      plan: plans[i] ?? ship.plan,
-      // Shields come back at the pit stop. Damage does not: the crew goes on
-      // patching it as the ship flies, and the rest waits for the garage.
-      state: {
-        ...startRace(ship.entrant.stats, ship.entrant.build ?? []),
-        condition: ship.state.condition,
-      },
-      waiting: false,
-    })),
+    ships: state.ships.map((ship, i) => {
+      // Re-planning the route at a pit stop is what the best navigation buys.
+      // Without it the route you set before the heat is the route you fly.
+      const routes =
+        ship.entrant.stats.nav >= NAV_FOR_REPLAN
+          ? readable(track, ship.entrant, asOrders(commands[i]).routes)
+          : ship.routes;
+      return {
+        ...ship,
+        plan: commands[i] === undefined ? ship.plan : asOrders(commands[i]).plan,
+        routes,
+        // Shields come back at the pit stop. Damage does not: the crew goes on
+        // patching it as the ship flies, and the rest waits for the garage.
+        state: {
+          ...startRace(ship.entrant.stats, ship.entrant.build ?? [], routes[0] ?? 0),
+          condition: ship.state.condition,
+        },
+        waiting: false,
+      };
+    }),
   };
 }
 

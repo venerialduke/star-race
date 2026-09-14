@@ -6,13 +6,14 @@
 // values are this file's to choose, the mechanics are not.
 //
 // A component is stocked only when the race can honour what it does. Engines,
-// shields and crew are. Navigation still needs splits, weapons need something
-// to hit, collection needs an economy — those say what they are waiting for
-// instead of quietly doing nothing.
+// shields, crew and navigation are. Weapons need something to hit and
+// collection needs an economy — those say what they are waiting for instead of
+// quietly doing nothing.
 
 import type { ShipStats } from './race';
 import {
   BASE_ENDURANCE,
+  BASE_NAV,
   BASE_HANDLING,
   BASE_REPAIR,
   BASE_SHIELDS,
@@ -21,7 +22,7 @@ import {
   STAT_MIN,
 } from './tuning';
 
-export type Category = 'engine' | 'shields' | 'crew';
+export type Category = 'engine' | 'shields' | 'crew' | 'navigation';
 
 export interface Level {
   /** What this level adds to the ship's stats. Anything unset adds nothing. */
@@ -33,6 +34,10 @@ export interface Level {
   readonly shieldRegen?: number;
   /** How fast this crew patches damage back up mid-race. */
   readonly repair?: number;
+  /** Navigation: which grades of split this can plan, and whether it can re-plan. */
+  readonly nav?: number;
+  /** A crew that makes a navigation system better. Worth nothing without one. */
+  readonly navBonus?: number;
   /** A share off the price of upgrades, or of buying a slot. */
   readonly upgradeDiscount?: number;
   readonly slotDiscount?: number;
@@ -177,7 +182,12 @@ export const COMPONENTS: readonly Component[] = [
     category: 'shields',
     arrows: 'Shields↑',
     levels: [
-      { shields: 22, slots: 1, cost: 26, note: 'General defence. Soaks the ground off the path.' },
+      {
+        shields: 22,
+        slots: 1,
+        cost: 26,
+        note: 'General defence. Soaks the ground off the path.',
+      },
       { shields: 40, slots: 1, cost: 24, note: 'More shielding.' },
       { shields: 62, slots: 1, cost: 38, note: 'More again.' },
     ],
@@ -188,9 +198,30 @@ export const COMPONENTS: readonly Component[] = [
     category: 'crew',
     arrows: 'endurance · Shields recharge↑',
     levels: [
-      { endurance: 0.55, shieldRegen: 1.8, repair: 2.2, slots: 1, cost: 28, note: 'Regular endurance; shields recharge faster, and they patch damage well.' },
-      { endurance: 0.7, shieldRegen: 2.3, repair: 2.8, slots: 1, cost: 24, note: 'Steadier, and faster again.' },
-      { endurance: 0.85, shieldRegen: 3, repair: 3.4, slots: 1, cost: 36, note: 'Steadier still.' },
+      {
+        endurance: 0.55,
+        shieldRegen: 1.8,
+        repair: 2.2,
+        slots: 1,
+        cost: 28,
+        note: 'Regular endurance; shields recharge faster, and they patch damage well.',
+      },
+      {
+        endurance: 0.7,
+        shieldRegen: 2.3,
+        repair: 2.8,
+        slots: 1,
+        cost: 24,
+        note: 'Steadier, and faster again.',
+      },
+      {
+        endurance: 0.85,
+        shieldRegen: 3,
+        repair: 3.4,
+        slots: 1,
+        cost: 36,
+        note: 'Steadier still.',
+      },
     ],
     waiting: 'the ability half of "shields and abilities recharge faster"',
   },
@@ -198,13 +229,33 @@ export const COMPONENTS: readonly Component[] = [
     id: 'crew-androids',
     name: 'Androids',
     category: 'crew',
-    arrows: 'endurance↑↑↑',
+    arrows: 'endurance↑↑↑ · Nav↑',
     levels: [
-      { endurance: 0.95, repair: 1, slots: 1, cost: 32, note: 'Very strong endurance. Gravity barely touches them — but they are no mechanics.' },
-      { endurance: 1.15, repair: 1.2, slots: 1, cost: 26, note: 'Stronger again.' },
-      { endurance: 1.4, repair: 1.4, slots: 1, cost: 40, note: 'Unbothered.' },
+      {
+        endurance: 0.95,
+        repair: 1,
+        navBonus: 1,
+        slots: 1,
+        cost: 32,
+        note: 'Very strong endurance, and they read a navigation system a grade deeper. No mechanics, though.',
+      },
+      {
+        endurance: 1.15,
+        repair: 1.2,
+        navBonus: 1,
+        slots: 1,
+        cost: 26,
+        note: 'Stronger again.',
+      },
+      {
+        endurance: 1.4,
+        repair: 1.4,
+        navBonus: 1,
+        slots: 1,
+        cost: 40,
+        note: 'Unbothered.',
+      },
     ],
-    waiting: 'their better navigation — navigation needs splits',
   },
   {
     id: 'crew-scientists',
@@ -212,9 +263,30 @@ export const COMPONENTS: readonly Component[] = [
     category: 'crew',
     arrows: 'endurance↓ · upgrades cost less',
     levels: [
-      { endurance: 0.4, repair: 1.3, upgradeDiscount: 0.25, slots: 1, cost: 24, note: 'Weak endurance; upgrades cost a quarter less.' },
-      { endurance: 0.5, repair: 1.5, upgradeDiscount: 0.35, slots: 1, cost: 22, note: 'A little hardier, and cheaper still.' },
-      { endurance: 0.6, repair: 1.7, upgradeDiscount: 0.45, slots: 1, cost: 34, note: 'Nearly half off every upgrade.' },
+      {
+        endurance: 0.4,
+        repair: 1.3,
+        upgradeDiscount: 0.25,
+        slots: 1,
+        cost: 24,
+        note: 'Weak endurance; upgrades cost a quarter less.',
+      },
+      {
+        endurance: 0.5,
+        repair: 1.5,
+        upgradeDiscount: 0.35,
+        slots: 1,
+        cost: 22,
+        note: 'A little hardier, and cheaper still.',
+      },
+      {
+        endurance: 0.6,
+        repair: 1.7,
+        upgradeDiscount: 0.45,
+        slots: 1,
+        cost: 34,
+        note: 'Nearly half off every upgrade.',
+      },
     ],
   },
   {
@@ -223,16 +295,63 @@ export const COMPONENTS: readonly Component[] = [
     category: 'crew',
     arrows: 'endurance↑ · slots cost less',
     levels: [
-      { endurance: 0.75, repair: 4, slotDiscount: 0.25, slots: 1, cost: 30, note: 'Strong endurance, slots cost less — and they rebuild damage as you fly.' },
-      { endurance: 0.85, repair: 5, slotDiscount: 0.35, slots: 1, cost: 26, note: 'Hardier, cheaper expansion, faster rebuilding.' },
-      { endurance: 1, repair: 6.5, slotDiscount: 0.5, slots: 1, cost: 38, note: 'Slots at half price, and damage barely sticks.' },
+      {
+        endurance: 0.75,
+        repair: 4,
+        slotDiscount: 0.25,
+        slots: 1,
+        cost: 30,
+        note: 'Strong endurance, slots cost less — and they rebuild damage as you fly.',
+      },
+      {
+        endurance: 0.85,
+        repair: 5,
+        slotDiscount: 0.35,
+        slots: 1,
+        cost: 26,
+        note: 'Hardier, cheaper expansion, faster rebuilding.',
+      },
+      {
+        endurance: 1,
+        repair: 6.5,
+        slotDiscount: 0.5,
+        slots: 1,
+        cost: 38,
+        note: 'Slots at half price, and damage barely sticks.',
+      },
+    ],
+  },
+
+  {
+    id: 'nav-system',
+    name: 'Navigation system',
+    category: 'navigation',
+    arrows: 'Nav↑',
+    levels: [
+      {
+        nav: 1,
+        slots: 1,
+        cost: 26,
+        note: 'Reads the dim splits, so you can plan a way through them.',
+      },
+      {
+        nav: 2,
+        slots: 1,
+        cost: 30,
+        note: 'Reads the dark ones too: every split on the track is yours to plan.',
+      },
+      {
+        nav: 3,
+        slots: 2,
+        cost: 44,
+        note: 'Takes a second slot, and lets you re-plan the route at a pit stop.',
+      },
     ],
   },
 ];
 
 /** The rest of the catalogue, and what each is waiting for. Shown, not sold. */
 export const NOT_STOCKED: readonly { name: string; waiting: string }[] = [
-  { name: 'Navigation', waiting: 'splits — every sector has one way through it' },
   { name: 'Weapons', waiting: 'ships that can reach each other' },
   { name: 'Collection', waiting: 'an economy to collect into' },
   { name: 'Deflector shields', waiting: 'hazards as objects, not as ground' },
@@ -276,6 +395,8 @@ export function resolveBuild(
   let endurance = BASE_ENDURANCE;
   let shieldRegen = 1;
   let repair = BASE_REPAIR;
+  let nav = BASE_NAV;
+  let navBonus = 0;
   fitted.forEach((item, i) => {
     const level = levelOf(item);
     if (level === undefined) return;
@@ -289,6 +410,10 @@ export function resolveBuild(
     endurance = Math.max(endurance, (level.endurance ?? 0) * worth);
     shieldRegen = Math.max(shieldRegen, (level.shieldRegen ?? 1) * worth);
     repair = Math.max(repair, (level.repair ?? 0) * worth);
+    // Navigation is a gate, not a quantity: the best system aboard flies the
+    // ship. A broken one reads less far, so damage can cost you a split.
+    nav = Math.max(nav, Math.floor((level.nav ?? 0) * worth));
+    navBonus = Math.max(navBonus, (level.navBonus ?? 0) * worth);
   });
   const clamp = (v: number): number => Math.min(STAT_MAX, Math.max(STAT_MIN, v));
   return {
@@ -298,6 +423,8 @@ export function resolveBuild(
     endurance,
     shieldRegen,
     repair,
+    // A crew that reads navigation well is worth nothing without one to read.
+    nav: nav > 0 ? nav + Math.floor(navBonus) : 0,
   };
 }
 
@@ -313,6 +440,7 @@ export function bareShip(thrust: number, handling: number): ShipStats {
     endurance: BASE_ENDURANCE,
     shieldRegen: 1,
     repair: BASE_REPAIR,
+    nav: BASE_NAV,
   };
 }
 

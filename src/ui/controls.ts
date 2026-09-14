@@ -10,13 +10,15 @@
 import { standings, type FieldState } from '../sim/field';
 import type { CornerPlan } from '../sim/race';
 import { frameAt, orderAt, type Segment } from '../sim/segment';
-import { TRACKS, type Track } from '../sim/track';
-import { TICK_HZ } from '../sim/tuning';
+import { describeRoute, navFor, TRACKS, type Sector, type Track } from '../sim/track';
+import { NAV_FOR_REPLAN, TICK_HZ } from '../sim/tuning';
 import { SHIP_COLOURS } from '../render/draw';
 
 export interface Settings {
   track: Track;
   plan: CornerPlan;
+  /** The way through each sector the player means to take, one index per sector. */
+  routes: number[];
   seed: string;
 }
 
@@ -40,6 +42,12 @@ export interface Controls {
   readonly element: HTMLElement;
   readonly settings: Settings;
   readonly boardSlot: HTMLElement;
+  /** A new heat on this track: the route resets and is open to plan again. */
+  setTrack(track: Track): void;
+  /** How far the build's navigation reads. Changes as parts are fitted. */
+  setNav(nav: number): void;
+  /** The heat has started. Without Nav 3 the route is now fixed. */
+  seal(): void;
   toRace(): void;
   toGarage(): void;
   update(state: Update): void;
@@ -57,6 +65,7 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   const settings: Settings = {
     track: TRACKS[0] as Track,
     plan: 'carry',
+    routes: (TRACKS[0] as Track).sectors.map(() => 0),
     seed: 'kestrel',
   };
 
@@ -82,6 +91,9 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
             <b>${p.label}</b><span>${p.hint}</span></button>`,
         ).join('')}
       </div>
+      <h3 class="routes-head">The route</h3>
+      <p id="route-note" class="hint"></p>
+      <div id="routes" class="routes"></div>
       <p id="staged" class="staged" hidden></p>
       <div id="board-slot"></div>
     </div>
@@ -107,6 +119,8 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   const bar = byId<HTMLElement>('bar');
   const rState = byId<HTMLElement>('r-state');
   const staged = byId<HTMLElement>('staged');
+  const routeBox = byId<HTMLElement>('routes');
+  const routeNote = byId<HTMLElement>('route-note');
   const go = byId<HTMLButtonElement>('b-go');
   const skip = byId<HTMLButtonElement>('b-skip');
 
@@ -151,12 +165,75 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   go.addEventListener('click', hooks.onGo);
   skip.addEventListener('click', hooks.onSkip);
 
+  /** How far the player's navigation reads, as the last render knew it. */
+  let nav = 0;
+  /** True once the heat has started: without Nav 3 the route is then fixed. */
+  let sealed = false;
+
+  /**
+   * The route planner. One row per sector, one button per way through it — and
+   * a way through it that your navigation cannot read is shown locked rather
+   * than hidden, because knowing a system would buy you something is the
+   * reason to buy one.
+   */
+  const renderRoutes = (): void => {
+    const track = settings.track;
+    const locked = sealed && nav < NAV_FOR_REPLAN;
+    routeNote.textContent = locked
+      ? 'The route is set for this heat. A level 3 navigation system would let you re-plan here.'
+      : nav === 0
+        ? 'Without a navigation system you can only plan the splits anyone can see.'
+        : `Navigation ${nav}: planning every split up to ${nav >= 2 ? 'dark' : 'dim'}.`;
+
+    routeBox.innerHTML = track.sectors
+      .map((sector: Sector) => {
+        const buttons = sector.routes
+          .map((route, index) => {
+            const readable = navFor(route.grade) <= nav;
+            const on = (settings.routes[sector.index] ?? 0) === index;
+            const disabled = !readable || locked;
+            const label = readable ? route.name : `Needs Nav ${navFor(route.grade)}`;
+            return `<button type="button" class="route${on ? ' on' : ''}${readable ? '' : ' unread'}"
+              data-sector="${sector.index}" data-route="${index}"${disabled ? ' disabled' : ''}>
+              <b>${label}</b><span>${readable ? describeRoute(sector, route) : route.grade}</span>
+            </button>`;
+          })
+          .join('');
+        return `<div class="sector"><span class="sector-n">${sector.index + 1}</span>
+          <div class="route-choices">${buttons}</div></div>`;
+      })
+      .join('');
+
+    for (const button of routeBox.querySelectorAll<HTMLButtonElement>('[data-route]')) {
+      button.addEventListener('click', () => {
+        settings.routes[Number(button.dataset['sector'])] = Number(
+          button.dataset['route'],
+        );
+        renderRoutes();
+      });
+    }
+  };
+
   showScreen('garage');
 
   return {
     element,
     settings,
     boardSlot: byId<HTMLElement>('board-slot'),
+    setTrack(next) {
+      settings.track = next;
+      settings.routes = next.sectors.map(() => 0);
+      sealed = false;
+      renderRoutes();
+    },
+    setNav(next) {
+      nav = next;
+      renderRoutes();
+    },
+    seal() {
+      sealed = true;
+      renderRoutes();
+    },
     toRace: () => showScreen('race'),
     toGarage: () => showScreen('garage'),
     update({ field, live, settled }) {

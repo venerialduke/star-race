@@ -89,16 +89,23 @@ refitting it does not launder the damage off it.
 - **The playback and the decisions are separate screens.** You may swap between
   them mid-segment, but nothing bought or fitted is slotted in until the next
   decision point.
+- **A split is a lateral bulge on the sector's own line**, and everything about
+  it — its length, its bends, where it is drawn — comes out of that one number.
+- **A route plan is an input like any other**, fixed before the lap that flies
+  it. The fork can take a route away from you; it can never give you a choice.
 
 ## What is built
 
-**S1 — the swing**, **S2 — the heat**, and **S3 — the ship and the shop**.
+**S1 — the swing**, **S2 — the heat**, **S3 — the ship and the shop**, and
+**S4 — the route**.
 Three ships fly one of three authored loops for two laps, with a pit stop
 between them. The player fits components into slots in the garage between laps,
 picks the track and the corner plan, and races; the rivals are bots that read
 the track and choose for themselves. The stats are no longer sliders — they are
 what a build adds up to. There is a starting budget but no income yet. Each lap
-is resolved before it is played back, on its own screen.
+is resolved before it is played back, on its own screen. Sectors offer more than
+one way through them, and what the player may plan is what their navigation can
+read.
 
 ## The track
 
@@ -197,6 +204,72 @@ mildest. Scaling it is what prices the gamble.
 The ship hauls itself back proportionally — fast at first, fighting the last
 few units — at a rate set by Handling.
 
+## The route
+
+A sector may offer more than one way through it. Each is a **route**; the ones
+that are not the golden path are **splits**. Every route of a sector leaves its
+checkpoint and arrives at the next one, so a ship on any of them is in the same
+place at both ends — what differs in between is how long the line is and how
+tight its bends are.
+
+A split is authored as **one number: a lateral bulge**, measured toward the
+inside of whatever the sector's bends are doing. Everything else falls out of
+that geometry rather than being chosen to agree with it:
+
+| Bulge    | The line                       | What it costs and buys            |
+| -------- | ------------------------------ | --------------------------------- |
+| positive | hugs the inside of every bend  | shorter, and tighter              |
+| negative | runs the outside of every bend | longer, and it opens the bends up |
+
+Following the turn is load-bearing. Pushing to a fixed side of the screen was
+the first version, and on any sector that turns both ways it tightened one
+corner and opened the next, so half the splits came out longer _and_ tighter —
+which is nobody's choice.
+
+**Canonical distance stays on the main line.** Laps, checkpoints and standings
+are all measured there, so none of them has to care which way anyone went. What
+a route changes is the exchange rate: a short line buys canonical distance
+faster than a long one. That, and the bends it hands you, is the whole of what
+a split is worth.
+
+## Navigation, and what it lets you plan
+
+Every split carries a **grade** — clear, dim or dark — and navigation is what
+sees through it. The ladder is the framework's:
+
+| Nav | What it buys                                           |
+| --- | ------------------------------------------------------ |
+| 0   | Plan the clear splits. Every ship can do this.         |
+| 1   | Plan the dim ones too.                                 |
+| 2   | Plan the dark ones: every split on the track is yours. |
+| 3   | Re-plan the route at a pit stop. Takes a second slot.  |
+
+A split one grade beyond your navigation is drawn as a hint — you can see
+something turns off there and no more than that. Anything further out you
+cannot see at all, which is the reason to buy a better system. Androids read a
+system one grade deeper, and are worth nothing on this count without one.
+
+**The rule lives in the simulation, not in the screen that drew the buttons.**
+A route plan is cut down to what the ship's navigation can actually read before
+the lap runs, and without Nav 3 the plan set before the heat is the plan flown
+all heat.
+
+The grades are not sprinkled at random: a split you need a system to read is a
+better split than one anybody can see, or the system would not be worth its
+slot.
+
+## Being swung into the wrong split
+
+The route is a plan, not a guarantee. At a fork the ship takes the line it
+planned — unless it arrives thrown far enough sideways that it is already
+pointing at another one, in which case it takes that instead.
+
+The threshold sits **just outside the golden path**, deliberately: losing your
+line is something that happens to a ship that went wide, never to one wobbling
+inside the path. That makes a big swing at the bend before a fork cost a route
+rather than only cost time, which is the swing reaching into the part of the
+game the player plans.
+
 ## Damage, shields and what it breaks
 
 The ground off the golden path holds things that hurt, and **you hit them on
@@ -272,6 +345,11 @@ lane so they do not sit on top of each other — a drawing trick only: the
 simulation has no lanes and no ship can touch another. The player's ship is
 drawn brightest and on top, and only the player's bends leave marks.
 
+The **splits** are drawn as the lines they are: the one you planned in gold, a
+line you could plan but did not in the ships' own blue, and a split one grade
+beyond your navigation as a faint dash — you can see something turns off there,
+and no more than that. A split further out than that is not drawn at all.
+
 The **tracking bar** is the thing that says who is winning: a lane per ship with
 its place, how far round the lap it is, and what it is giving away on total
 time. At a pit stop and at the finish it shows totals instead of gaps.
@@ -288,6 +366,12 @@ it. The **garage** is every decision: the track, the corner plan, the shop, the
 shelf and the build — credits, slots used, and what the build adds up to. A seed
 box sits under both, because the same seed must produce the same heat and being
 able to prove that by eye is the point.
+
+**The route** is planned in the garage, a row per sector and a button per way
+through it. A line your navigation cannot read is shown locked rather than
+hidden, because knowing that a better system would buy you something is the
+reason to buy one. Once the heat starts the route is sealed, and the panel says
+so — unless you fitted the system that can re-plan at a pit stop.
 
 You can swap between them whenever you like, and the tracking bar stays on both
 so the lap can be watched while the shopping is done. What you cannot do is

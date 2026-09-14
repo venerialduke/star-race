@@ -263,18 +263,62 @@ one tick at the line**. That is the bet paying off, and it is invisible unless
 the bar tracks the road rather than the result. It is also an argument for the
 sector times in S1.3: the lap total hides where it was won.
 
-## S4 — the route
+## S4 — the route — **done**
 
-**S4 is done when:** a sector offers more than one way through it, the player's
-navigation decides how much of that they can see and choose, and a big enough
-swing throws the ship into a split it did not plan.
+All three items are in. A sector offers more than one way through it, navigation
+decides how much of that you may plan, and a swing big enough to put you off the
+path takes the fork away from you.
 
-- **S4.1 Splits.** A sector with several paths that all end at the next
-  checkpoint.
-- **S4.2 Navigation.** The three levels in the framework: choose at more
-  splits, see the unseen and plan the whole heat, re-plan at a pit stop.
-- **S4.3 Swung into the wrong split.** The bend at a fork, and the swing that
-  decides it.
+**A split is one number.** A lateral bulge on the sector's own line, measured
+toward the inside of whatever its bends are doing — positive hugs the inside of
+every bend (shorter, tighter), negative runs the outside of every one (longer,
+opens up). Its length, its bends and where it is drawn all come out of that.
+Canonical distance stays on the main line, so laps and standings never have to
+know which way anyone went; a short line simply buys canonical distance faster.
+
+**What the route is worth**, best readable line against the golden path, 24
+seeds, tuned on 8 others so the check is honest:
+
+| | Kestrel | Meridian | Cinder |
+| --- | --- | --- | --- |
+| handling 0.7 — Nav 0 → 2 | −9 → **−9** | −17 → **−51** | −0 → **+71** |
+| handling 1.0 — Nav 0 → 2 | −4 → **−48** | −8 → **−38** | −12 → **−12** |
+| handling 1.4 — Nav 0 → 2 | −3 → **−47** | −16 → **−52** | −18 → **−30** |
+
+Ticks a lap; minus is faster. **Navigation is worth 0.6–0.9s a lap, and only to
+a ship with handling to spare.** On the Kestrel it is worth nothing at all below
+handling 1.0 — the lines it unlocks are the tight ones, and a ship that cannot
+hold them is better off on the golden path. That is the gate working.
+
+**Three things worth the next session's attention.**
+
+- **Nav 2 does not reliably beat Nav 1.** On the Meridian the dark split is the
+  outer arc, which is never faster — its worth is that it opens the bends, and a
+  one-lap clock cannot see safety. On the Cinder the dark split came out +71 at
+  handling 0.7 on the check seeds having looked good on the tuning seeds. The
+  dark grade is meant to be the best grade and on one track of three it is not.
+- **Measuring a split carries seed noise.** Changing route changes which seeded
+  stream the bends draw from, so the same split is lucky on one seed and unlucky
+  on another — around ±30 ticks at 10 seeds. Anything measured about routes
+  needs 24 seeds or it is measuring the draw.
+- **A navigation system does not fit a full build at the starting budget.** Two
+  engines, a shield and a crew is already 94–120c against 100. Nav competes
+  directly with the shield or the crew rather than joining them, which is the
+  right tension, but it means nav is untested alongside a competitive build.
+
+**The Cinder Coil barely wants splits.** Half the track is bends, so any line off
+the golden path pays more in length than it wins in speed; three rounds of
+tuning could not make its inside lines better than neutral. Its splits are now
+a handling gamble (inside) plus one dark wide line that is worth 60 ticks to a
+ship with **no** handling and costs 49 to one with plenty — an inversion, and
+the most interesting thing on that track.
+
+## S4.4 — the route in a season
+
+Not scheduled. What S4 leaves for later: junctions that open as the loop grows,
+sectors spliced in from a season seed holding the darkest splits, and augments
+that add a split or a whole sector. All of it is in the framework; none of it
+means anything until S5 gives the season somewhere to keep it.
 
 ## S5 — the season
 

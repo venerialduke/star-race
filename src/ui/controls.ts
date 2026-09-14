@@ -36,18 +36,26 @@ export interface Update {
   readonly live: { segment: Segment; cursor: number } | undefined;
   /** The segment has played out and the next decision is due. */
   readonly settled: boolean;
+  /** The whole heat is over, not just a lap of it. */
+  readonly done: boolean;
+  /** What to say about the result, when the race was not a heat against anyone. */
+  readonly note?: string | undefined;
 }
 
 export interface Controls {
   readonly element: HTMLElement;
   readonly settings: Settings;
   readonly boardSlot: HTMLElement;
+  /** Where the season's standings go, above the shop. */
+  readonly seasonSlot: HTMLElement;
   /** A new heat on this track: the route resets and is open to plan again. */
   setTrack(track: Track): void;
   /** How far the build's navigation reads. Changes as parts are fitted. */
   setNav(nav: number): void;
   /** The heat has started. Without Nav 3 the route is now fixed. */
   seal(): void;
+  /** What the season is waiting for, so the Go button can say it. */
+  setSeason(stage: 'pacing' | 'heat' | 'cut' | 'over', playerOut: boolean): void;
   toRace(): void;
   toGarage(): void;
   update(state: Update): void;
@@ -79,12 +87,7 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
     <div id="bar" class="bar"></div>
     <div id="r-state" class="state">on the path</div>
     <div id="garage-screen">
-      <div class="tracks" role="group" aria-label="Track">
-        ${TRACKS.map(
-          (t, i) =>
-            `<button type="button" data-track="${i}" class="track"><b>${t.name}</b><span>${t.shape}</span></button>`,
-        ).join('')}
-      </div>
+      <div id="season-slot"></div>
       <div class="plans" role="group" aria-label="Corner plan">
         ${PLANS.map(
           (p) => `<button type="button" data-plan="${p.id}" class="plan">
@@ -101,7 +104,7 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       <label>Seed <input id="s-seed" type="text" value="kestrel" spellcheck="false" /></label>
       <button type="button" id="b-skip" hidden>Skip</button>
       <button type="button" id="b-go" class="go">Go</button>
-      <button type="button" id="b-restart">New heat</button>
+      <button type="button" id="b-restart">New season</button>
     </div>`;
   parent.appendChild(element);
 
@@ -115,6 +118,9 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   };
 
   let screen: 'race' | 'garage' = 'garage';
+  /** What the season is waiting for, which is what the Go button is offering. */
+  let stage: 'pacing' | 'heat' | 'cut' | 'over' = 'heat';
+  let playerOut = false;
   const garageScreen = byId<HTMLElement>('garage-screen');
   const bar = byId<HTMLElement>('bar');
   const rState = byId<HTMLElement>('r-state');
@@ -140,20 +146,12 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
     );
   }
 
-  for (const button of element.querySelectorAll<HTMLButtonElement>('[data-track]')) {
-    button.addEventListener('click', () => {
-      settings.track = TRACKS[Number(button.dataset['track'])] as Track;
-      paint('[data-track]', (b) => TRACKS[Number(b.dataset['track'])] === settings.track);
-      hooks.onNewHeat();
-    });
-  }
   for (const button of element.querySelectorAll<HTMLButtonElement>('[data-plan]')) {
     button.addEventListener('click', () => {
       settings.plan = button.dataset['plan'] as CornerPlan;
       paint('[data-plan]', (b) => b.dataset['plan'] === settings.plan);
     });
   }
-  paint('[data-track]', (b) => TRACKS[Number(b.dataset['track'])] === settings.track);
   paint('[data-plan]', (b) => b.dataset['plan'] === settings.plan);
 
   const seed = byId<HTMLInputElement>('s-seed');
@@ -220,9 +218,15 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
     element,
     settings,
     boardSlot: byId<HTMLElement>('board-slot'),
+    seasonSlot: byId<HTMLElement>('season-slot'),
     setTrack(next) {
+      // The season picks the track now, so this is told rather than chosen.
+      // Re-planning only resets when the track actually changes underneath it.
+      const changed = next !== settings.track;
       settings.track = next;
-      settings.routes = next.sectors.map(() => 0);
+      if (changed || settings.routes.length !== next.sectors.length) {
+        settings.routes = next.sectors.map(() => 0);
+      }
       sealed = false;
       renderRoutes();
     },
@@ -234,17 +238,33 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       sealed = true;
       renderRoutes();
     },
+    setSeason(next, out) {
+      stage = next;
+      playerOut = out;
+    },
     toRace: () => showScreen('race'),
     toGarage: () => showScreen('garage'),
-    update({ field, live, settled }) {
+    update({ field, live, settled, done: heatOver, note }) {
       // Nothing has been raced yet: the garage is the whole game.
       if (field === undefined || live === undefined) {
         bar.innerHTML = '';
         skip.hidden = true;
         go.hidden = false;
-        go.textContent = 'Race';
+        go.textContent =
+          stage === 'over'
+            ? 'New season'
+            : stage === 'pacing'
+              ? 'Pacing lap'
+              : 'Race the heat';
         staged.hidden = true;
-        rState.textContent = 'Fit the ship, set the plan, then Race.';
+        rState.textContent =
+          stage === 'over'
+            ? playerOut
+              ? 'Cut. Start another season when you are ready.'
+              : 'Season over.'
+            : stage === 'pacing'
+              ? 'One lap alone, against the track. Fit the ship, then go.'
+              : 'Fit the ship, set the plan and the route, then race.';
         rState.className = 'state';
         return;
       }
@@ -252,7 +272,13 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       const done = field.phase === 'done';
       skip.hidden = settled;
       go.hidden = !settled;
-      go.textContent = done ? 'Next heat' : 'Go — next lap';
+      go.textContent = !done
+        ? 'Go — next lap'
+        : stage === 'over'
+          ? 'New season'
+          : heatOver
+            ? 'Next'
+            : 'Go — next lap';
 
       // What is waiting for the next decision point, said plainly.
       staged.hidden = !(screen === 'garage' && !settled);
@@ -294,7 +320,10 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       const me = field.ships.findIndex((s) => s.entrant.isPlayer);
       const frame = frameAt(live.segment, me, live.cursor);
 
-      if (settled && done) {
+      if (settled && done && note !== undefined) {
+        rState.textContent = note;
+        rState.className = 'state done';
+      } else if (settled && done) {
         const final = standings(field);
         const mine = final.find((r) => r.ship.entrant.isPlayer);
         const won = final[0];

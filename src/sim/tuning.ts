@@ -161,6 +161,51 @@ export const SELL_RETURN = 0.6;
 /** A heat is this many laps, with a pit stop at the end of each one. */
 export const LAPS_PER_HEAT = 2;
 
+// The season.
+
+/** Ships in a heat. The roster stays a multiple of this so a group is never short. */
+export const GROUP_SIZE = 3;
+
+/**
+ * How many race the season, and how it narrows. Nine into three groups, then
+ * six into two, then three for the season — one cut per phase, each taking the
+ * field down by one group.
+ */
+export const ROSTER = 9;
+export const PHASES = 3;
+export const HEATS_PER_PHASE = 3;
+
+/** Credits paid by finish order at the end of a heat. The biggest sum in it. */
+export const PURSE_BY_PLACE = [70, 44, 26] as const;
+
+/** Points by finish order. Points are the standing and are never spent. */
+export const POINTS_BY_PLACE = [10, 6, 3] as const;
+
+/**
+ * The margin bonus: what a ship gets for finishing close behind, on top of its
+ * place. A third on the winner's tail is worth about twice a beaten one, which
+ * is the reason to keep racing after the win has gone.
+ */
+export const MARGIN_POINTS = 3;
+/** Ticks behind the winner at which the bonus has run out entirely. */
+export const MARGIN_WINDOW = 300;
+
+/**
+ * Interest on credits held through a heat rather than spent, and its cap.
+ * Small on purpose: enough that banking for a level 3 part is a real choice,
+ * not so much that hoarding beats racing.
+ */
+export const INTEREST_RATE = 0.08;
+export const INTEREST_CAP = 22;
+
+/**
+ * The pacing lap: a fee for turning up, plus credits for every tick under the
+ * track's par, capped. Paid against the benchmark rather than against anyone.
+ */
+export const PACING_BASE = 35;
+export const PACING_PER_TICK = 0.14;
+export const PACING_CAP = 55;
+
 /** A bend counts as demanding if its holding speed is under this share of top speed. */
 export const BOT_TIGHT_HOLD = 0.95;
 
@@ -169,6 +214,9 @@ export const BOT_HANDLING_TILT = 2;
 
 /** How far a bot's build wanders off what the track suggests. */
 export const BOT_STAT_SPREAD = 0.22;
+
+/** How often a bot banks its winnings rather than deepening a part with them. */
+export const BOT_THRIFT = 0.3;
 
 // The route.
 

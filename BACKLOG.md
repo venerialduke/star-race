@@ -477,15 +477,68 @@ and dear to a quick one, and its one real prize needs the best system to see.
   nothing and costs 7–11% in length. Every wide line on that track is a safety
   option, and a one-lap clock cannot see safety.
 
-## S5 — the season
+## S5 — the season — **done**
 
-**S5 is done when:** a run is several heats with a cut at the end of a phase,
+**S5 was done when:** a run is several heats with a cut at the end of a phase,
 and the standings are worth protecting.
 
-- **S5.1 The purse and points.** Finish order, and the margin bonus.
-- **S5.2 Credits, interest and the shop between heats.**
-- **S5.3 Phases, groups and the cut.**
-- **S5.4 The pacing lap**, paid against par rather than against anyone.
+- **S5.1 The purse and points.** Finish order, and the margin bonus. — done
+- **S5.2 Credits, interest and the shop between heats.** — done
+- **S5.3 Phases, groups and the cut.** — done
+- **S5.4 The pacing lap**, paid against par rather than against anyone. — done
+
+Nine racers, three phases of three heats, a group of three cut at the end of
+each — so the last phase is one group racing each other for the season. Every
+heat the field is drawn into groups and every group races; the player's is drawn
+first and watched, the rest are the same simulation resolved with nobody
+watching. What carries is the garage. `DESIGN.md` has the rules.
+
+**A season is a value the seed decides.** `newSeason`, `nextUp`, `settleHeat`,
+`applyCut` — nothing mutates, and `nextUp` says what is due rather than doing
+it, so the caller either watches a heat or resolves it. That seam is what let
+the difficulty be measured at all: the same functions run the season headless.
+
+**How hard it is.** A player who shops exactly as well as a rival and paces 6%
+over par, 24 seeds:
+
+| | |
+| --- | --- |
+| survived both cuts | **13 / 24** |
+| won the season | **5 / 24** |
+
+Winning one season in five off bot-quality shopping is about right for a floor —
+it leaves the player room to be better without needing to be good.
+
+**But the two cuts are not the same cut.** Every elimination in those 24 seeds
+happened at the *second* phase; the player survived the first in **24 of 24**,
+going into it ranked between 1st and 6th of 9 and never once in the bottom
+three. So the first cut is theatre and the second is the whole filter. The
+likely reason is the pacing lap: it pays the player credits no rival gets, one
+heat before anyone has won anything, and the table breaks ties on credits. That
+is a thing to measure against a real player before touching — a floor that never
+eliminates on the opening phase may be the right feel for the opening phase —
+but it should not be mistaken for a cut that bites.
+
+**Two findings worth keeping.**
+
+- **Slots stop being the constraint, and then stats do.** A slot per finish puts
+  the player on 13 by the last heat where they started on the opening budget's
+  worth, and in **24 of 24 seeds handling finished pinned at `STAT_MAX`**. Late
+  in a season there is nothing left to decide with the credits: the shop is
+  answering a question that has already been answered. Either the cap has to
+  move, the slots have to stop coming, or — better — the late-season purse needs
+  something to buy that is not a stat. S6's weapons and fixtures are the obvious
+  candidate; it is worth re-measuring this after them rather than tuning now.
+- **The margin bonus is doing its job and is cheap to overpay.** A third on the
+  winner's tail scores about twice a beaten third. At `MARGIN_POINTS` 3 against a
+  10/6/3 table that is worth roughly half a place, which is enough to keep a lost
+  heat live without letting a good loss beat a bad win. Raising it past 4 would
+  make third-and-close outscore second-and-distant, which is a different game.
+
+**One rule the browser found.** Being cut ends the run. The season is still a
+well-formed value afterwards and the rivals could go on racing each other, but
+the player was being offered heats they were not in. `nextUp` answers `over` for
+a cut player now, and `playerIsOut` is what the UI reads.
 
 ## S6 — interaction
 

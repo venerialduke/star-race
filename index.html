@@ -86,6 +86,86 @@
         max-height: none;
         overflow-y: visible;
       }
+      /* The season: the table you read to know whether you survive the cut. */
+      .season h3 {
+        margin: 2px 0 4px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .racers {
+        display: grid;
+        gap: 2px;
+      }
+      .racer {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 34px 52px;
+        gap: 6px;
+        align-items: center;
+        padding: 3px 7px;
+        border-radius: 5px;
+        font-size: 11.5px;
+        color: var(--soft);
+      }
+      .racer.head {
+        font-size: 9px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        opacity: 0.6;
+        padding-bottom: 0;
+      }
+      .racer.me {
+        background: #0e1730;
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .racer.gone {
+        opacity: 0.35;
+        text-decoration: line-through;
+      }
+      .racer .r-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .racer .r-name em {
+        font-style: normal;
+        font-size: 9px;
+        color: var(--gold);
+        letter-spacing: 0.04em;
+      }
+      .racer .r-pts,
+      .racer .r-cred {
+        text-align: right;
+        font:
+          600 11px ui-monospace,
+          monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      .racer.me .r-pts {
+        color: var(--gold);
+      }
+      /* Where the cut falls. One more place is a thing you can see. */
+      .cutline {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 3px 0;
+        font-size: 8.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--warn);
+        opacity: 0.8;
+      }
+      .cutline::before,
+      .cutline::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--warn);
+        opacity: 0.45;
+      }
       /* The route: one row per sector, one button per way through it. */
       .routes-head {
         margin: 12px 0 2px;

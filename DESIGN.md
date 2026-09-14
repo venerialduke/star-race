@@ -96,16 +96,17 @@ refitting it does not launder the damage off it.
 
 ## What is built
 
-**S1 — the swing**, **S2 — the heat**, **S3 — the ship and the shop**, and
-**S4 — the route**.
+**S1 — the swing**, **S2 — the heat**, **S3 — the ship and the shop**,
+**S4 — the route**, and **S5 — the season**.
 Three ships fly one of three authored loops for two laps, with a pit stop
 between them. The player fits components into slots in the garage between laps,
-picks the track and the corner plan, and races; the rivals are bots that read
-the track and choose for themselves. The stats are no longer sliders — they are
-what a build adds up to. There is a starting budget but no income yet. Each lap
-is resolved before it is played back, on its own screen. Sectors offer more than
-one way through them, and what the player may plan is what their navigation can
-read.
+sets the corner plan and the route, and races; the rivals are bots that read the
+track and choose for themselves. The stats are no longer sliders — they are what
+a build adds up to. Each lap is resolved before it is played back, on its own
+screen. Sectors offer more than one way through them, and what the player may
+plan is what their navigation can read. A heat is no longer the whole game: nine
+racers run a season of phases, a cut at the end of each, and what a heat pays is
+what you take into the next one.
 
 ## The track
 
@@ -448,6 +449,12 @@ hidden, because knowing that a better system would buy you something is the
 reason to buy one. Once the heat starts the route is sealed, and the panel says
 so — unless you fitted the system that can re-plan at a pit stop.
 
+**The standings** sit at the top of the garage, because between heats there are
+only two questions worth a glance: am I going to survive the cut, and who am I
+racing next. So the panel is points, the cut line drawn across the table where
+it falls, and the ships in the next group marked. The Go button says what the
+season is waiting for — a pacing lap, a heat, or a new season.
+
 You can swap between them whenever you like, and the tracking bar stays on both
 so the lap can be watched while the shopping is done. What you cannot do is
 reach the ship on screen: the garage says so plainly while a segment is
@@ -499,6 +506,55 @@ Nothing about a bot is privileged. It decides from the track and its own state,
 before the lap, and hands the result in as an input — which is exactly the seam
 a networked player's choices will arrive through.
 
+## The season
+
+A heat used to be the whole game. Nothing it produced had to be worth anything
+afterwards, so nothing about finishing second rather than third mattered. The
+season is what makes it matter.
+
+`ROSTER` racers — the player and eight rivals — run `PHASES` phases of
+`HEATS_PER_PHASE` heats each. Every heat the field is drawn into groups of
+`GROUP_SIZE` and each group races its own heat on the same track; the player's
+group is drawn first, because that is the one anybody watches. The other groups
+are the same simulation with nobody watching: same orders, same seed, resolved
+rather than played.
+
+**What carries between heats is the garage**: credits, slots, and the parts in
+it. That is the whole of the thing — a season is a garage growing, or not.
+
+**The pacing lap** opens the season. The player flies the first track alone
+against its `par`, and is paid `PACING_BASE` for turning up plus
+`PACING_PER_TICK` for every tick under par, to `PACING_CAP`. It is the first
+sight of a track and the first credits of a season, and nobody can lose it.
+
+**What a heat pays** is a purse by place (`PURSE_BY_PLACE`), points by place
+(`POINTS_BY_PLACE`), and a slot for finishing. On top of the points sits a
+**margin bonus**: up to `MARGIN_POINTS` more, falling to nothing across
+`MARGIN_WINDOW` ticks of gap to the winner. So a third that finished on the
+winner's tail is worth about twice one that was beaten out of sight, which is
+the reason to keep racing once the win has gone.
+
+**Credits held earn interest** — `INTEREST_RATE` of the balance, capped at
+`INTEREST_CAP` — so not spending is a move and not merely a failure to shop.
+The cap is what stops it being the only move.
+
+**The cut** comes at the end of every phase: the bottom `GROUP_SIZE` of the
+table are out. The roster is a multiple of the group size and stays one, so the
+last phase is a single group racing each other for the season. The standings
+panel draws the cut line where it actually falls, so "one more place" is
+something the player can see rather than a number they hold in their head.
+
+Ties are broken by credits, then by name — never by anything unseeded.
+
+**Being cut ends the run.** The season would carry on perfectly well without
+the player; the rivals would go on racing each other. But there is nothing left
+to decide, and a race the player is not in is not a thing to offer them.
+
+Rivals shop between heats the way the player does, out of the same purse and
+against the same shelf, holding back `BOT_THRIFT` of what they have. Nothing
+about a rival is privileged: it decides from the track and its own garage, and
+hands the result in as an input.
+
 ## Tuning
 
 Every balance number lives in `src/sim/tuning.ts`, with a one-line comment
@@ -509,8 +565,8 @@ midpoint).
 
 ## Later
 
-Everything else in `design/catalogue/framework.md`: pools and the purse, points
-and the cut, weapons and fixtures, collection and the economy it needs.
+Everything else in `design/catalogue/framework.md`: weapons and fixtures,
+collection and the economy it needs, and everything the ships do to each other.
 `BACKLOG.md` says the order.
 
 Three directions are recorded rather than built, because each says something

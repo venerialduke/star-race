@@ -8,12 +8,13 @@
 import type { Entrant, Orders } from './field';
 import type { CornerPlan } from './race';
 import { makeRng, seedFrom } from './rng';
-import { buy, fit, newGarage, upgrade, type Garage } from './garage';
+import { buy, fit, newGarage, slotsFree, upgrade, type Garage } from './garage';
 import { resolveBuild } from './ship';
 import { holdingSpeed, legalRoutes, routeOf, type Route, type Track } from './track';
 import {
   BOT_HANDLING_TILT,
   BOT_ROUTE_NERVE,
+  BOT_THRIFT,
   BOT_STAT_SPREAD,
   BOT_TIGHT_HOLD,
   SPEED_PER_THRUST,
@@ -21,7 +22,20 @@ import {
   STAT_MIN,
 } from './tuning';
 
-const NAMES = ['Vex Ardo', 'Sable Rook', 'Juno Kest', 'Ilsa Crane', 'Mott Rell'];
+// One each, and enough of them: a season fields eight rivals, and two ships
+// racing under the same name is a table nobody can read.
+const NAMES = [
+  'Vex Ardo',
+  'Sable Rook',
+  'Juno Kest',
+  'Ilsa Crane',
+  'Mott Rell',
+  'Cass Delune',
+  'Orrin Vale',
+  'Thessa Kyre',
+  'Piet Danser',
+  'Nome Ferrik',
+];
 
 /** What a bot fills its spare slots with, once the engines are chosen. */
 const SUPPORT = [
@@ -59,38 +73,81 @@ export function tightness(track: Track): number {
  * build before it knows how the bends will fall, exactly as the player must.
  */
 export function makeBot(track: Track, seed: number, index: number): Entrant {
-  const rng = makeRng(seed).fork(index * 5381);
+  return entrantOf(
+    `bot-${index}`,
+    NAMES[index % NAMES.length] as string,
+    botShop(newGarage(), track, seed, index, 0),
+  );
+}
+
+/** A racer as the field needs it, from whatever its garage currently holds. */
+export function entrantOf(id: string, name: string, garage: Garage): Entrant {
+  return {
+    id,
+    name,
+    stats: resolveBuild(garage.fitted),
+    build: garage.fitted,
+    isPlayer: false,
+  };
+}
+
+/** The name a rival races under, by its place in the roster. */
+export function botName(index: number): string {
+  return NAMES[index % NAMES.length] as string;
+}
+
+/**
+ * One shopping trip. A bot spends what it has on what the track asks for —
+ * Handling where the bends are tight, Thrust where they are not — then fills
+ * what is left with a shield, a crew or a navigation system on a seeded draw.
+ *
+ * Between heats it comes back with whatever it won and does this again, which
+ * is the same loop the player is in: a rival that never spends its winnings is
+ * not a rival for long.
+ */
+export function botShop(
+  garage: Garage,
+  track: Track,
+  seed: number,
+  index: number,
+  round: number,
+): Garage {
+  const rng = makeRng(seed).fork(index * 5381 + round * 7717);
   const tilt = tightness(track) * BOT_HANDLING_TILT;
   const wobble = (): number => (rng.unitInterval() - 0.5) * 2 * BOT_STAT_SPREAD;
 
   const lean = clamp(tilt + wobble());
   const engine =
     lean > 0.58 ? 'handling-engine' : lean < 0.34 ? 'speed-engine' : 'balanced-engine';
-  const second = rng.unitInterval() < 0.5 ? engine : 'balanced-engine';
   const pick = (): string =>
     SUPPORT[Math.floor(rng.unitInterval() * SUPPORT.length)] as string;
-  const support = pick();
-  const spare = pick();
 
-  let garage: Garage = newGarage();
-  for (const id of [engine, second, support, spare]) {
-    const before = garage;
-    garage = buy(garage, id);
-    if (garage !== before) garage = fit(garage, garage.shelf.length - 1);
-  }
-  // Whatever is left goes into deepening one of the parts it already has.
-  if (garage.fitted.length > 0) {
-    const target = Math.floor(rng.unitInterval() * garage.fitted.length);
-    garage = upgrade(garage, target);
+  let next = garage;
+  // Engines first, then support, then whatever it fancies. Each buy is tried
+  // and simply does not happen if the credits or the slots are not there.
+  const wanted = [
+    engine,
+    rng.unitInterval() < 0.5 ? engine : 'balanced-engine',
+    pick(),
+    pick(),
+    pick(),
+  ];
+  for (const id of wanted) {
+    if (slotsFree(next) <= 0) break;
+    const before = next;
+    next = buy(next, id);
+    if (next !== before) next = fit(next, next.shelf.length - 1);
   }
 
-  return {
-    id: `bot-${index}`,
-    name: NAMES[index % NAMES.length] as string,
-    stats: resolveBuild(garage.fitted),
-    build: garage.fitted,
-    isPlayer: false,
-  };
+  // Whatever is left goes into deepening something it already has — and
+  // sometimes into nothing at all, because credits held earn interest and a
+  // rival that always spends to zero never learns that.
+  const thrifty = rng.unitInterval() < BOT_THRIFT;
+  if (!thrifty && next.fitted.length > 0) {
+    const target = Math.floor(rng.unitInterval() * next.fitted.length);
+    next = upgrade(next, target);
+  }
+  return next;
 }
 
 /**

@@ -140,6 +140,40 @@ pass had handling builds losing everywhere, because the base ship was slow
 enough that spending on Handling left nothing to go with; `BASE_THRUST` went
 from 0.70 to 0.78 and the handling engine's thrust penalty halved.
 
+## S3.5 — shields and crew, and the systems that make them real — **done**
+
+Asked for directly: the shop needed more than engines. Both categories needed a
+system first, and both systems are in the framework already.
+
+- **Damage.** The ground off the path hurts, once per excursion. Shields soak
+  it, hull is underneath, and a ship with no hull is out of the heat.
+- **Gravity.** Cornering load and engine effort wear the crew; endurance
+  resists; a spent crew loses a third of the ship's handling.
+
+Eight new components: general shields at three levels, and four crews —
+engineers, androids, scientists, nanites. Bots now **shop in the same garage**,
+with the same budget and slots, so a rival is a build rather than a pair of
+numbers.
+
+**What the numbers say.** Over 24 seeded heats per cell:
+
+- **Crew pay on the Cinder Coil and nowhere else.** There a crew is worth about
+  four seconds a lap — no crew at all leaves you spent by mid-race, and Charge
+  demands a better crew than Carry does. On the Meridian Run the bends are too
+  open to tire anyone.
+- **A low-handling build on the tight track is now genuinely dangerous**: five
+  or six heats in twenty-four end with the hull gone. On the open tracks it is
+  nearly free.
+
+**Two things that did not work, left honest rather than tuned away:**
+
+- **Shields never win a heat.** They cost a slot, and a slot is worth more as
+  an engine, because being lost is rare and the hull resets every heat. Shields
+  should start paying when hull becomes **run health** across a whole run —
+  which is what S5 is for, and what the framework always said hull was.
+- **Lift still wins nothing.** Damage was the obvious candidate to rescue it
+  and did not: Lift survives, but it is so slow it loses on time anyway.
+
 ## S4 — the route
 
 **S4 is done when:** a sector offers more than one way through it, the player's

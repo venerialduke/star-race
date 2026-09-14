@@ -78,6 +78,57 @@ export const LIFT_MARGIN = 0.97;
 export const BASE_THRUST = 0.78;
 export const BASE_HANDLING = 0.7;
 
+/** Hull every ship has. Components do not add to it yet. */
+export const BASE_HULL = 100;
+
+/** Shields with nothing fitted: none. A bare ship takes hazards on the hull. */
+export const BASE_SHIELDS = 0;
+
+/**
+ * Endurance with no crew aboard. Low, because nav is flying the ship alone —
+ * which the framework says it does badly.
+ */
+export const BASE_ENDURANCE = 0.35;
+
+// Hazards. The ground off the golden path is not just slower; the framework
+// says it holds things that hurt.
+
+/** Damage taken on being thrown off the path, at top speed and a full swing. */
+export const HAZARD_DAMAGE = 18;
+
+/** The swing, in track units, that counts as being thrown all the way out. */
+export const HAZARD_FULL_EXPOSURE = 26;
+
+/**
+ * An excursion counts as over once the ship is back inside this share of the
+ * path's half width — so drifting across the line does not bill it twice.
+ */
+export const EXCURSION_CLEAR = 0.6;
+
+/** Shields regenerate this much per tick while the ship is on the path. */
+export const SHIELD_REGEN = 0.035;
+
+// Gravity, and what it does to a crew.
+
+/** Gravity accrued per unit of acceleration the engine applies. */
+export const GRAVITY_PER_ACCEL = 4;
+
+/**
+ * Gravity accrued per unit of cornering load — speed squared over the bend's
+ * radius. This is the part a crew really feels, and it is why the tight track
+ * empties them and the open one does not.
+ */
+export const GRAVITY_PER_CORNER = 0.95;
+
+/** Charging through a bend loads the crew harder than a straight does. */
+export const GRAVITY_CHARGE_MULTIPLIER = 2.4;
+
+/** Gravity shed per tick when the ship is not accelerating. */
+export const GRAVITY_RECOVERY = 0.0016;
+
+/** How much of its handling a fully spent crew loses. */
+export const WORN_HANDLING_LOSS = 0.32;
+
 // The garage.
 
 /** Credits a player opens a season with. There is no other income yet. */

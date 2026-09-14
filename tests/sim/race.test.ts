@@ -4,12 +4,20 @@
 
 import { describe, expect, it } from 'vitest';
 import { seedFrom } from '../../src/sim/rng';
+import { bareShip } from '../../src/sim/ship';
 import { simulate, type RaceConfig } from '../../src/sim/race';
-import { KESTREL_LOOP, TRACKS, holdingSpeed, type Track } from '../../src/sim/track';
+import {
+  CINDER_COIL,
+  KESTREL_LOOP,
+  MERIDIAN_RUN,
+  TRACKS,
+  holdingSpeed,
+  type Track,
+} from '../../src/sim/track';
 
 const base = (overrides: Partial<RaceConfig> = {}): RaceConfig => ({
   track: KESTREL_LOOP,
-  stats: { thrust: 1, handling: 1 },
+  stats: bareShip(1, 1),
   plan: 'carry',
   seed: seedFrom('kestrel'),
   ...overrides,
@@ -75,7 +83,7 @@ describe('the race', () => {
   it('runs a different race from a different seed', () => {
     // The seed only changes the race through the swing, so this needs a build
     // and a plan that actually swing: a slow enough ship has no corner to lose.
-    const fast = { stats: { thrust: 1.4, handling: 0.7 }, plan: 'charge' } as const;
+    const fast = { stats: bareShip(1.4, 0.7), plan: 'charge' } as const;
     const a = simulate(base({ ...fast, seed: seedFrom('kestrel') }), 2000);
     const b = simulate(base({ ...fast, seed: seedFrom('other') }), 2000);
     expect(a.distance).not.toBe(b.distance);
@@ -89,8 +97,8 @@ describe('the race', () => {
   });
 
   it('swings wider the more excess speed it carries', () => {
-    const steady = simulate(base({ stats: { thrust: 0.6, handling: 1.3 } }), 2500);
-    const reckless = simulate(base({ stats: { thrust: 1.6, handling: 0.6 } }), 2500);
+    const steady = simulate(base({ stats: bareShip(0.6, 1.3) }), 2500);
+    const reckless = simulate(base({ stats: bareShip(1.6, 0.6) }), 2500);
     const worst = (s: typeof steady): number =>
       Math.max(0, ...s.swings.map((e) => e.swing));
     expect(worst(reckless)).toBeGreaterThan(worst(steady));
@@ -98,5 +106,53 @@ describe('the race', () => {
 
   it('gives a bigger bend a higher holding speed', () => {
     expect(holdingSpeed(70, 1)).toBeGreaterThan(holdingSpeed(42, 1));
+  });
+});
+
+describe('hazards, shields and the crew', () => {
+  const shipWith = (over: Partial<ReturnType<typeof bareShip>>): RaceConfig['stats'] => ({
+    ...bareShip(1.3, 0.62),
+    ...over,
+  });
+
+  it('hurts a ship that is thrown off the path, and not one that stays on it', () => {
+    const wild = simulate(base({ stats: shipWith({}), plan: 'charge' }), 3000);
+    const safe = simulate(base({ stats: shipWith({}), plan: 'lift' }), 3000);
+    expect(wild.hull).toBeLessThan(100);
+    expect(safe.hull).toBe(100);
+  });
+
+  it('bills an excursion once, not once per tick spent outside', () => {
+    // The ship crosses the edge a handful of times a lap. If damage were
+    // charged by the tick, a low-handling build would be dead long before this.
+    const state = simulate(base({ stats: shipWith({}), plan: 'charge' }), 3000);
+    expect(state.hull).toBeGreaterThan(20);
+  });
+
+  it('spends shields before hull, and regrows them on the path', () => {
+    const bare = simulate(base({ stats: shipWith({}), plan: 'charge' }), 3000);
+    const shielded = simulate(base({ stats: shipWith({ shields: 60 }), plan: 'charge' }), 3000);
+    expect(shielded.hull).toBeGreaterThan(bare.hull);
+  });
+
+  it('wears a crew on a track of tight bends, and a better crew resists it', () => {
+    const weak = simulate(
+      { track: CINDER_COIL, stats: shipWith({ endurance: 0.35 }), plan: 'carry', seed: seedFrom('c') },
+      3000,
+    );
+    const strong = simulate(
+      { track: CINDER_COIL, stats: shipWith({ endurance: 0.95 }), plan: 'carry', seed: seedFrom('c') },
+      3000,
+    );
+    expect(weak.worn).toBeGreaterThan(strong.worn);
+    expect(weak.distance).toBeLessThan(strong.distance);
+  });
+
+  it('leaves an open track easy on the crew', () => {
+    const state = simulate(
+      { track: MERIDIAN_RUN, stats: shipWith({ endurance: 0.35 }), plan: 'carry', seed: seedFrom('m') },
+      3000,
+    );
+    expect(state.worn).toBeLessThan(0.2);
   });
 });

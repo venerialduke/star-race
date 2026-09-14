@@ -14,7 +14,7 @@ import type { ShipStats } from './race';
 import {
   BASE_ENDURANCE,
   BASE_HANDLING,
-  BASE_HULL,
+  BASE_REPAIR,
   BASE_SHIELDS,
   BASE_THRUST,
   STAT_MAX,
@@ -31,6 +31,8 @@ export interface Level {
   readonly endurance?: number;
   /** A multiplier on shield regeneration, not an addition. */
   readonly shieldRegen?: number;
+  /** How fast this crew patches damage back up mid-race. */
+  readonly repair?: number;
   /** A share off the price of upgrades, or of buying a slot. */
   readonly upgradeDiscount?: number;
   readonly slotDiscount?: number;
@@ -167,9 +169,9 @@ export const COMPONENTS: readonly Component[] = [
     category: 'crew',
     arrows: 'endurance · Shields recharge↑',
     levels: [
-      { endurance: 0.55, shieldRegen: 1.8, slots: 1, cost: 28, note: 'Regular endurance; shields recharge faster.' },
-      { endurance: 0.7, shieldRegen: 2.3, slots: 1, cost: 24, note: 'Steadier, and faster again.' },
-      { endurance: 0.85, shieldRegen: 3, slots: 1, cost: 36, note: 'Steadier still.' },
+      { endurance: 0.55, shieldRegen: 1.8, repair: 2.2, slots: 1, cost: 28, note: 'Regular endurance; shields recharge faster, and they patch damage well.' },
+      { endurance: 0.7, shieldRegen: 2.3, repair: 2.8, slots: 1, cost: 24, note: 'Steadier, and faster again.' },
+      { endurance: 0.85, shieldRegen: 3, repair: 3.4, slots: 1, cost: 36, note: 'Steadier still.' },
     ],
     waiting: 'the ability half of "shields and abilities recharge faster"',
   },
@@ -179,9 +181,9 @@ export const COMPONENTS: readonly Component[] = [
     category: 'crew',
     arrows: 'endurance↑↑↑',
     levels: [
-      { endurance: 0.95, slots: 1, cost: 32, note: 'Very strong endurance. Gravity barely touches them.' },
-      { endurance: 1.15, slots: 1, cost: 26, note: 'Stronger again.' },
-      { endurance: 1.4, slots: 1, cost: 40, note: 'Unbothered.' },
+      { endurance: 0.95, repair: 1, slots: 1, cost: 32, note: 'Very strong endurance. Gravity barely touches them — but they are no mechanics.' },
+      { endurance: 1.15, repair: 1.2, slots: 1, cost: 26, note: 'Stronger again.' },
+      { endurance: 1.4, repair: 1.4, slots: 1, cost: 40, note: 'Unbothered.' },
     ],
     waiting: 'their better navigation — navigation needs splits',
   },
@@ -191,9 +193,9 @@ export const COMPONENTS: readonly Component[] = [
     category: 'crew',
     arrows: 'endurance↓ · upgrades cost less',
     levels: [
-      { endurance: 0.4, upgradeDiscount: 0.25, slots: 1, cost: 24, note: 'Weak endurance; upgrades cost a quarter less.' },
-      { endurance: 0.5, upgradeDiscount: 0.35, slots: 1, cost: 22, note: 'A little hardier, and cheaper still.' },
-      { endurance: 0.6, upgradeDiscount: 0.45, slots: 1, cost: 34, note: 'Nearly half off every upgrade.' },
+      { endurance: 0.4, repair: 1.3, upgradeDiscount: 0.25, slots: 1, cost: 24, note: 'Weak endurance; upgrades cost a quarter less.' },
+      { endurance: 0.5, repair: 1.5, upgradeDiscount: 0.35, slots: 1, cost: 22, note: 'A little hardier, and cheaper still.' },
+      { endurance: 0.6, repair: 1.7, upgradeDiscount: 0.45, slots: 1, cost: 34, note: 'Nearly half off every upgrade.' },
     ],
   },
   {
@@ -202,9 +204,9 @@ export const COMPONENTS: readonly Component[] = [
     category: 'crew',
     arrows: 'endurance↑ · slots cost less',
     levels: [
-      { endurance: 0.75, slotDiscount: 0.25, slots: 1, cost: 30, note: 'Strong endurance; slots cost a quarter less.' },
-      { endurance: 0.85, slotDiscount: 0.35, slots: 1, cost: 26, note: 'Hardier, and cheaper expansion.' },
-      { endurance: 1, slotDiscount: 0.5, slots: 1, cost: 38, note: 'Slots at half price.' },
+      { endurance: 0.75, repair: 4, slotDiscount: 0.25, slots: 1, cost: 30, note: 'Strong endurance, slots cost less — and they rebuild damage as you fly.' },
+      { endurance: 0.85, repair: 5, slotDiscount: 0.35, slots: 1, cost: 26, note: 'Hardier, cheaper expansion, faster rebuilding.' },
+      { endurance: 1, repair: 6.5, slotDiscount: 0.5, slots: 1, cost: 38, note: 'Slots at half price, and damage barely sticks.' },
     ],
   },
 ];
@@ -245,46 +247,75 @@ export function slotsOf(fitted: Fitted): number {
  * A build, added up. Components stack: two engines is a build, not a mistake,
  * and an empty ship still flies — slowly.
  */
-export function resolveBuild(fitted: readonly Fitted[]): ShipStats {
-  let thrust = BASE_THRUST;
-  let handling = BASE_HANDLING;
+export function resolveBuild(
+  fitted: readonly Fitted[],
+  condition: Condition = { frame: 1, parts: [] },
+): ShipStats {
+  const frame = condition.frame;
+  let thrust = BASE_THRUST * frame;
+  let handling = BASE_HANDLING * frame;
   let shields = BASE_SHIELDS;
   let endurance = BASE_ENDURANCE;
   let shieldRegen = 1;
-  for (const item of fitted) {
+  let repair = BASE_REPAIR;
+  fitted.forEach((item, i) => {
     const level = levelOf(item);
-    if (level === undefined) continue;
-    thrust += level.thrust ?? 0;
-    handling += level.handling ?? 0;
-    shields += level.shields ?? 0;
-    // Crews do not stack their endurance: the ship is flown by the best of them.
-    endurance = Math.max(endurance, level.endurance ?? 0);
-    shieldRegen = Math.max(shieldRegen, level.shieldRegen ?? 1);
-  }
+    if (level === undefined) return;
+    // A damaged component gives less of whatever it gives.
+    const worth = condition.parts[i] ?? 1;
+    thrust += (level.thrust ?? 0) * worth;
+    handling += (level.handling ?? 0) * worth;
+    shields += (level.shields ?? 0) * worth;
+    // Crews do not stack: the ship is flown by the best of them, and a hurt
+    // crew is worth less than a whole one.
+    endurance = Math.max(endurance, (level.endurance ?? 0) * worth);
+    shieldRegen = Math.max(shieldRegen, (level.shieldRegen ?? 1) * worth);
+    repair = Math.max(repair, (level.repair ?? 0) * worth);
+  });
   const clamp = (v: number): number => Math.min(STAT_MAX, Math.max(STAT_MIN, v));
   return {
     thrust: clamp(thrust),
     handling: clamp(handling),
-    shields,
-    hull: BASE_HULL,
+    shields: Math.max(0, shields),
     endurance,
     shieldRegen,
+    repair,
   };
 }
 
 /**
  * A bare ship with the two stats named and nothing else fitted — no shields,
- * no crew. Bots and tests use it to talk about a build without shopping.
+ * no crew. Tests use it to talk about a build without shopping.
  */
 export function bareShip(thrust: number, handling: number): ShipStats {
   return {
     thrust,
     handling,
     shields: BASE_SHIELDS,
-    hull: BASE_HULL,
     endurance: BASE_ENDURANCE,
     shieldRegen: 1,
+    repair: BASE_REPAIR,
   };
+}
+
+/**
+ * How intact the ship is. The frame carries the base ship; each part carries
+ * its own. Damage lands on these, not on a single pool, so what a hit costs
+ * you depends on what it hit — and everything is repaired between races.
+ */
+export interface Condition {
+  readonly frame: number;
+  readonly parts: readonly number[];
+}
+
+export function fullCondition(fitted: readonly Fitted[]): Condition {
+  return { frame: 1, parts: fitted.map(() => 1) };
+}
+
+/** The average of everything, for a readout that has to be one number. */
+export function integrity(condition: Condition): number {
+  const all = [condition.frame, ...condition.parts];
+  return all.reduce((sum, c) => sum + c, 0) / all.length;
 }
 
 /** The best discount fitted, as a share off. Discounts do not stack either. */

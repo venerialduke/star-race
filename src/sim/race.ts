@@ -6,6 +6,13 @@
 
 import { makeRng, type Rng } from './rng';
 import {
+  bareShip,
+  fullCondition,
+  resolveBuild,
+  type Condition,
+  type Fitted,
+} from './ship';
+import {
   holdingSpeed,
   nextBend,
   sampleAt,
@@ -15,8 +22,11 @@ import {
 } from './track';
 import {
   ACCEL_PER_THRUST,
-  BASE_HULL,
+  BASE_HANDLING,
+  BASE_THRUST,
   BRAKE_PER_TICK,
+  CONDITION_PER_DAMAGE,
+  DAMAGE_PER_EXTRA_PART,
   CARRY_SCRUB,
   CHARGE_EXCESS_BONUS,
   LIFT_MARGIN,
@@ -28,7 +38,10 @@ import {
   HAZARD_DAMAGE,
   HAZARD_FULL_EXPOSURE,
   EXCURSION_CLEAR,
+  FRAME_FAILED,
+  FRAME_TOUGHNESS,
   RECOVER_FLOOR,
+  REPAIR_PER_TICK,
   RECOVER_PER_HANDLING,
   SHIELD_REGEN,
   SPEED_PER_THRUST,
@@ -51,14 +64,14 @@ export interface ShipStats {
   readonly thrust: number;
   /** The holding speed of every bend, and how fast a wide ship recovers. */
   readonly handling: number;
-  /** Damage the shields soak before the hull sees any. */
+  /** Damage the shields soak before anything on the ship is hit. */
   readonly shields: number;
-  /** How much the ship survives. Gone, and it is out of the heat. */
-  readonly hull: number;
   /** How long the crew lasts under gravity. */
   readonly endurance: number;
   /** Shield regeneration on the path, as a multiple of the base rate. */
   readonly shieldRegen: number;
+  /** How fast the crew patches damaged parts back up, mid-race. */
+  readonly repair: number;
 }
 
 /** One bend, as it happened. What the player is really watching. */
@@ -95,12 +108,17 @@ export interface RaceState {
   readonly lastLapTicks: number | undefined;
   readonly lastSectorTicks: number | undefined;
   readonly swings: readonly SwingEvent[];
-  /** What is left of the shields, and of the hull under them. */
+  /** What is left of the shields. */
   readonly shields: number;
-  readonly hull: number;
+  /** How intact the frame and each fitted part are. Damage lands here. */
+  readonly condition: Condition;
+  /** The ship's stats as they are right now, with damage counted. */
+  readonly stats: ShipStats;
+  /** What the last hit broke, for the readout. */
+  readonly lastBroken: string | undefined;
   /** Gravity the crew is carrying, 0 to 1. At 1 they are spent. */
   readonly worn: number;
-  /** Hull gone. The ship stops where it is and is placed last. */
+  /** The frame has failed. The ship stops where it is and is placed last. */
   readonly lost: boolean;
   /**
    * An excursion is in progress: the ship crossed the edge and has not yet
@@ -118,7 +136,10 @@ export interface RaceState {
 
 export interface RaceConfig {
   readonly track: Track;
+  /** The undamaged ship. What it is worth right now lives in the state. */
   readonly stats: ShipStats;
+  /** What it is built from, so damage knows what there is to break. */
+  readonly build?: readonly Fitted[];
   readonly plan: CornerPlan;
   readonly seed: number;
 }
@@ -126,7 +147,7 @@ export interface RaceConfig {
 const clampStat = (value: number): number =>
   Math.min(STAT_MAX, Math.max(STAT_MIN, value));
 
-export function startRace(stats?: ShipStats): RaceState {
+export function startRace(stats?: ShipStats, build: readonly Fitted[] = []): RaceState {
   return {
     tick: 0,
     distance: 0,
@@ -141,7 +162,9 @@ export function startRace(stats?: ShipStats): RaceState {
     lastSectorTicks: undefined,
     swings: [],
     shields: stats?.shields ?? 0,
-    hull: stats?.hull ?? BASE_HULL,
+    condition: fullCondition(build),
+    stats: stats ?? bareShip(BASE_THRUST, BASE_HANDLING),
+    lastBroken: undefined,
     worn: 0,
     lost: false,
     outside: false,
@@ -168,10 +191,20 @@ function brakingDistance(from: number, to: number): number {
 export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const { track, plan } = config;
   if (state.lost) return { ...state, tick: state.tick + 1, speed: 0 };
-  const thrust = clampStat(config.stats.thrust);
+
+  // What the ship is worth this tick: its build, less whatever is broken. A
+  // damaged engine gives less thrust, a damaged crew repairs more slowly, and
+  // a shot shield soaks less — so one bad excursion is felt for the rest of
+  // the race.
+  const stats =
+    config.build === undefined
+      ? scaleByFrame(config.stats, state.condition.frame)
+      : resolveBuild(config.build, state.condition);
+
+  const thrust = clampStat(stats.thrust);
   // A worn crew flies worse: the ship is being held by whatever is left of
   // them, and by the nav system, which the framework says drifts wide.
-  const handling = clampStat(config.stats.handling) * (1 - state.worn * WORN_HANDLING_LOSS);
+  const handling = clampStat(stats.handling) * (1 - state.worn * WORN_HANDLING_LOSS);
 
   const topSpeed = SPEED_PER_THRUST * thrust;
   const accel = ACCEL_PER_THRUST * thrust;
@@ -210,7 +243,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const load =
     (cornering * GRAVITY_PER_CORNER + pushing * GRAVITY_PER_ACCEL) *
     (onBend && plan === 'charge' ? GRAVITY_CHARGE_MULTIPLIER : 1);
-  const endurance = Math.max(0.05, config.stats.endurance);
+  const endurance = Math.max(0.05, stats.endurance);
   // Coasting is what recovers a crew, so the two never cancel each other out.
   const worn = Math.min(
     1,
@@ -283,12 +316,18 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const soaked = Math.min(state.shields, hit);
   const shields = crossed
     ? state.shields - soaked
-    : Math.min(
-        config.stats.shields,
-        state.shields + (wide ? 0 : SHIELD_REGEN * config.stats.shieldRegen),
-      );
-  const hull = state.hull - (hit - soaked);
-  const lost = hull <= 0;
+    : Math.min(stats.shields, state.shields + (wide ? 0 : SHIELD_REGEN * stats.shieldRegen));
+
+  // What the shields did not stop breaks things. A bigger hit finds more to
+  // break, and which parts it finds is a seeded draw — so the same excursion
+  // always costs you the same, and two ships never share the damage.
+  const through = hit - soaked;
+  const repaired = repair(state.condition, stats.repair);
+  const { condition, broken } =
+    through > 0
+      ? breakSomething(repaired, through, config.seed, state.tick, config.build)
+      : { condition: repaired, broken: undefined };
+  const lost = condition.frame <= FRAME_FAILED;
 
   // 4. Move. Being off the golden path costs time, not damage — and the
   // further out the ship is thrown, the more of its speed it loses.
@@ -318,13 +357,66 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     lastSectorTicks: crossedSector ? tick - state.sectorStartTick : state.lastSectorTicks,
     swings,
     shields,
-    hull: Math.max(0, hull),
+    condition,
+    stats,
+    lastBroken: broken ?? state.lastBroken,
     worn,
     lost,
     outside,
     inBend,
     swingTarget,
     trail: [...state.trail, { distance, offset }].slice(-TRAIL_LENGTH),
+  };
+}
+
+/** Everything a crew can reach, patched a little further back toward whole. */
+function repair(condition: Condition, rate: number): Condition {
+  const step = REPAIR_PER_TICK * rate;
+  if (step <= 0) return condition;
+  const mend = (c: number): number => (c <= 0 ? c : Math.min(1, c + step));
+  return { frame: mend(condition.frame), parts: condition.parts.map(mend) };
+}
+
+/**
+ * Spread a hit across the ship. One part for a glancing blow, more for a bad
+ * one — the frame counts as a target too, so a bare ship has something to
+ * lose. A part already at nothing is skipped: it cannot break further.
+ */
+function breakSomething(
+  condition: Condition,
+  damage: number,
+  seed: number,
+  tick: number,
+  build: readonly Fitted[] | undefined,
+): { condition: Condition; broken: string | undefined } {
+  const targets = 1 + Math.floor(damage / DAMAGE_PER_EXTRA_PART);
+  const each = (damage / targets) * CONDITION_PER_DAMAGE;
+  const rng = makeRng(seed).fork(tick * 31 + 7);
+
+  let frame = condition.frame;
+  const parts = [...condition.parts];
+  let broken: string | undefined;
+
+  for (let i = 0; i < targets; i += 1) {
+    const choice = Math.floor(rng.unitInterval() * (parts.length + 1)) - 1;
+    if (choice < 0 || parts.length === 0) {
+      frame = Math.max(0, frame - each * FRAME_TOUGHNESS);
+      broken ??= 'the frame';
+    } else {
+      parts[choice] = Math.max(0, (parts[choice] ?? 1) - each);
+      broken ??= build?.[choice]?.componentId;
+    }
+  }
+  return { condition: { frame, parts }, broken };
+}
+
+/** A ship with no build to break: everything it has rides on its frame. */
+function scaleByFrame(stats: ShipStats, frame: number): ShipStats {
+  return {
+    ...stats,
+    thrust: stats.thrust * frame,
+    handling: stats.handling * frame,
+    shields: stats.shields * frame,
   };
 }
 
@@ -344,7 +436,7 @@ function bendStartAt(track: Track, distance: number): number | undefined {
 
 /** Run a whole race headless — for tests, and for the balance work to come. */
 export function simulate(config: RaceConfig, ticks: number): RaceState {
-  let state = startRace();
+  let state = startRace(config.stats, config.build ?? []);
   for (let i = 0; i < ticks; i += 1) state = stepRace(state, config);
   return state;
 }

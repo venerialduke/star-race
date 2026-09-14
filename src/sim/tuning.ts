@@ -78,8 +78,8 @@ export const LIFT_MARGIN = 0.97;
 export const BASE_THRUST = 0.78;
 export const BASE_HANDLING = 0.7;
 
-/** Hull every ship has. Components do not add to it yet. */
-export const BASE_HULL = 100;
+/** How fast a ship with nobody aboard patches itself up. Barely at all. */
+export const BASE_REPAIR = 0.25;
 
 /** Shields with nothing fitted: none. A bare ship takes hazards on the hull. */
 export const BASE_SHIELDS = 0;
@@ -95,6 +95,30 @@ export const BASE_ENDURANCE = 0.35;
 
 /** Damage taken on being thrown off the path, at top speed and a full swing. */
 export const HAZARD_DAMAGE = 18;
+
+/**
+ * Condition lost per point of damage that gets past the shields. Damage is
+ * split across whatever it hits, so a big hit spread over three parts costs
+ * each of them less than a small hit on one.
+ */
+export const CONDITION_PER_DAMAGE = 0.045;
+
+/**
+ * What a hit costs the frame, against what it costs a component. The frame is
+ * the whole ship rather than one box bolted to it, so it gives way more
+ * slowly — and a ship with parts fitted spreads its damage rather than taking
+ * it all in one place.
+ */
+export const FRAME_TOUGHNESS = 0.4;
+
+/** Every this much damage in one hit finds another part to break. */
+export const DAMAGE_PER_EXTRA_PART = 6;
+
+/** Condition repaired per tick, per point of the crew's repair rating. */
+export const REPAIR_PER_TICK = 0.00035;
+
+/** Below this, a ship's frame has failed and it is out of the heat. */
+export const FRAME_FAILED = 0.001;
 
 /** The swing, in track units, that counts as being thrown all the way out. */
 export const HAZARD_FULL_EXPOSURE = 26;

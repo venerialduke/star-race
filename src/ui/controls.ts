@@ -2,8 +2,9 @@
 // screen. The bar is the thing that says who is winning: a lane per ship, its
 // place, how far round the lap it is, and what it is giving away on total time.
 
-import { standings, type FieldState } from '../sim/field';
+import { standings, type FieldState, type ShipProgress } from '../sim/field';
 import type { CornerPlan } from '../sim/race';
+import { integrity } from '../sim/ship';
 import { TRACKS, type Track } from '../sim/track';
 import { TICK_HZ } from '../sim/tuning';
 import { SHIP_COLOURS } from '../render/draw';
@@ -30,10 +31,10 @@ const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
 
 const seconds = (ticks: number): string => `${(ticks / TICK_HZ).toFixed(2)}s`;
 
-/** Hull, shields and how spent the crew is — only what is worth saying. */
-function condition(me: { state: { hull: number; shields: number; worn: number } } | undefined): string {
+/** How intact the ship is, what the shields have left, how spent the crew is. */
+function condition(me: ShipProgress | undefined): string {
   if (me === undefined) return '';
-  const parts = [`hull ${Math.round(me.state.hull)}`];
+  const parts = [`ship ${Math.round(integrity(me.state.condition) * 100)}%`];
   if (me.state.shields > 0.5) parts.push(`shields ${Math.round(me.state.shields)}`);
   if (me.state.worn > 0.25) parts.push(`crew ${Math.round((1 - me.state.worn) * 100)}%`);
   return ` · ${parts.join(' · ')}`;
@@ -185,7 +186,7 @@ export function mountControls(
         rState.textContent = `${result} +1 slot. Race again to spend it.`;
         rState.className = 'state done';
       } else if (me?.state.lost === true) {
-        rState.textContent = 'HULL GONE — out of the heat.';
+        rState.textContent = 'THE FRAME HAS GONE — out of the heat.';
         rState.className = 'state wide';
       } else if (me?.state.wide === true) {
         rState.textContent = `WIDE — off the path${condition(me)}`;

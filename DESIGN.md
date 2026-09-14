@@ -159,7 +159,7 @@ mildest. Scaling it is what prices the gamble.
 The ship hauls itself back proportionally — fast at first, fighting the last
 few units — at a rate set by Handling.
 
-## Damage, shields and the hull
+## Damage, shields and what it breaks
 
 The ground off the golden path holds things that hurt, and **you hit them on
 the way out**. Damage lands once per **excursion** — the tick the ship crosses
@@ -171,10 +171,31 @@ Charging by the tick was the first version and it was wrong: a low-handling
 build spends most of a lap outside, so it died every time. That is a ban on a
 build, not a risk.
 
-**Shields** take the hit first and regrow while the ship is on the path.
-**Hull** is underneath and never comes back inside a heat; at zero the ship is
-**lost** — it stops where it is, and the standings place it behind everyone who
-finished. Shields come back at a pit stop. The hull does not.
+**Shields** take the hit first and regrow while the ship is on the path. They
+are refilled at every pit stop.
+
+**What the shields do not stop breaks something.** There is no hull pool. A hit
+that gets through is split across one or more targets — a bigger hit finds more
+to break — chosen by a seeded draw from the ship's **frame** and every fitted
+**component**. Each target loses **condition**, and a component in poor
+condition is worth proportionally less of whatever it gives: a broken engine
+gives less thrust, a shot shield soaks less, a hurt crew repairs more slowly.
+So one bad excursion is felt for the rest of the race.
+
+The frame is the whole ship rather than one box bolted to it, so it gives way
+more slowly — `FRAME_TOUGHNESS` — and a ship with parts fitted spreads its
+damage rather than taking it all in one place. If the frame fails entirely the
+ship is **lost**: it stops where it is and the standings place it behind
+everyone who finished.
+
+**The crew repairs as you fly.** Every tick, condition is patched back toward
+whole at a rate set by the crew's `repair` — nanites are rebuilders and fix
+almost anything, androids are strong but no mechanics, and a ship with nobody
+aboard barely mends at all.
+
+**Everything is repaired between races.** Damage is a within-race system: it
+prices speed against shields and gives the crew a second job, and the garage
+puts it right before the next heat.
 
 ## Gravity and the crew
 

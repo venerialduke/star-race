@@ -76,7 +76,7 @@ export function startField(
     ships: entrants.map((entrant, i) => ({
       entrant,
       plan: plans[i] ?? 'carry',
-      state: startRace(entrant.stats),
+      state: startRace(entrant.stats, entrant.build ?? []),
       lapTicks: [],
       totalTicks: 0,
       waiting: false,
@@ -98,6 +98,7 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
     const next = stepRace(ship.state, {
       track: config.track,
       stats: ship.entrant.stats,
+      build: ship.entrant.build,
       plan: ship.plan,
       seed: seedFor(config.seed, i, state.lap),
     });
@@ -138,8 +139,13 @@ export function leavePit(state: FieldState, plans: readonly CornerPlan[]): Field
     ships: state.ships.map((ship, i) => ({
       ...ship,
       plan: plans[i] ?? ship.plan,
-      // Shields come back at the pit stop; the hull does not.
-      state: { ...startRace(ship.entrant.stats), hull: ship.state.hull, lost: ship.state.lost },
+      // Shields come back at the pit stop. Damage does not: the crew goes on
+      // patching it as the ship flies, and the rest waits for the garage.
+      state: {
+        ...startRace(ship.entrant.stats, ship.entrant.build ?? []),
+        condition: ship.state.condition,
+        lost: ship.state.lost,
+      },
       waiting: ship.state.lost,
     })),
   };

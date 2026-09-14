@@ -39,6 +39,35 @@ nothing in `src/sim` may reach for an opponent's state at a moment of its
 choosing. Every decision enters the race as an input, made before the tick that
 consumes it.
 
+A fourth follows from the third: **a segment is computed before it is watched.**
+The unit of compute is the stretch of track between two decision points. Since
+no input enters the race inside one, running it to its end up front is the same
+race, tick for tick, as stepping it live.
+
+## The segment
+
+A **segment** is the run between two decision points — today, one lap between
+pit stops. `recordSegment` steps the field to the end of it and keeps the film:
+one small frame per ship per tick, holding only what the screen needs. Wall
+clock time then moves a cursor through that film. Nothing is simulated while
+the player watches.
+
+This changes no outcome. What it changes is what the rest of the program can
+do. The result exists before the playback does, so the playback can be skipped,
+paused or replayed. And a heat could as easily be resolved somewhere else and
+watched here, which is the shape a networked race has to have.
+
+The cost is the thing the player feels: **you cannot affect a segment once it
+is running.** Every decision lands at a decision point, and the next segment is
+built from the garage as it stands at that moment. That is the honest version
+of the third rule rather than a new restriction — a mid-lap purchase was never
+going to be legal in a race resolved elsewhere.
+
+What carries across a decision point: total time, and the damage on every part
+the ship still has. A part is followed by the id it was bought under, so damage
+stays with the part, a new part arrives undamaged, and taking a part off and
+refitting it does not launder the damage off it.
+
 ## Decisions taken at the build call (2026-09-13)
 
 - **Bots now, real players later.** The initial build is the player against
@@ -53,14 +82,23 @@ consumes it.
   feel, not correctness, so they carry determinism tests and little else. The
   test suite grows when the economy does, where the answers are numbers.
 
+## Decisions taken on the architecture (2026-09-14)
+
+- **The unit of compute is the segment**, the stretch of track between two
+  decision points. A segment is resolved in full before any of it is shown.
+- **The playback and the decisions are separate screens.** You may swap between
+  them mid-segment, but nothing bought or fitted is slotted in until the next
+  decision point.
+
 ## What is built
 
 **S1 — the swing**, **S2 — the heat**, and **S3 — the ship and the shop**.
 Three ships fly one of three authored loops for two laps, with a pit stop
-between them. The player fits components into slots on a board between heats,
+between them. The player fits components into slots in the garage between laps,
 picks the track and the corner plan, and races; the rivals are bots that read
 the track and choose for themselves. The stats are no longer sliders — they are
-what a build adds up to. There is a starting budget but no income yet.
+what a build adds up to. There is a starting budget but no income yet. Each lap
+is resolved before it is played back, on its own screen.
 
 ## The track
 
@@ -238,11 +276,23 @@ The **tracking bar** is the thing that says who is winning: a lane per ship with
 its place, how far round the lap it is, and what it is giving away on total
 time. At a pit stop and at the finish it shows totals instead of gaps.
 
-Between heats the panel is **the board**: credits, slots used, what the build
-adds up to, what is fitted, what is on the shelf, and the shop. Three buttons
-for the track, three for the corner plan, and a seed box — because the same
-seed must produce the same heat, and being able to prove that by eye is the
-point.
+Because the segment is computed before it is shown, its end already knows who
+won — so the bar must not read it. While a lap is playing the bar is read off
+the film at the cursor and nothing else, and the test for that is that cutting
+the film off at the cursor changes no answer. It matters: on the Kestrel Loop a
+Charge can run third the whole lap, twenty-eight ticks down at half distance,
+and win at the line.
+
+**Two screens.** The **race** is playback: the loop, and the tracking bar over
+it. The **garage** is every decision: the track, the corner plan, the shop, the
+shelf and the build — credits, slots used, and what the build adds up to. A seed
+box sits under both, because the same seed must produce the same heat and being
+able to prove that by eye is the point.
+
+You can swap between them whenever you like, and the tracking bar stays on both
+so the lap can be watched while the shopping is done. What you cannot do is
+reach the ship on screen: the garage says so plainly while a segment is
+running, and anything bought or fitted waits for the next decision point.
 
 ## The heat
 
@@ -265,9 +315,13 @@ The player may change the corner plan at the pit stop, and the bots choose
 again too. Every decision is an input, fixed before the lap that consumes it —
 never during it.
 
-**Standings** while a lap is running are projected: a ship's total so far, plus
-this lap's ticks, plus what it would take to close the gap to the furthest ship
-at its current pace. When everyone is in, the projection is just the total.
+**Standings** are read two ways, for two different questions. Once everyone is
+in, a ship's total time is the answer and the bar shows it. While a lap is
+playing, `orderAt` reads the film at the cursor: a ship is placed by the time it
+has banked plus the ticks it has run, and its gap to the leader is how long ago
+the leader was where it is now — the interval a racing bar shows. Past the line
+the road stops comparing, since each ship sits frozen wherever its last tick
+left it, so finished ships are separated by their times instead.
 
 ## The rivals
 

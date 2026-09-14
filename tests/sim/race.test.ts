@@ -120,8 +120,8 @@ describe('hazards, shields and the crew', () => {
   it('hurts a ship that is thrown off the path, and not one that stays on it', () => {
     // Damage only has components to break, so this needs a ship with some.
     const build = [
-      { componentId: 'speed-engine', level: 1 },
-      { componentId: 'speed-engine', level: 1 },
+      { uid: 'a', componentId: 'speed-engine', level: 1 },
+      { uid: 'b', componentId: 'speed-engine', level: 1 },
     ];
     const raced = (plan: 'lift' | 'charge'): number =>
       integrity(
@@ -142,10 +142,12 @@ describe('hazards, shields and the crew', () => {
     // Compared over one lap, not a fixed number of ticks: a shielded ship
     // stays quicker, so by any tick count it has met more bends than the bare
     // one and the comparison flips for the wrong reason.
-    const overALap = (extra: readonly { componentId: string; level: number }[]): number => {
+    const overALap = (
+      extra: readonly { uid: string; componentId: string; level: number }[],
+    ): number => {
       const build = [
-        { componentId: 'speed-engine', level: 1 },
-        { componentId: 'speed-engine', level: 1 },
+        { uid: 'a', componentId: 'speed-engine', level: 1 },
+        { uid: 'b', componentId: 'speed-engine', level: 1 },
         ...extra,
       ];
       const config = base({ stats: resolveBuild(build), build, plan: 'charge' });
@@ -153,9 +155,9 @@ describe('hazards, shields and the crew', () => {
       while (state.lap < 1 && state.tick < 20000) state = stepRace(state, config);
       return integrity(state.condition);
     };
-    expect(overALap([{ componentId: 'general-shields', level: 3 }])).toBeGreaterThan(
-      overALap([{ componentId: 'crew-androids', level: 1 }]),
-    );
+    expect(
+      overALap([{ uid: 'c', componentId: 'general-shields', level: 3 }]),
+    ).toBeGreaterThan(overALap([{ uid: 'c', componentId: 'crew-androids', level: 1 }]));
   });
 
   it('wears a crew on a track of tight bends, and a better crew resists it', () => {
@@ -181,7 +183,8 @@ describe('hazards, shields and the crew', () => {
 });
 
 describe('damage that breaks things', () => {
-  const kit = ['speed-engine', 'speed-engine', 'general-shields'].map((id) => ({
+  const kit = ['speed-engine', 'speed-engine', 'general-shields'].map((id, i) => ({
+    uid: `k${i}`,
     componentId: id,
     level: 1,
   }));
@@ -219,8 +222,8 @@ describe('damage that breaks things', () => {
   });
 
   it('repairs faster with a crew that is good at it', () => {
-    const withNanites = [...kit.slice(0, 2), { componentId: 'crew-nanites', level: 1 }];
-    const withAndroids = [...kit.slice(0, 2), { componentId: 'crew-androids', level: 1 }];
+    const withNanites = [...kit.slice(0, 2), { uid: 'c', componentId: 'crew-nanites', level: 1 }];
+    const withAndroids = [...kit.slice(0, 2), { uid: 'c', componentId: 'crew-androids', level: 1 }];
     expect(integrity(heatOf(withNanites, 'charge').condition)).toBeGreaterThan(
       integrity(heatOf(withAndroids, 'charge').condition),
     );
@@ -229,7 +232,7 @@ describe('damage that breaks things', () => {
   it('spreads a bigger hit across more of the ship', () => {
     // Every part of a four-part ship should be able to take a hit, given a
     // race long enough to be thrown off the path a few times.
-    const four = [...kit, { componentId: 'crew-androids', level: 1 }];
+    const four = [...kit, { uid: 'c', componentId: 'crew-androids', level: 1 }];
     const state = heatOf(four, 'charge', 9000);
     expect(state.condition.parts.filter((c) => c < 1).length).toBeGreaterThan(1);
   });

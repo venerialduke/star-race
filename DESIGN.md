@@ -484,6 +484,20 @@ does not read them, and nothing about the race changes if they do.
 fitted. Laying none is a real choice: a placed mine is on the board before the
 start, so it tells the rest of the heat something about you.
 
+**The shop says what a part would do for *your* build**, not what it does in
+the abstract. Every row carries the difference fitting it would make — `+0.25
+thrust · −0.08 handling`, `+22 shields`, `an ability`, `25% off upgrades` — read
+by resolving the build with the part and without it, so what is shown is the
+truth for the ship you actually have rather than the numbers on the part.
+
+That matters because several parts are worth nothing to some builds and the
+numbers on them cannot say so. A crew is the best one aboard, so a second crew
+adds nothing at all; a second engine adds less than the first, because copies
+fall off; a navigation crew is worth nothing without a system to read. A part
+that would add nothing says so and is dimmed rather than hidden — knowing that a
+second crew is worthless is worth knowing. Fitted parts carry the same line,
+which is how a ship with three crews aboard shows two of them idle.
+
 **The standings** sit at the top of the garage, because between heats there are
 only two questions worth a glance: am I going to survive the cut, and who am I
 racing next. So the panel is points, the cut line drawn across the table where

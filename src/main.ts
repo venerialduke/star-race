@@ -14,10 +14,15 @@
 // on screen was settled before you opened it.
 
 import { drawField, type ShipView } from './render/draw';
-import { botPlan, makeBot } from './sim/bot';
+import { botOrders, makeBot } from './sim/bot';
 import { finishRace, newGarage, type Garage } from './sim/garage';
-import { leavePit, startField, type Entrant, type FieldConfig } from './sim/field';
-import type { CornerPlan } from './sim/race';
+import {
+  leavePit,
+  startField,
+  type Command,
+  type Entrant,
+  type FieldConfig,
+} from './sim/field';
 import { seedFrom } from './sim/rng';
 import { recordSegment, wakeAt, swingsBy, type Segment } from './sim/segment';
 import { carryCondition, resolveBuild } from './sim/ship';
@@ -56,6 +61,8 @@ const board = mountBoard(
   (next) => {
     garage = next;
     board.render(garage);
+    // Fitting a navigation system changes what the route planner can read.
+    controls.setNav(resolveBuild(garage.fitted).nav);
   },
 );
 
@@ -70,10 +77,12 @@ function playerEntrant(): Entrant {
   };
 }
 
-/** Every ship's plan for a lap, decided before the lap that consumes it. */
-function plansFor(lap: number): CornerPlan[] {
+/** Every ship's orders for a lap, decided before the lap that consumes it. */
+function ordersFor(lap: number): Command[] {
   return entrants.map((entrant) =>
-    entrant.isPlayer ? controls.settings.plan : botPlan(entrant, config.seed, lap),
+    entrant.isPlayer
+      ? { plan: controls.settings.plan, routes: controls.settings.routes }
+      : botOrders(entrant, config.track, config.seed, lap),
   );
 }
 
@@ -82,6 +91,8 @@ function startHeat(): void {
   const seed = seedFrom(controls.settings.seed);
   config = { track, laps: LAPS_PER_HEAT, seed };
   entrants = [playerEntrant(), makeBot(track, seed, 1), makeBot(track, seed, 2)];
+  controls.setTrack(track);
+  controls.setNav(resolveBuild(garage.fitted).nav);
   segment = undefined;
   cursor = 0;
   paid = false;
@@ -102,9 +113,9 @@ function nextSegment(): void {
   entrants = entrants.map((entrant) => (entrant.isPlayer ? player : entrant));
 
   if (previous === undefined) {
-    segment = recordSegment(startField(entrants, plansFor(0)), config);
+    segment = recordSegment(startField(entrants, ordersFor(0), config.track), config);
   } else {
-    const carried = leavePit(previous.end, plansFor(previous.end.lap + 1));
+    const carried = leavePit(previous.end, ordersFor(previous.end.lap + 1), config.track);
     const ships = carried.ships.map((ship) =>
       ship.entrant.isPlayer
         ? {
@@ -122,6 +133,7 @@ function nextSegment(): void {
     segment = recordSegment({ ...carried, ships }, config);
   }
   cursor = 0;
+  controls.seal();
   controls.toRace();
 }
 
@@ -154,6 +166,7 @@ function views(): readonly ShipView[] {
     const now = wake[wake.length - 1];
     return {
       distance: now?.distance ?? 0,
+      route: now?.route ?? 0,
       offset: now?.offset ?? 0,
       wide: now?.wide ?? false,
       isPlayer: entrants[ship]?.isPlayer ?? false,
@@ -189,7 +202,14 @@ function frame(now: number): void {
 
   const rect = canvas.getBoundingClientRect();
   resize(rect.width, rect.height);
-  drawField(ctx, config.track, views(), rect.width, rect.height);
+  drawField(
+    ctx,
+    config.track,
+    views(),
+    { planned: controls.settings.routes, nav: resolveBuild(garage.fitted).nav },
+    rect.width,
+    rect.height,
+  );
   controls.update({
     field: segment?.end,
     live: segment === undefined ? undefined : { segment, cursor },

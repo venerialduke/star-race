@@ -1,7 +1,17 @@
 // Canvas drawing. Reads sim state, never writes it.
 
 import type { SwingEvent } from '../sim/race';
-import { normalOf, sampleAt, type Track, type Vec } from '../sim/track';
+import {
+  canonicalOf,
+  navFor,
+  normalOf,
+  placeOn,
+  routeOf,
+  sampleAt,
+  type Route,
+  type Track,
+  type Vec,
+} from '../sim/track';
 import { PATH_HALF_WIDTH } from '../sim/tuning';
 
 /** How many recent positions the wake keeps. Structural: the length of a line. */
@@ -22,6 +32,10 @@ const DEEP = '#0b1428';
 const PATH = '#ffd166';
 const PATH_EDGE = 'rgba(255, 209, 102, 0.22)';
 const OFF_PATH = 'rgba(120, 150, 210, 0.16)';
+/** A split you can plan, and one you can only see is there. */
+const SPLIT = 'rgba(126, 224, 255, 0.55)';
+const SPLIT_HINT = 'rgba(126, 224, 255, 0.18)';
+const SPLIT_TAKEN = 'rgba(255, 209, 102, 0.85)';
 const SHIP_WIDE = '#ff7a6b';
 
 /** One colour per lane of the field. The player is always the first. */
@@ -73,19 +87,30 @@ function project(view: View, p: Vec): Vec {
  */
 export interface ShipView {
   readonly distance: number;
+  /** Which way through the current sector: the same distance is a different place. */
+  readonly route: number;
   readonly offset: number;
   readonly wide: boolean;
   readonly isPlayer: boolean;
   /** Where it has just been, oldest first. */
-  readonly wake: readonly { distance: number; offset: number }[];
+  readonly wake: readonly { distance: number; offset: number; route: number }[];
   /** The bends that threw it, for the marks left behind.  */
   readonly swings: readonly SwingEvent[];
+}
+
+/** What the player knows about the route, which decides how the splits are drawn. */
+export interface RouteView {
+  /** The way through each sector the player means to take. */
+  readonly planned: readonly number[];
+  /** How far the player's navigation reads. */
+  readonly nav: number;
 }
 
 export function drawField(
   ctx: CanvasRenderingContext2D,
   track: Track,
   ships: readonly ShipView[],
+  routes: RouteView,
   width: number,
   height: number,
 ): void {
@@ -114,6 +139,28 @@ export function drawField(
   ribbon(Math.max(1.5, PATH_HALF_WIDTH * 0.4 * view.scale), PATH);
   edge(ctx, view, track, PATH_HALF_WIDTH);
   edge(ctx, view, track, -PATH_HALF_WIDTH);
+
+  // The splits. A line you can plan is drawn; one a grade beyond your
+  // navigation is a hint that something turns off here and no more than that;
+  // anything further out you cannot see at all, which is what buying a better
+  // system is for.
+  for (const sector of track.sectors) {
+    sector.routes.forEach((route, index) => {
+      if (index === 0) return;
+      const need = navFor(route.grade);
+      if (need > routes.nav + 1) return;
+      const readable = need <= routes.nav;
+      const taken = readable && routes.planned[sector.index] === index;
+      splitLine(
+        ctx,
+        view,
+        route,
+        taken ? SPLIT_TAKEN : readable ? SPLIT : SPLIT_HINT,
+        taken ? 1.1 : 0.7,
+        readable ? [] : [6, 7],
+      );
+    });
+  }
 
   // Checkpoints.
   ctx.lineWidth = Math.max(1, view.scale);
@@ -171,7 +218,12 @@ function drawShip(
     marks.forEach((swing, i) => {
       if (swing.swing <= 0.5) return;
       const age = (i + 1) / marks.length;
-      const at = sampleAt(track, swing.bendStart);
+      // The bend is remembered in its own route's distances, so it has to be
+      // put back onto the lap before it can be drawn.
+      const sector = track.sectors[swing.sector];
+      if (sector === undefined) return;
+      const line = routeOf(sector, swing.route);
+      const at = placeOn(track, canonicalOf(sector, line, swing.bendStart), swing.route);
       const n = normalOf(at);
       const out = -at.turn * Math.min(swing.swing, PATH_HALF_WIDTH * 3);
       const mark = project(view, { x: at.pos.x + n.x * out, y: at.pos.y + n.y * out });
@@ -187,7 +239,7 @@ function drawShip(
   if (ship.wake.length > 1) {
     ctx.beginPath();
     ship.wake.slice(-TRAIL).forEach((point, i) => {
-      const at = sampleAt(track, point.distance);
+      const at = placeOn(track, point.distance, point.route);
       const n = normalOf(at);
       const p = project(view, {
         x: at.pos.x + n.x * (point.offset + lane),
@@ -202,7 +254,7 @@ function drawShip(
     ctx.stroke();
   }
 
-  const here = sampleAt(track, ship.distance);
+  const here = placeOn(track, ship.distance, ship.route);
   const n = normalOf(here);
   const p = project(view, {
     x: here.pos.x + n.x * (ship.offset + lane),
@@ -272,4 +324,28 @@ function edge(
   ctx.lineWidth = Math.max(1, view.scale * 0.6);
   ctx.strokeStyle = 'rgba(255, 209, 102, 0.45)';
   ctx.stroke();
+}
+
+/** One split, drawn as the line it is. */
+function splitLine(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  route: Route,
+  style: string,
+  weight: number,
+  dash: readonly number[],
+): void {
+  ctx.beginPath();
+  route.samples.forEach((sample, i) => {
+    const p = project(view, sample.pos);
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.setLineDash(dash as number[]);
+  ctx.lineWidth = Math.max(1.2, PATH_HALF_WIDTH * 0.3 * weight * view.scale);
+  ctx.strokeStyle = style;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.setLineDash([]);
 }

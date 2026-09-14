@@ -13,11 +13,17 @@ import {
   type Fitted,
 } from './ship';
 import {
+  alongOf,
+  bendOn,
   holdingSpeed,
-  nextBend,
-  sampleAt,
+  nextBendOn,
+  rateOf,
+  routeOf,
+  sampleOn,
   sectorAt,
-  type Bend,
+  sectorOf,
+  type Route,
+  type Sector,
   type Track,
 } from './track';
 import {
@@ -38,6 +44,7 @@ import {
   HAZARD_DAMAGE,
   HAZARD_FULL_EXPOSURE,
   EXCURSION_CLEAR,
+  FORK_PULL,
   RECOVER_FLOOR,
   REPAIR_PER_TICK,
   RECOVER_PER_HANDLING,
@@ -70,11 +77,17 @@ export interface ShipStats {
   readonly shieldRegen: number;
   /** How fast the crew patches damaged parts back up, mid-race. */
   readonly repair: number;
+  /** Which grades of split the ship can plan, and whether it can re-plan at a pit stop. */
+  readonly nav: number;
 }
 
 /** One bend, as it happened. What the player is really watching. */
 export interface SwingEvent {
   readonly tick: number;
+  /** Which sector and which way through it, so the mark lands on the line flown. */
+  readonly sector: number;
+  readonly route: number;
+  /** Where the bend starts, measured along the route it is on. */
   readonly bendStart: number;
   readonly radius: number;
   readonly entrySpeed: number;
@@ -90,6 +103,8 @@ export interface SwingEvent {
 export interface TrailPoint {
   readonly distance: number;
   readonly offset: number;
+  /** Which way through the sector, so the wake is drawn on the line flown. */
+  readonly route: number;
 }
 
 export interface RaceState {
@@ -101,6 +116,8 @@ export interface RaceState {
   readonly wide: boolean;
   readonly lap: number;
   readonly sector: number;
+  /** Which way through the current sector the ship is taking. */
+  readonly route: number;
   readonly lapStartTick: number;
   readonly sectorStartTick: number;
   readonly lastLapTicks: number | undefined;
@@ -122,8 +139,11 @@ export interface RaceState {
    * excursion over and over, because the offset hovers across the line.
    */
   readonly outside: boolean;
-  /** The bend currently being taken, if any. */
-  readonly inBend: Bend | undefined;
+  /**
+   * The bend currently being taken, named so that the same bend on two routes
+   * is not mistaken for one. Undefined on a straight.
+   */
+  readonly bendKey: string | undefined;
   /** Where the current swing is pulling the ship. */
   readonly swingTarget: number;
   /** Recent positions, oldest first. Bounded, so a long race stays cheap. */
@@ -137,13 +157,28 @@ export interface RaceConfig {
   /** What it is built from, so damage knows what there is to break. */
   readonly build?: readonly Fitted[];
   readonly plan: CornerPlan;
+  /**
+   * The way through each sector, decided before the lap that flies it — one
+   * index per sector. A ship can still be thrown onto a different line at the
+   * fork, but never choose one there.
+   */
+  readonly routes?: readonly number[];
   readonly seed: number;
 }
 
 const clampStat = (value: number): number =>
   Math.min(STAT_MAX, Math.max(STAT_MIN, value));
 
-export function startRace(stats?: ShipStats, build: readonly Fitted[] = []): RaceState {
+/**
+ * A ship at the line. The starting route matters: a route is chosen on crossing
+ * into a sector, and a ship never crosses into the one it starts in — so
+ * without this the plan for sector 0 was quietly ignored on the first lap.
+ */
+export function startRace(
+  stats?: ShipStats,
+  build: readonly Fitted[] = [],
+  route = 0,
+): RaceState {
   return {
     tick: 0,
     distance: 0,
@@ -152,6 +187,7 @@ export function startRace(stats?: ShipStats, build: readonly Fitted[] = []): Rac
     wide: false,
     lap: 0,
     sector: 0,
+    route,
     lapStartTick: 0,
     sectorStartTick: 0,
     lastLapTicks: undefined,
@@ -163,7 +199,7 @@ export function startRace(stats?: ShipStats, build: readonly Fitted[] = []): Rac
     lastBroken: undefined,
     worn: 0,
     outside: false,
-    inBend: undefined,
+    bendKey: undefined,
     swingTarget: 0,
     trail: [],
   };
@@ -204,7 +240,14 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const topSpeed = SPEED_PER_THRUST * thrust;
   const accel = ACCEL_PER_THRUST * thrust;
 
-  const here = sampleAt(track, state.distance);
+  // Where the ship is: which sector, which way through it, and how far along
+  // that line. Canonical distance stays on the main line so laps and standings
+  // never care which way anyone went; the route decides the geometry.
+  const sector = sectorOf(track, state.distance);
+  const route = routeOf(sector, state.route);
+  const along = alongOf(track, sector, route, state.distance);
+
+  const here = sampleOn(route, along);
   const onBend = here.radius > 0;
   const holding = onBend ? holdingSpeed(here.radius, handling) : Infinity;
 
@@ -215,7 +258,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     else if (plan === 'charge') speed = Math.min(topSpeed, speed + accel);
     else if (speed > holding) speed = Math.max(holding, speed - CARRY_SCRUB);
   } else {
-    const ahead = nextBend(track, state.distance);
+    const ahead = lookAhead(track, sector, route, along, config.routes);
     let braking = false;
     if (plan === 'lift' && ahead !== undefined) {
       const target = holdingSpeed(ahead.bend.radius, handling) * LIFT_MARGIN;
@@ -234,7 +277,8 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   // a Charge that holds top speed never "accelerates", so it read as the
   // gentlest plan in the game.
   const cornering = onBend ? (speed * speed) / here.radius : 0;
-  const pushing = Math.max(0, speed - state.speed) + (onBend && plan === 'charge' ? accel : 0);
+  const pushing =
+    Math.max(0, speed - state.speed) + (onBend && plan === 'charge' ? accel : 0);
   const load =
     (cornering * GRAVITY_PER_CORNER + pushing * GRAVITY_PER_ACCEL) *
     (onBend && plan === 'charge' ? GRAVITY_CHARGE_MULTIPLIER : 1);
@@ -249,39 +293,41 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   );
 
   // 2. Entering a bend: one seeded draw decides how wide this one throws us.
-  let inBend = state.inBend;
+  const bend = onBend ? bendOn(route, along) : undefined;
+  // The same bend on two routes is not the same bend, so the name carries both.
+  const key =
+    bend === undefined
+      ? undefined
+      : `${sector.index}:${state.route}:${Math.round(bend.start)}`;
+  let bendKey = state.bendKey;
   let swingTarget = state.swingTarget;
   const swings = [...state.swings];
-  const entering =
-    onBend &&
-    (inBend === undefined || inBend.start !== bendStartAt(track, state.distance));
-  if (entering) {
-    const bend = bendAt(track, state.distance);
-    if (bend !== undefined) {
-      inBend = bend;
-      const bendHolding = holdingSpeed(bend.radius, handling);
-      const rawExcess = Math.max(0, speed - bendHolding) / bendHolding;
-      const excess =
-        plan === 'lift' ? 0 : rawExcess + (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0);
-      const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT);
-      const draw = drawFor(config.seed, bend.start, state.lap).unitInterval();
-      const swing = spread * draw;
-      // The swing throws the ship outward: away from the way the bend turns.
-      swingTarget = -bend.turn * swing;
-      swings.push({
-        tick: state.tick,
-        bendStart: bend.start,
-        radius: bend.radius,
-        entrySpeed: speed,
-        holding: bendHolding,
-        excess,
-        swing,
-        wentWide: swing > PATH_HALF_WIDTH,
-      });
-    }
+  if (bend !== undefined && key !== bendKey) {
+    bendKey = key;
+    const bendHolding = holdingSpeed(bend.radius, handling);
+    const rawExcess = Math.max(0, speed - bendHolding) / bendHolding;
+    const excess =
+      plan === 'lift' ? 0 : rawExcess + (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0);
+    const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT);
+    const draw = drawFor(config.seed, key as string, state.lap).unitInterval();
+    const swing = spread * draw;
+    // The swing throws the ship outward: away from the way the bend turns.
+    swingTarget = -bend.turn * swing;
+    swings.push({
+      tick: state.tick,
+      sector: sector.index,
+      route: state.route,
+      bendStart: bend.start,
+      radius: bend.radius,
+      entrySpeed: speed,
+      holding: bendHolding,
+      excess,
+      swing,
+      wentWide: swing > PATH_HALF_WIDTH,
+    });
   }
   if (!onBend) {
-    inBend = undefined;
+    bendKey = undefined;
     swingTarget = 0;
   }
 
@@ -290,7 +336,10 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   if (onBend) {
     offset += (swingTarget - offset) * SWING_RISE;
   } else {
-    const pull = Math.max(RECOVER_FLOOR, Math.abs(offset) * RECOVER_PER_HANDLING * handling);
+    const pull = Math.max(
+      RECOVER_FLOOR,
+      Math.abs(offset) * RECOVER_PER_HANDLING * handling,
+    );
     offset = Math.abs(offset) <= pull ? 0 : offset - Math.sign(offset) * pull;
   }
   const over = Math.abs(offset) - PATH_HALF_WIDTH;
@@ -311,7 +360,10 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const soaked = Math.min(state.shields, hit);
   const shields = crossed
     ? state.shields - soaked
-    : Math.min(stats.shields, state.shields + (wide ? 0 : SHIELD_REGEN * stats.shieldRegen));
+    : Math.min(
+        stats.shields,
+        state.shields + (wide ? 0 : SHIELD_REGEN * stats.shieldRegen),
+      );
 
   // What the shields did not stop breaks things. A bigger hit finds more to
   // break, and which parts it finds is a seeded draw — so the same excursion
@@ -328,14 +380,21 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const keep = wide
     ? Math.max(WIDE_SPEED_FLOOR, WIDE_SPEED_AT_EDGE - over * WIDE_SPEED_PER_UNIT)
     : 1;
-  const distance = state.distance + speed * keep;
+  // A short line buys canonical distance faster than a long one: that, and
+  // the bends it hands you, is the whole of what a split is worth.
+  const distance = state.distance + speed * keep * rateOf(sector, route);
 
-  // 5. Checkpoints and laps.
+  // 5. Checkpoints, laps, and the fork.
   const tick = state.tick + 1;
   const lap = Math.floor(distance / track.length);
   const crossedLap = lap > state.lap;
-  const sector = sectorAt(track, distance);
-  const crossedSector = sector !== state.sector;
+  const nextSector = sectorAt(track, distance);
+  const crossedSector = nextSector !== state.sector;
+  // At a fork the ship takes the line it planned — unless it arrives thrown far
+  // enough sideways that it is already pointing at another one.
+  const nextRoute = crossedSector
+    ? chooseRoute(track.sectors[nextSector] as Sector, config.routes, offset)
+    : state.route;
 
   return {
     tick,
@@ -344,7 +403,8 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     offset,
     wide,
     lap,
-    sector,
+    sector: nextSector,
+    route: nextRoute,
     lapStartTick: crossedLap ? tick : state.lapStartTick,
     sectorStartTick: crossedSector ? tick : state.sectorStartTick,
     lastLapTicks: crossedLap ? tick - state.lapStartTick : state.lastLapTicks,
@@ -356,9 +416,9 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     lastBroken: broken ?? state.lastBroken,
     worn,
     outside,
-    inBend,
+    bendKey,
     swingTarget,
-    trail: [...state.trail, { distance, offset }].slice(-TRAIL_LENGTH),
+    trail: [...state.trail, { distance, offset, route: nextRoute }].slice(-TRAIL_LENGTH),
   };
 }
 
@@ -398,17 +458,62 @@ function breakSomething(
 }
 
 /** A stream of its own per bend per lap, so one bend's draw never shifts another's. */
-function drawFor(seed: number, bendStart: number, lap: number): Rng {
-  return makeRng(seed).fork(Math.round(bendStart) * 977 + lap * 31);
+function drawFor(seed: number, key: string, lap: number): Rng {
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+  }
+  return makeRng(seed).fork(((hash >>> 0) % 1000003) + lap * 31);
 }
 
-function bendAt(track: Track, distance: number): Bend | undefined {
-  const wrapped = ((distance % track.length) + track.length) % track.length;
-  return track.bends.find((b) => wrapped >= b.start && wrapped < b.end);
+/**
+ * The next bend a ship will meet, looking past the end of its own line into
+ * the sector after it — which is the one it planned, since it has not reached
+ * the fork yet and cannot know what it will be thrown into.
+ */
+function lookAhead(
+  track: Track,
+  sector: Sector,
+  route: Route,
+  along: number,
+  routes: readonly number[] | undefined,
+): { bend: { radius: number }; gap: number } | undefined {
+  const here = nextBendOn(route, along);
+  if (here !== undefined) return here;
+  const after = track.sectors[(sector.index + 1) % track.sectors.length] as Sector;
+  const line = routeOf(after, routes?.[after.index] ?? 0);
+  const next = nextBendOn(line, 0);
+  if (next === undefined) return undefined;
+  return { bend: next.bend, gap: route.length - along + next.gap };
 }
 
-function bendStartAt(track: Track, distance: number): number | undefined {
-  return bendAt(track, distance)?.start;
+/**
+ * Which way through a sector a ship actually goes. It planned one line; if it
+ * arrives at the fork thrown far enough sideways to be pointing at another,
+ * that is the one it takes. This is the swing costing a route rather than time.
+ */
+export function chooseRoute(
+  sector: Sector,
+  routes: readonly number[] | undefined,
+  offset: number,
+): number {
+  const planned = routes?.[sector.index] ?? 0;
+  // Arrive anywhere near the line and you make the fork you meant to make.
+  if (Math.abs(offset) <= FORK_PULL) return planned;
+
+  // Thrown further than that, the ship goes where it is pointing — but only if
+  // another line is clearly nearer than the one it planned, or a ship would
+  // lose its route to every stray wobble.
+  let best = planned;
+  let bestGap = Math.abs(routeOf(sector, planned).entryOffset - offset);
+  sector.routes.forEach((line, i) => {
+    const gap = Math.abs(line.entryOffset - offset);
+    if (gap < bestGap - FORK_PULL) {
+      best = i;
+      bestGap = gap;
+    }
+  });
+  return best;
 }
 
 /** Run a whole race headless — for tests, and for the balance work to come. */

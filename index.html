@@ -86,6 +86,86 @@
         max-height: none;
         overflow-y: visible;
       }
+      /* The route: one row per sector, one button per way through it. */
+      .routes-head {
+        margin: 12px 0 2px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .hint {
+        margin: 0 0 6px;
+        font-size: 10.5px;
+        line-height: 1.35;
+        color: var(--soft);
+      }
+      .routes {
+        display: grid;
+        gap: 5px;
+      }
+      .sector {
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr);
+        gap: 7px;
+        align-items: center;
+      }
+      .sector-n {
+        font:
+          700 10px ui-monospace,
+          monospace;
+        color: var(--soft);
+        text-align: center;
+      }
+      .route-choices {
+        display: flex;
+        gap: 5px;
+        min-width: 0;
+      }
+      .route {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        padding: 5px 6px;
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        background: #0e1730;
+        color: var(--ink);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .route b {
+        font-size: 11.5px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .route span {
+        font-size: 9.5px;
+        color: var(--soft);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .route.on {
+        border-color: var(--gold);
+        background: #1b2a4d;
+      }
+      .route.on b {
+        color: var(--gold);
+      }
+      /* A line your navigation cannot read: shown, so you know what you are missing. */
+      .route.unread {
+        border-style: dashed;
+        opacity: 0.5;
+      }
+      .route[disabled] {
+        cursor: default;
+      }
       /* Why nothing you do here touches the lap on screen. */
       .staged {
         margin: 8px 0 0;

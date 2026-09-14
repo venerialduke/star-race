@@ -5,14 +5,15 @@
 // Every decision it makes is an input, chosen before the lap that consumes it
 // — the same seam a real player's choices will arrive through.
 
-import type { Entrant } from './field';
+import type { Entrant, Orders } from './field';
 import type { CornerPlan } from './race';
 import { makeRng, seedFrom } from './rng';
 import { buy, fit, newGarage, upgrade, type Garage } from './garage';
 import { resolveBuild } from './ship';
-import { holdingSpeed, type Track } from './track';
+import { holdingSpeed, legalRoutes, routeOf, type Route, type Track } from './track';
 import {
   BOT_HANDLING_TILT,
+  BOT_ROUTE_NERVE,
   BOT_STAT_SPREAD,
   BOT_TIGHT_HOLD,
   SPEED_PER_THRUST,
@@ -29,6 +30,7 @@ const SUPPORT = [
   'crew-engineers',
   'crew-nanites',
   'crew-scientists',
+  'nav-system',
 ] as const;
 
 const clamp = (v: number): number => Math.min(STAT_MAX, Math.max(STAT_MIN, v));
@@ -89,6 +91,62 @@ export function makeBot(track: Track, seed: number, index: number): Entrant {
     build: garage.fitted,
     isPlayer: false,
   };
+}
+
+/**
+ * What a bot flies this lap: how it takes its bends, and the way it means to
+ * go at every fork. Both are settled before the lap, like everyone's.
+ */
+export function botOrders(
+  entrant: Entrant,
+  track: Track,
+  seed: number,
+  lap: number,
+): Orders {
+  return {
+    plan: botPlan(entrant, seed, lap),
+    routes: botRoutes(entrant, track, seed, lap),
+  };
+}
+
+/**
+ * Which way a bot goes at each fork it can read. A ship with handling to spare
+ * takes the shorter, tighter line; one without it stays wide. It does not
+ * always: a rival that always picks the same line is a metronome.
+ */
+export function botRoutes(
+  entrant: Entrant,
+  track: Track,
+  seed: number,
+  lap: number,
+): readonly number[] {
+  const rng = makeRng(seed ^ seedFrom(entrant.id)).fork(lap * 131 + 7);
+  const allowed = legalRoutes(track, entrant.stats.nav);
+  const spare = entrant.stats.handling - entrant.stats.thrust;
+
+  return track.sectors.map((sector) => {
+    const choices = allowed[sector.index] ?? [0];
+    if (choices.length <= 1) return 0;
+    // Shorter is better if you can hold it; the nerve to try is a seeded draw.
+    const nerve = BOT_ROUTE_NERVE + spare;
+    const main = sector.routes[0] as Route;
+    // Scored once each: drawing inside the comparison would judge the same
+    // line differently depending on how often it was looked at.
+    const scored = choices.map((index) => {
+      const route = routeOf(sector, index);
+      const shorter = (main.length - route.length) / main.length;
+      const tightest = route.bends.reduce(
+        (least, b) => Math.min(least, b.radius),
+        Infinity,
+      );
+      const hold = Number.isFinite(tightest)
+        ? holdingSpeed(tightest, entrant.stats.handling)
+        : Infinity;
+      const risk = Math.max(0, 1 - hold / (SPEED_PER_THRUST * entrant.stats.thrust));
+      return { index, score: shorter * 10 * nerve - risk + rng.unitInterval() * 0.35 };
+    });
+    return scored.reduce((best, row) => (row.score > best.score ? row : best)).index;
+  });
 }
 
 /**

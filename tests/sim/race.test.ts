@@ -150,7 +150,14 @@ describe('hazards, shields and the crew', () => {
         { uid: 'b', componentId: 'speed-engine', level: 1 },
         ...extra,
       ];
-      const config = base({ stats: resolveBuild(build), build, plan: 'charge' });
+      const config = base({
+        // A track that actually throws the ship: on a circuit it can hold,
+        // neither ship is damaged and the comparison proves nothing.
+        track: CINDER_COIL,
+        stats: resolveBuild(build),
+        build,
+        plan: 'charge',
+      });
       let state = startRace(config.stats, build);
       while (state.lap < 1 && state.tick < 20000) state = stepRace(state, config);
       return integrity(state.condition);
@@ -162,11 +169,21 @@ describe('hazards, shields and the crew', () => {
 
   it('wears a crew on a track of tight bends, and a better crew resists it', () => {
     const weak = simulate(
-      { track: CINDER_COIL, stats: shipWith({ endurance: 0.35 }), plan: 'carry', seed: seedFrom('c') },
+      {
+        track: CINDER_COIL,
+        stats: shipWith({ endurance: 0.35 }),
+        plan: 'carry',
+        seed: seedFrom('c'),
+      },
       3000,
     );
     const strong = simulate(
-      { track: CINDER_COIL, stats: shipWith({ endurance: 0.95 }), plan: 'carry', seed: seedFrom('c') },
+      {
+        track: CINDER_COIL,
+        stats: shipWith({ endurance: 0.95 }),
+        plan: 'carry',
+        seed: seedFrom('c'),
+      },
       3000,
     );
     expect(weak.worn).toBeGreaterThan(strong.worn);
@@ -175,7 +192,12 @@ describe('hazards, shields and the crew', () => {
 
   it('leaves an open track easy on the crew', () => {
     const state = simulate(
-      { track: MERIDIAN_RUN, stats: shipWith({ endurance: 0.35 }), plan: 'carry', seed: seedFrom('m') },
+      {
+        track: MERIDIAN_RUN,
+        stats: shipWith({ endurance: 0.35 }),
+        plan: 'carry',
+        seed: seedFrom('m'),
+      },
       3000,
     );
     expect(state.worn).toBeLessThan(0.2);
@@ -222,8 +244,14 @@ describe('damage that breaks things', () => {
   });
 
   it('repairs faster with a crew that is good at it', () => {
-    const withNanites = [...kit.slice(0, 2), { uid: 'c', componentId: 'crew-nanites', level: 1 }];
-    const withAndroids = [...kit.slice(0, 2), { uid: 'c', componentId: 'crew-androids', level: 1 }];
+    const withNanites = [
+      ...kit.slice(0, 2),
+      { uid: 'c', componentId: 'crew-nanites', level: 1 },
+    ];
+    const withAndroids = [
+      ...kit.slice(0, 2),
+      { uid: 'c', componentId: 'crew-androids', level: 1 },
+    ];
     expect(integrity(heatOf(withNanites, 'charge').condition)).toBeGreaterThan(
       integrity(heatOf(withAndroids, 'charge').condition),
     );

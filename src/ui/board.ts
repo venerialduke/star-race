@@ -119,11 +119,12 @@ export function mountBoard(
               )
               .join('')}`;
 
-      const CATEGORIES: readonly Category[] = ['engine', 'shields', 'crew'];
+      const CATEGORIES: readonly Category[] = ['engine', 'shields', 'crew', 'navigation'];
       const CATEGORY_NAMES: Record<Category, string> = {
         engine: 'Engines',
         shields: 'Shields',
         crew: 'Crew',
+        navigation: 'Navigation',
       };
       const shopRows = CATEGORIES.map((category) => {
         const rows = COMPONENTS.filter((c) => c.category === category)
@@ -149,6 +150,7 @@ export function mountBoard(
           <span>Shields <b>${stats.shields}</b></span>
           <span>Crew <b>${stats.endurance.toFixed(2)}</b></span>
           <span>Repair <b>${stats.repair.toFixed(1)}</b></span>
+          <span>Nav <b>${stats.nav}</b></span>
         </div>
         <h3>Fitted</h3>
         ${fittedRows}

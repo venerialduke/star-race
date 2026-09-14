@@ -109,7 +109,6 @@ export const DAMAGE_PER_EXTRA_PART = 6;
 /** Condition repaired per tick, per point of the crew's repair rating. */
 export const REPAIR_PER_TICK = 0.00035;
 
-
 /** The swing, in track units, that counts as being thrown all the way out. */
 export const HAZARD_FULL_EXPOSURE = 26;
 
@@ -170,6 +169,39 @@ export const BOT_HANDLING_TILT = 2;
 
 /** How far a bot's build wanders off what the track suggests. */
 export const BOT_STAT_SPREAD = 0.22;
+
+// The route.
+
+/**
+ * How far off the line a ship can be carried and still make the split it
+ * planned. Past this the fork takes whichever line the ship is pointing at —
+ * which is what makes a big swing at the bend before a fork cost you a route.
+ *
+ * Deliberately just outside PATH_HALF_WIDTH: **losing your line is something
+ * that happens to a ship that went wide**, not to one wobbling inside the
+ * path. At 7 it fired on almost every checkpoint of the Cinder Coil and the
+ * route plan stopped meaning anything.
+ */
+export const FORK_PULL = 11;
+
+/**
+ * A bare ship's navigation: none. Nav is what turns a dark split dim and a dim
+ * split clear, so a ship without a system plans only the splits anyone can see.
+ */
+export const BASE_NAV = 0;
+
+/** Nav needed to plan a split of each grade. A grade above your nav is unplannable. */
+export const NAV_FOR_DIM = 1;
+export const NAV_FOR_DARK = 2;
+
+/** Nav at which the route may be re-planned at a pit stop rather than only before the heat. */
+export const NAV_FOR_REPLAN = 3;
+
+/** How much of a sector the fan-out either side of a fork takes up. */
+export const FORK_SHARE = 0.22;
+
+/** How far a bot leans toward the shorter line when its handling can take one. */
+export const BOT_ROUTE_NERVE = 0.55;
 
 /** Ship stats are clamped to this range, so a slider cannot break the sim. */
 export const STAT_MIN = 0.5;

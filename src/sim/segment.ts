@@ -18,6 +18,8 @@ import type { SwingEvent } from './race';
 /** One ship at one tick: everything the screen needs and nothing it does not. */
 export interface Frame {
   readonly distance: number;
+  /** Which way through the current sector: the same distance is a different place. */
+  readonly route: number;
   readonly offset: number;
   readonly speed: number;
   readonly wide: boolean;
@@ -47,6 +49,7 @@ const RUNAWAY = 40000;
 
 const frameOf = (ship: FieldState['ships'][number]): Frame => ({
   distance: ship.state.distance,
+  route: ship.state.route,
   offset: ship.state.offset,
   speed: ship.state.speed,
   wide: ship.state.wide,

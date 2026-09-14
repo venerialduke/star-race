@@ -9,6 +9,18 @@
 // that is nearly all of them: weapons have ships to reach, and collection has
 // an economy to collect into. What is left in `NOT_STOCKED` says what it is
 // still waiting for rather than quietly doing nothing.
+//
+// **Levels must be worth more than copies.** Engines and shields are the only
+// two categories whose numbers *add up* — a crew, a navigation system and a
+// weapon are each the best one aboard and stacking them does nothing. So those
+// two are the only places where "buy another" competes with "buy deeper", and
+// until S7 they got it backwards: 106 credits bought a level 3 balanced engine
+// for +0.30, or three level 1s for +0.45. Upgrading was a strictly worse deal
+// than bolting on another, slots arrived free at a rate of one a race, and so
+// the only strategy in the game was to own more parts. Every level below is now
+// priced so that a maxed part beats the copies the same credits would buy, in
+// one slot instead of three — which is what makes the framework's "one maxed
+// part is most of a ship" true rather than aspirational.
 
 import type { AbilityId } from './ability';
 import type { ShipStats } from './race';
@@ -20,6 +32,7 @@ import {
   BASE_SHIELDS,
   BASE_THRUST,
   ABILITY_WORKS,
+  STACK_FALLOFF,
   STAT_MAX,
   STAT_MIN,
 } from './tuning';
@@ -118,19 +131,19 @@ export const COMPONENTS: readonly Component[] = [
         note: 'Moderate acceleration, low handling.',
       },
       {
-        thrust: 0.4,
-        handling: -0.08,
+        thrust: 0.52,
+        handling: -0.1,
         slots: 1,
-        cost: 25,
-        note: 'Accelerates harder again.',
+        cost: 28,
+        note: 'Twice the engine, and a little worse through a bend.',
       },
       {
-        thrust: 0.55,
-        handling: -0.08,
+        thrust: 0.8,
+        handling: -0.12,
         grants: 'boost',
         slots: 1,
-        cost: 40,
-        note: 'Harder again — and it boosts down a straight when it has the charge.',
+        cost: 45,
+        note: 'Nearly all the thrust there is — and it boosts down a straight.',
       },
     ],
   },
@@ -148,19 +161,19 @@ export const COMPONENTS: readonly Component[] = [
         note: 'Moderate handling, low acceleration.',
       },
       {
-        thrust: -0.02,
-        handling: 0.38,
+        thrust: -0.03,
+        handling: 0.52,
         slots: 1,
-        cost: 25,
-        note: 'Better handling, and a little acceleration.',
+        cost: 28,
+        note: 'Twice the grip, and a little acceleration back.',
       },
       {
         thrust: -0.02,
-        handling: 0.52,
+        handling: 0.82,
         grants: 'three-bends',
         slots: 2,
-        cost: 40,
-        note: 'Better again. Takes a run of three bends perfectly, and takes a second slot.',
+        cost: 45,
+        note: 'Nearly all the grip there is. Takes a run of bends perfectly, and a second slot.',
       },
     ],
   },
@@ -178,18 +191,18 @@ export const COMPONENTS: readonly Component[] = [
         note: 'Moderate acceleration and handling.',
       },
       {
-        thrust: 0.22,
-        handling: 0.22,
+        thrust: 0.32,
+        handling: 0.32,
         slots: 1,
-        cost: 28,
-        note: 'A little better at both.',
+        cost: 30,
+        note: 'Twice as much of both.',
       },
       {
-        thrust: 0.3,
-        handling: 0.3,
+        thrust: 0.52,
+        handling: 0.52,
         slots: 1,
-        cost: 44,
-        note: 'Better again, with inertia dampeners.',
+        cost: 48,
+        note: 'More again, with inertia dampeners — and it all fits in one slot.',
       },
     ],
     waiting: 'its inertia dampeners',
@@ -206,8 +219,8 @@ export const COMPONENTS: readonly Component[] = [
         cost: 26,
         note: 'General defence. Soaks the ground off the path.',
       },
-      { shields: 40, slots: 1, cost: 24, note: 'More shielding.' },
-      { shields: 62, slots: 1, cost: 38, note: 'More again.' },
+      { shields: 48, slots: 1, cost: 26, note: 'Twice the shielding.' },
+      { shields: 85, slots: 1, cost: 42, note: 'More than three of the first, in one slot.' },
     ],
   },
   {
@@ -380,22 +393,22 @@ export const COMPONENTS: readonly Component[] = [
         note: 'Reads a black hole as a corner: through one faster, and unharmed.',
       },
       {
-        thrust: 0.32,
-        handling: 0.05,
+        thrust: 0.44,
+        handling: 0.06,
         readsHoles: true,
         grants: 'dark-boost',
         slots: 1,
         cost: 30,
-        note: 'Boosts down a straight — and leaves a small black hole behind it.',
+        note: 'Twice the engine — and it leaves a small black hole behind its boost.',
       },
       {
-        thrust: 0.46,
-        handling: 0.06,
+        thrust: 0.7,
+        handling: 0.08,
         readsHoles: true,
         grants: 'dark-boost',
         slots: 2,
         cost: 46,
-        note: 'Harder again, and takes a second slot.',
+        note: 'More again, and takes a second slot.',
       },
     ],
   },
@@ -413,14 +426,14 @@ export const COMPONENTS: readonly Component[] = [
         note: 'Lighter than general shields, and gathers dark matter off a black hole.',
       },
       {
-        shields: 32,
+        shields: 40,
         collects: 2,
         slots: 1,
         cost: 26,
-        note: 'More shielding, and gathers more.',
+        note: 'Twice the shielding, and gathers more.',
       },
       {
-        shields: 48,
+        shields: 72,
         collects: 3,
         captures: true,
         slots: 1,
@@ -585,14 +598,22 @@ export function resolveBuild(
   let captures = false;
   let readsHoles = false;
   let collects = 0;
+  /** How many of each component have been counted, for the stacking falloff. */
+  const seen = new Map<string, number>();
   fitted.forEach((item, i) => {
     const level = levelOf(item);
     if (level === undefined) return;
     // A damaged component gives less of whatever it gives.
     const worth = condition.parts[i] ?? 1;
-    thrust += (level.thrust ?? 0) * worth;
-    handling += (level.handling ?? 0) * worth;
-    shields += (level.shields ?? 0) * worth;
+    // And each further copy of the same part is worth less than the last, so
+    // that bolting on a twelfth engine is not the whole of the game. Only the
+    // categories that add up are affected; the rest take the best aboard.
+    const copies = seen.get(item.componentId) ?? 0;
+    seen.set(item.componentId, copies + 1);
+    const stacked = worth * Math.pow(STACK_FALLOFF, copies);
+    thrust += (level.thrust ?? 0) * stacked;
+    handling += (level.handling ?? 0) * stacked;
+    shields += (level.shields ?? 0) * stacked;
     // Crews do not stack: the ship is flown by the best of them, and a hurt
     // crew is worth less than a whole one.
     endurance = Math.max(endurance, (level.endurance ?? 0) * worth);

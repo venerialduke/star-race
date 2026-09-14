@@ -300,6 +300,22 @@ export function payFor(
 }
 
 /**
+ * How a racer spends what it has, between heats. A rival shops for itself; the
+ * player is handed their winnings and decides in the garage.
+ *
+ * This is a seam, not a convenience. Today every rival is a bot, but nothing in
+ * the season should assume that — a rival is whoever hands in a garage, which
+ * is the same shape a networked player's shopping would arrive in. The balance
+ * harness uses it to race two ways of spending against each other, which is the
+ * only way to ask whether the shop is a real choice.
+ */
+export type Shopper = (racer: Racer, track: Track, seed: number) => Garage;
+
+/** What rivals have always done: read the track and spend on what it asks for. */
+export const botShopper: Shopper = (racer, track, seed) =>
+  botShop(racer.garage, track, seed, seedOfRival(racer.id), racer.heats);
+
+/**
  * Settle every group's finishes into the season: purse, points, a slot for
  * finishing, interest on what was not spent, and a shopping trip for each
  * rival. Then the heat counter moves on.
@@ -307,6 +323,7 @@ export function payFor(
 export function settleHeat(
   season: Season,
   results: readonly (readonly Finish[])[],
+  shop: Shopper = botShopper,
 ): Season {
   const track = trackAt(season.seed, season.phase, season.heat);
   const paid = new Map<
@@ -344,7 +361,7 @@ export function settleHeat(
       // A rival spends its winnings; the player is handed theirs and chooses.
       garage: racer.isPlayer
         ? earned
-        : botShop(earned, track, season.seed, seedOfRival(racer.id), racer.heats + 1),
+        : shop({ ...racer, garage: earned, heats: racer.heats + 1 }, track, season.seed),
     };
   });
 

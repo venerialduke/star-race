@@ -448,3 +448,22 @@ export const PERFECT_LOOKAHEAD = 420;
 
 /** How far back a mine rack notices somebody chasing, per level. */
 export const MINE_SEE_BACK = [180, 240, 300] as const;
+
+/**
+ * What each further copy of the **same** component is worth, as a share of the
+ * one before it. The first is worth all of itself, the second 60% of that, the
+ * third 36%, and so on.
+ *
+ * Only two categories add up at all — engines and shields — and until S7 the
+ * arithmetic there said bolt on more. Twelve level-1 engines cost less than the
+ * season paid out and put both thrust and handling on their caps, so the whole
+ * shop collapsed into one move. This is what prices that: two of a thing is
+ * still a build, twelve is not.
+ *
+ * Deliberately per component rather than per category. The framework is
+ * explicit that "two shields is a build, not a mistake" — two *different*
+ * shields each count in full, and the collector's storage is meant to scale
+ * with the ship's total shielding. What is being stopped is the same part
+ * twelve times over, not variety within a category.
+ */
+export const STACK_FALLOFF = 0.6;

@@ -97,7 +97,8 @@ refitting it does not launder the damage off it.
 ## What is built
 
 **S1 — the swing**, **S2 — the heat**, **S3 — the ship and the shop**,
-**S4 — the route**, **S5 — the season**, and **S6 — interaction**.
+**S4 — the route**, **S5 — the season**, **S6 — interaction**, and the
+measurement half of **S7 — the shop**.
 Three ships fly one of three authored loops for two laps, with a pit stop
 between them. The player fits components into slots in the garage between laps,
 sets the corner plan and the route, and races; the rivals are bots that read the
@@ -694,6 +695,55 @@ Both are paid at the end of the heat, on top of the purse. So a ship can come
 third and leave the heat richer than the ship that beat it — which is the first
 income in the game that does not come from beating somebody, and the first reason
 to spend late-season credits on something that is not a stat.
+
+## The shop, and what a level is worth
+
+**Levels must be worth more than copies.** This is the rule the whole shop rests
+on, and until S7 it was the wrong way round.
+
+Only two categories add up at all. A crew, a navigation system and a weapon are
+each **the best one aboard** — a second crew does nothing, a second navigation
+system does nothing, and a second missile rack fires no extra missile. Engines
+and shields are the exception: their numbers sum. So those two are the only
+places where "buy another" competes with "buy deeper", and the arithmetic said
+buy another: 106 credits bought a level 3 balanced engine for +0.30, or three
+level 1s for +0.45. Upgrading was strictly the worse deal.
+
+Nothing priced that difference, because **slots arrive free** — one for every
+race finished, so thirteen by the end of a season. A build with nothing to spend
+credits on could bolt on another engine at no cost but the credits, and twelve
+cheap engines put both thrust and handling on their caps. The whole shop
+collapsed into one move, and every question about *which* part was drowned out
+by *how many*.
+
+Two things fix it:
+
+- **Every level now adds more than the level below it**, at a cost that rises
+  more slowly than the effect. A maxed engine beats the copies the same credits
+  would buy, and does it in one slot instead of three. That is what makes "one
+  maxed part is most of a ship" true rather than aspirational.
+- **Each further copy of the same component is worth less than the last** —
+  `STACK_FALLOFF`, 60% of the one before. Two of a thing is still a build;
+  twelve is not.
+
+The falloff is deliberately **per component, not per category**. The framework
+is explicit that two shields is a build rather than a mistake, and that a
+collector's storage scales with the ship's *total* shielding — so two different
+shields each count in full. What is stopped is the same part twelve times over,
+not variety within a category.
+
+**Rivals shop through a seam, not a special case.** `settleHeat` takes a
+`Shopper`: today every rival is a bot, but nothing in the season assumes that. A
+rival is whoever hands in a garage, which is the same shape a networked player's
+shopping would arrive in — and it is what lets the balance harness race two ways
+of spending against each other rather than against a bot.
+
+**Balance is measured in seasons, not in ticks.** `npm run balance` runs whole
+seasons where every racer follows a **policy** — a build they are shopping
+toward — and reports how often each survives the cuts and wins. A heat-clock
+measurement cannot answer the question the shop asks, because the season pays by
+place and the cut is on points: a part that wins races while losing time is a
+good part, and ticks call it bad.
 
 ## Tuning
 

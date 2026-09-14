@@ -601,30 +601,60 @@ crew's shield-regeneration rating also speeds up abilities: the catalogue does
 say Engineers do both, but at the full multiplier they silently doubled or
 tripled every ability in the game.
 
+**What the tuning fixed, measured after the fact.**
+
+- **The chain's variance is back.** On the Cinder Coil the chain-on build ran a
+  standard deviation of 0.0 over 72 races — one distinct finishing time in
+  seventy-two. It now runs sd 122 against a chain-off control of sd 144, fires
+  1.28 times a lap rather than 3.00, and is worth 197 ticks rather than 520. The
+  loop that does it is the right one: being thrown wide costs charge, so a ship
+  that needs the chain most can least afford it.
+- **Boost fires honestly.** Zero firings into a bend on all three tracks, against
+  63% / 32% / 100% before, and none at all on the Cinder Coil, whose longest
+  straight is 80 units against a requirement of 150. Worth +18 ticks a heat on
+  the Kestrel and +124 on the Meridian, against +7 and +77.
+- **Charge is a resource.** A build with no ability to spend it on idles at full
+  charge 81% of its ticks on the Kestrel and 9% on the Cinder Coil, against 94%
+  and 92% before. On the Coil, where a ship is off the path three-quarters of the
+  lap, it now barely fills at all.
+- **The collector is a bonus, not an immunity.** 33 credits a heat on the Kestrel
+  and the Meridian and 7 on the Coil, against a 26-credit third place and a
+  70-credit win — and it is no longer faster, no longer wins more, and no longer
+  takes less damage than plain shields of the same level.
+
+**One regression the re-measurement caught in the tuning itself.** Cutting the
+charge rate and the push at once multiplied: weapons fired a third as often and
+each landing hit moved a ship half as far, so output fell about sixfold and every
+weapon became worse than leaving the slot empty. `MISSILE_POWER` and `MINE_POWER`
+were raised to pay it back on the axis that does not bring back the
+one-hit-to-the-wall problem — a bigger power beats the shields that were eating
+them whole, where a bigger push per point would not. Two cuts to one output is
+the mistake to remember; neither looked like much on its own.
+
 **The finding that S6 does not fix, and the next milestone has to.**
 
-**A second engine beats every weapon, in every slot, on every track, by five to
-nine times.** Measured over 24+ seeds a cell with the subject rotated through all
-three grid positions: a balanced engine in the fourth slot is worth +548 to +946
-ticks of margin, and the best weapon is worth +273 — gravity mines on the
-Meridian Run, the only cell where a weapon clearly pays. On the Cinder Coil every
-weapon is dead weight, because ships are already off the golden path 75% of the
-time there and one more shove costs a target about ten ticks a heat.
+**A second engine beats every weapon, in every slot, on every track.** After the
+power raise a weapon is roughly a wash against an empty slot — within 20 to 60
+ticks either way over a two-lap heat — and a balanced engine in the same slot is
+worth 435 to 1675 ticks of margin. The best a weapon was ever measured doing to
+the rest of the field is about 20 ticks.
 
-This is not really an S6 number. **Thrust dominates the whole game**, and it has
-since S3; interaction is the first system to be measured against it and so the
-first to show it. Two things worth holding on to before anything is tuned:
+**Raising the numbers further will not fix it, and that is the point.** A push
+big enough to compete with a permanent stat is a push that takes an unshielded
+ship from the centreline to the wall in one hit — which is the thing the corridor
+work in V1.2 existed to stop. A displacement weapon costs its target a line and a
+few dozen ticks of recovery; an engine gives its owner eighteen per cent more top
+speed for the whole race. Those are not the same size of thing and no constant in
+`tuning.ts` makes them one.
 
-- Weapons raise **win rate** more than they raise margin — a missile takes the
-  Meridian from 77% to 90% wins while costing 104 ticks of clock. Weapons only
-  ever target the ship *ahead*, so they are a rubber band. Points are by place
-  and the cut is on points, so that may be the currency that actually matters,
-  and a margin-only measurement would say a weapon is bad when the season says it
-  is good. The season-level version of this measurement has not been run.
-- The honest alternative is that the engine ladder is too steep and everything
-  else in the shop is priced against it. That is a tuning pass over `ship.ts`
-  costs and stat steps, not a new mechanic, and it should be measured in seasons
-  won rather than ticks gained.
+So this is not really an S6 number. **Thrust has dominated since S3**, and
+interaction is the first system measured against it and so the first to show it.
+One thing to check before anything is repriced: weapons only ever target the ship
+*ahead*, so they are a rubber band, and an earlier round of this measurement had
+them raising win rate while costing clock. That did not survive the retune — they
+now cost both — but the season pays by place and the cut is on points, so the
+measurement that decides this is seasons won, not ticks gained, and it has still
+never been run. That is S7.1, and it comes first for a reason.
 
 **Smaller things left standing**, recorded rather than fixed:
 
@@ -634,6 +664,13 @@ first to show it. Two things worth holding on to before anything is tuned:
 - **Collector shields are useless at L1–L2 and the whole part at L3.** Capture is
   the only reason to own one. A part with nothing at its first two levels is a
   shape worth avoiding next time something is added to the shop.
+- **The longest pin in the game is now made by a boost, not by a weapon.** A
+  180-tick boost holds a ship above its own top speed into bends, so it swings
+  wider: the dark-boost field's worst spell on the corridor wall went from 97 to
+  127 ticks on average and 555 at its worst, the longest anywhere in a
+  3,888-race sweep. Its laps got faster too, so it is the trade the game is
+  built on — but the pin problem is not closed just because the missiles were
+  cut.
 - **Damage is a non-event in a two-lap heat**: mean integrity loss 0.000–0.034.
   Shields' real job in S6 is stopping pushes, not soaking damage. Either heats
   get longer or `HAZARD_DAMAGE` matters more than it does.

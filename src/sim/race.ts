@@ -696,14 +696,20 @@ function arrivals(
   const take = (power: number, side: number, what: string, hazard: boolean): void => {
     if (power <= 0) return;
     // A collector at full strength keeps the weapon: it never lands, and it
-    // sells when the race ends. Catching it still loads the shield, though —
-    // without that the shield never leaves full and captures everything for the
-    // rest of the race for nothing, which measured at roughly two first places
-    // of income a heat. Now a capture buys the next one time to recharge.
-    if (stats.captures && full && !hazard && left >= power) {
+    // sells when the race ends. Catching it still costs the shielding, though —
+    // without that the shield never leaves full, captures everything for the
+    // rest of the race for nothing, and earns about two first places a heat.
+    //
+    // A weapon bigger than the shield is still caught, and empties it. Refusing
+    // those was the first version of this fix and it went too far the other way:
+    // the missiles worth catching are exactly the ones that outweigh a shield,
+    // so collectors earned nothing at all. What limits it is the recharge — the
+    // next capture waits for full shields, however big the last one was.
+    if (stats.captures && full && !hazard) {
       salvage += power * SALVAGE_PER_POWER;
-      left -= power;
-      spent += power;
+      const caught = Math.min(left, power);
+      left -= caught;
+      spent += caught;
       hit = `captured ${what}`;
       return;
     }

@@ -288,20 +288,29 @@ describe('what answers a weapon', () => {
     expect(state.shields).toBeCloseTo(stats.shields - 30, 6);
   });
 
-  it('cannot keep a weapon bigger than the shielding it has to catch it with', () => {
+  it('keeps a weapon bigger than its shielding, and is emptied doing it', () => {
     const build = [fit('speed-engine', 2), fit('collector-shield', 3, 2)];
     const stats = resolveBuild(build);
-    const state = stepRace(startRace(stats, build), {
+    const config = {
       track: KESTREL_LOOP,
       stats,
       build,
-      plan: 'carry',
+      plan: 'carry' as const,
       seed: 1,
       id: 'a',
-      incoming: [{ from: 'b', side: 1, power: stats.shields + 10, scrub: 0 }],
-    });
-    expect(state.salvage).toBe(0);
-    expect(Math.abs(state.offset)).toBeGreaterThan(0);
+    };
+    const big = { from: 'b', side: 1, power: stats.shields + 40, scrub: 0 };
+    const caught = stepRace(startRace(stats, build), { ...config, incoming: [big] });
+    // The missiles worth catching are exactly the ones that outweigh a shield.
+    expect(caught.salvage).toBeGreaterThan(0);
+    expect(caught.offset).toBe(0);
+    expect(caught.shields).toBe(0);
+
+    // And the next one lands, because the shields are no longer full. That is
+    // the whole of what stops a collector being immune to weapons.
+    const next = stepRace(caught, { ...config, incoming: [big] });
+    expect(next.salvage).toBe(caught.salvage);
+    expect(Math.abs(next.offset)).toBeGreaterThan(0);
   });
 
   it('takes speed off with a pull, which no shield answers', () => {

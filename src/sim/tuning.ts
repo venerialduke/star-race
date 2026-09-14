@@ -360,8 +360,17 @@ export const PERFECT_WANTS_BENDS = 3;
 /** How far up the road a missile reaches, in track units, per level. */
 export const MISSILE_RANGE = [260, 340, 420] as const;
 
-/** What a missile carries. Shields soak it; what gets through pushes. */
-export const MISSILE_POWER = [16, 26, 38] as const;
+/**
+ * What a missile carries. Shields soak it; what gets through pushes.
+ *
+ * Raised once the charge rate and the push were both cut, because the two cuts
+ * multiplied: weapons fired a third as often and each landing hit moved a ship
+ * half as far, so their output fell about sixfold and every weapon became worse
+ * than leaving the slot empty. The fix is here rather than in `PUSH_PER_POWER`
+ * — a bigger power beats the shields that were eating these whole, where a
+ * bigger push per point would bring back the one-hit-to-the-wall problem.
+ */
+export const MISSILE_POWER = [26, 38, 48] as const;
 
 /**
  * Track units of lateral push per point of weapon power that beats the shields.
@@ -390,8 +399,13 @@ export const MINE_DROP_BACK = 40;
 export const FIXTURE_REACH = 30;
 export const FIXTURE_ACROSS = 20;
 
-/** What a mine and a black hole carry when a ship passes one. */
-export const MINE_POWER = [20, 30, 42] as const;
+/**
+ * What a mine and a black hole carry when a ship passes one. Raised with
+ * `MISSILE_POWER` and for the same reason: against a rival carrying the
+ * cheapest shield in the shop, a mine was delivering 2.4 units of push against
+ * a golden path 9 wide, which is not an event.
+ */
+export const MINE_POWER = [30, 42, 54] as const;
 export const BLACK_HOLE_POWER = 30;
 
 /** Ticks a dropped fixture lasts before it fades. A placed one lasts the heat. */
@@ -407,10 +421,12 @@ export const BLACK_HOLE_CARRY = 0.12;
  *
  * At 0.9 a heat's salvage came to 127-189 credits against a 70-credit first
  * place and a 100-credit starting ship — the loot was worth about two wins, and
- * collecting quietly became a better living than racing. It is a good bonus now,
- * not a second economy.
+ * collecting quietly became a better living than racing. Cut to 0.2 it landed at
+ * 9-17 credits, which is a third of a third place and below noticing. This is
+ * the middle: a good heat's collecting is worth something without being worth
+ * more than winning.
  */
-export const SALVAGE_PER_POWER = 0.2;
+export const SALVAGE_PER_POWER = 0.45;
 
 /** Dark matter gathered by passing through a black hole with a collector. */
 export const DARK_MATTER_PER_HOLE = 12;

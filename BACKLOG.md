@@ -694,9 +694,9 @@ seasons, and neither is "buy engines".
 - **S7.1 Measure in seasons, not ticks.** — **done**. `npm run balance`.
 - **S7.2 The engine ladder.** — **half done**: the level curve and stacking are
   fixed, the cap is not. See below.
-- **S7.3 Give the tractor beam a job, or cut it.** Still open, and the season
-  numbers are worse than the heat numbers were: 0 wins in 72.
-- **S7.4 Levels 1 and 2 of the collector shield.** Still open.
+- **S7.3 Give the tractor beam a job.** — **done, and it did not help much**.
+- **S7.4 Levels 1 and 2 of the collector shield.** — **done, and it did not help
+  at all**. Both below.
 
 ### S7.1 — the harness
 
@@ -775,6 +775,61 @@ the game feels rather than what a part costs:
    more than once" and it would also weaken the honest two-engine builds.
 
 None of the three is a tuning pass, which is why none of them is in this one.
+The owner chose to leave it and take S7.3 and S7.4 instead.
+
+### S7.3 and S7.4 — two parts that now have a reason to exist, and still lose
+
+Both had the same thing wrong: nothing to do. A tractor beam took speed off the
+ship ahead, which is not a reason to fit one over a missile. A collector shield
+needed level 3 *and* full shields to keep anything, so its first two levels
+collected nothing and were strictly worse than plain shielding.
+
+Both are fixed as designs. **A tether pulls both ways**, so holding the ship
+ahead back now tows the ship holding it — the only weapon that helps its owner
+rather than only hurting somebody. **A collector keeps a piece of every weapon
+that lands**, more of it the deeper the part, with the whole-weapon capture still
+reserved for level 3 at full shields.
+
+Neither made its build competitive, and the numbers say so plainly. Seventy-two
+seasons, every policy racing the others, before and after:
+
+| policy | before | after | | policy | before | after |
+| --- | --- | --- | --- | --- | --- | --- |
+| engine-spam | 25 | **21** | | shields | 6 | 8 |
+| handling | 17 | **21** | | speed | 6 | 7 |
+| **dark** | 3 | **16** | | collector | 6 | **7** |
+| nav | 15 | 12 | | bot | 7 | 7 |
+| engines | 8 | 9 | | **tractor** | 0 | **2** |
+| | | | | armed · mines | 0 · 1 | **0 · 0** |
+
+- **The tether moved the tractor beam from 0 to 2 of 72.** That is about one
+  standard error. It is a better part and it is still near the bottom.
+- **Collecting at every level moved the collector from 6 to 7.** That is nothing.
+  The income is real and it does not buy enough to change a season.
+- **The thing that actually moved was neither.** `dark` went from 3 to 16, and
+  that was the *level curve* — the dark matter engine was added in S6 and never
+  repriced, so it still had the old diminishing ladder. The shop test caught it;
+  no one would have found it by playing. Repricing one mediocre part was worth
+  five times what redesigning two parts was.
+
+**The lesson worth keeping: "has a reason to exist" is not "is worth buying".**
+Both parts are better designed than they were and neither is competitive, because
+the problem was never that they had no job — it was that a slot spent on a stat
+pays every tick of every lap and a slot spent on a weapon pays a few dozen ticks
+a heat. That gap is the same one S6 measured on the clock, and it is untouched.
+
+**Weapons win nothing, now measured three ways**: on the heat clock in S6, over
+seasons against bots, and over seasons against other policies. `armed` and
+`mines` won 0 of 72 each. Nothing in `tuning.ts` fixes this — a push big enough
+to compete with a permanent stat is the one-hit-to-the-wall problem the corridor
+work exists to stop — so it belongs with the three rule changes above rather than
+with another tuning pass.
+
+**And the S7 bar is not met.** "Two builds that spend the same credits
+differently both win seasons, and neither is buy engines": the top five are
+engine-spam, handling, dark, nav and engines. Every one of them is led by an
+engine. The non-engine ideas — weapons, collection, shields — are the whole
+bottom half.
 
 ## Not scheduled
 

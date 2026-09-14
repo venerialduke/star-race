@@ -12,6 +12,8 @@ import { SELL_RETURN, SLOTS_AT_START, SLOT_PER_FINISH, STARTING_CREDITS } from '
 
 export interface Garage {
   readonly credits: number;
+  /** Counts up so every part bought gets an id of its own. */
+  readonly bought: number;
   readonly slots: number;
   /** Owned and fitted, in the order they were fitted. */
   readonly fitted: readonly Fitted[];
@@ -22,6 +24,7 @@ export interface Garage {
 export function newGarage(): Garage {
   return {
     credits: STARTING_CREDITS,
+    bought: 0,
     slots: SLOTS_AT_START,
     fitted: [],
     shelf: [],
@@ -45,7 +48,8 @@ export function buy(garage: Garage, componentId: string): Garage {
   return {
     ...garage,
     credits: garage.credits - cost,
-    shelf: [...garage.shelf, { componentId, level: 1 }],
+    bought: garage.bought + 1,
+    shelf: [...garage.shelf, { uid: `p${garage.bought}`, componentId, level: 1 }],
   };
 }
 

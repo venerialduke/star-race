@@ -1,10 +1,15 @@
-// The controls, the readouts and the tracking bar. One thumb, bottom of the
-// screen. The bar is the thing that says who is winning: a lane per ship, its
-// place, how far round the lap it is, and what it is giving away on total time.
+// The two screens, and everything around them.
+//
+// **Race** is playback: the track, and the tracking bar over it. **Garage** is
+// every decision: the track, the corner plan, the shop and the build. The bar
+// is on both, so you can watch the lap while you shop. You can open the garage
+// while a segment plays — but what the segment shows was settled before you
+// opened it, so nothing you do there reaches the ship until the next decision
+// point. The garage says so.
 
-import { standings, type FieldState, type ShipProgress } from '../sim/field';
+import { standings, type FieldState } from '../sim/field';
 import type { CornerPlan } from '../sim/race';
-import { integrity } from '../sim/ship';
+import { frameAt, orderAt, type Segment } from '../sim/segment';
 import { TRACKS, type Track } from '../sim/track';
 import { TICK_HZ } from '../sim/tuning';
 import { SHIP_COLOURS } from '../render/draw';
@@ -15,12 +20,29 @@ export interface Settings {
   seed: string;
 }
 
+export interface Hooks {
+  /** Start the next segment with whatever the garage now holds. */
+  onGo(): void;
+  onNewHeat(): void;
+  /** Jump to the end of the segment being played. */
+  onSkip(): void;
+}
+
+export interface Update {
+  /** The field as it stands at the end of the segment on screen. */
+  readonly field: FieldState | undefined;
+  readonly live: { segment: Segment; cursor: number } | undefined;
+  /** The segment has played out and the next decision is due. */
+  readonly settled: boolean;
+}
+
 export interface Controls {
   readonly element: HTMLElement;
   readonly settings: Settings;
-  /** Where the board mounts: the panel owns the layout, the board owns its own markup. */
   readonly boardSlot: HTMLElement;
-  update(field: FieldState | undefined, track: Track): void;
+  toRace(): void;
+  toGarage(): void;
+  update(state: Update): void;
 }
 
 const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
@@ -31,24 +53,7 @@ const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
 
 const seconds = (ticks: number): string => `${(ticks / TICK_HZ).toFixed(2)}s`;
 
-/** How intact the ship is, what the shields have left, how spent the crew is. */
-function condition(me: ShipProgress | undefined): string {
-  if (me === undefined) return '';
-  const parts = [`ship ${Math.round(integrity(me.state.condition) * 100)}%`];
-  if (me.state.shields > 0.5) parts.push(`shields ${Math.round(me.state.shields)}`);
-  if (me.state.worn > 0.25) parts.push(`crew ${Math.round((1 - me.state.worn) * 100)}%`);
-  return ` · ${parts.join(' · ')}`;
-}
-
-const gap = (ticks: number): string =>
-  ticks <= 0.5 ? 'leader' : `+${(ticks / TICK_HZ).toFixed(2)}`;
-
-export function mountControls(
-  parent: HTMLElement,
-  onGo: () => void,
-  onRestart: () => void,
-  onRace: () => void,
-): Controls {
+export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   const settings: Settings = {
     track: TRACKS[0] as Track,
     plan: 'carry',
@@ -58,25 +63,32 @@ export function mountControls(
   const element = document.createElement('div');
   element.className = 'panel';
   element.innerHTML = `
+    <div class="screens" role="tablist">
+      <button type="button" data-screen="race" class="screen">Race</button>
+      <button type="button" data-screen="garage" class="screen">Garage</button>
+    </div>
     <div id="bar" class="bar"></div>
     <div id="r-state" class="state">on the path</div>
-    <div class="tracks" role="group" aria-label="Track">
-      ${TRACKS.map(
-        (t, i) =>
-          `<button type="button" data-track="${i}" class="track"><b>${t.name}</b><span>${t.shape}</span></button>`,
-      ).join('')}
+    <div id="garage-screen">
+      <div class="tracks" role="group" aria-label="Track">
+        ${TRACKS.map(
+          (t, i) =>
+            `<button type="button" data-track="${i}" class="track"><b>${t.name}</b><span>${t.shape}</span></button>`,
+        ).join('')}
+      </div>
+      <div class="plans" role="group" aria-label="Corner plan">
+        ${PLANS.map(
+          (p) => `<button type="button" data-plan="${p.id}" class="plan">
+            <b>${p.label}</b><span>${p.hint}</span></button>`,
+        ).join('')}
+      </div>
+      <p id="staged" class="staged" hidden></p>
+      <div id="board-slot"></div>
     </div>
-    <div class="plans" role="group" aria-label="Corner plan">
-      ${PLANS.map(
-        (p) => `<button type="button" data-plan="${p.id}" class="plan">
-          <b>${p.label}</b><span>${p.hint}</span></button>`,
-      ).join('')}
-    </div>
-    <div id="board-slot"></div>
     <div class="seedrow">
       <label>Seed <input id="s-seed" type="text" value="kestrel" spellcheck="false" /></label>
-      <button type="button" id="b-go" class="go" hidden>Go</button>
-      <button type="button" id="b-race" class="go">Race</button>
+      <button type="button" id="b-skip" hidden>Skip</button>
+      <button type="button" id="b-go" class="go">Go</button>
       <button type="button" id="b-restart">New heat</button>
     </div>`;
   parent.appendChild(element);
@@ -84,114 +96,159 @@ export function mountControls(
   const byId = <T extends HTMLElement>(id: string): T =>
     element.querySelector(`#${id}`) as T;
 
-  const paint = (
-    selector: string,
-    isOn: (button: HTMLButtonElement) => boolean,
-  ): void => {
+  const paint = (selector: string, isOn: (b: HTMLButtonElement) => boolean): void => {
     for (const button of element.querySelectorAll<HTMLButtonElement>(selector)) {
       button.classList.toggle('on', isOn(button));
     }
   };
-  const paintTracks = (): void =>
-    paint('[data-track]', (b) => TRACKS[Number(b.dataset['track'])] === settings.track);
-  const paintPlans = (): void =>
-    paint('[data-plan]', (b) => b.dataset['plan'] === settings.plan);
+
+  let screen: 'race' | 'garage' = 'garage';
+  const garageScreen = byId<HTMLElement>('garage-screen');
+  const bar = byId<HTMLElement>('bar');
+  const rState = byId<HTMLElement>('r-state');
+  const staged = byId<HTMLElement>('staged');
+  const go = byId<HTMLButtonElement>('b-go');
+  const skip = byId<HTMLButtonElement>('b-skip');
+
+  const showScreen = (which: 'race' | 'garage'): void => {
+    screen = which;
+    // The page reads this to give whichever screen is up the whole window.
+    element.dataset['screen'] = which;
+    garageScreen.hidden = which !== 'garage';
+    // The tracking bar stays on both: it is what you want to see while you
+    // shop, and it is read off the film, so it cannot get ahead of the lap.
+    paint('[data-screen]', (b) => b.dataset['screen'] === which);
+  };
+
+  for (const button of element.querySelectorAll<HTMLButtonElement>('[data-screen]')) {
+    button.addEventListener('click', () =>
+      showScreen(button.dataset['screen'] as 'race' | 'garage'),
+    );
+  }
 
   for (const button of element.querySelectorAll<HTMLButtonElement>('[data-track]')) {
     button.addEventListener('click', () => {
       settings.track = TRACKS[Number(button.dataset['track'])] as Track;
-      paintTracks();
-      onRestart();
+      paint('[data-track]', (b) => TRACKS[Number(b.dataset['track'])] === settings.track);
+      hooks.onNewHeat();
     });
   }
   for (const button of element.querySelectorAll<HTMLButtonElement>('[data-plan]')) {
     button.addEventListener('click', () => {
       settings.plan = button.dataset['plan'] as CornerPlan;
-      paintPlans();
+      paint('[data-plan]', (b) => b.dataset['plan'] === settings.plan);
     });
   }
-  paintTracks();
-  paintPlans();
+  paint('[data-track]', (b) => TRACKS[Number(b.dataset['track'])] === settings.track);
+  paint('[data-plan]', (b) => b.dataset['plan'] === settings.plan);
 
   const seed = byId<HTMLInputElement>('s-seed');
   seed.addEventListener('change', () => {
     settings.seed = seed.value;
-    onRestart();
+    hooks.onNewHeat();
   });
-  byId<HTMLButtonElement>('b-restart').addEventListener('click', onRestart);
-  const go = byId<HTMLButtonElement>('b-go');
-  go.addEventListener('click', onGo);
-  const race = byId<HTMLButtonElement>('b-race');
-  race.addEventListener('click', onRace);
-  const boardSlot = byId<HTMLElement>('board-slot');
+  byId<HTMLButtonElement>('b-restart').addEventListener('click', hooks.onNewHeat);
+  go.addEventListener('click', hooks.onGo);
+  skip.addEventListener('click', hooks.onSkip);
 
-  const bar = byId<HTMLElement>('bar');
-  const rState = byId<HTMLElement>('r-state');
+  showScreen('garage');
 
   return {
     element,
     settings,
-    boardSlot,
-    update(field, track) {
-      // No heat yet: the board is the whole screen.
-      if (field === undefined) {
+    boardSlot: byId<HTMLElement>('board-slot'),
+    toRace: () => showScreen('race'),
+    toGarage: () => showScreen('garage'),
+    update({ field, live, settled }) {
+      // Nothing has been raced yet: the garage is the whole game.
+      if (field === undefined || live === undefined) {
         bar.innerHTML = '';
-        boardSlot.hidden = false;
-        race.hidden = false;
-        go.hidden = true;
+        skip.hidden = true;
+        go.hidden = false;
+        go.textContent = 'Race';
+        staged.hidden = true;
         rState.textContent = 'Fit the ship, set the plan, then Race.';
         rState.className = 'state';
         return;
       }
-      boardSlot.hidden = true;
-      race.hidden = field.phase !== 'done';
-      const rows = standings(field);
-      const leader = rows[0];
+
+      const done = field.phase === 'done';
+      skip.hidden = settled;
+      go.hidden = !settled;
+      go.textContent = done ? 'Next heat' : 'Go — next lap';
+
+      // What is waiting for the next decision point, said plainly.
+      staged.hidden = !(screen === 'garage' && !settled);
+      staged.textContent =
+        'The lap on screen was settled before you opened this. Anything you buy or fit takes effect at the next pit stop.';
+
+      // Mid-playback the bar is read off the film, never off `field`: the
+      // segment was computed before it was watched, so its end already knows
+      // who won, and reading it would announce the result over the race.
+      const rows = settled
+        ? standings(field).map((row) => ({
+            lane: field.ships.indexOf(row.ship),
+            place: row.place,
+            progress: 1,
+            time: seconds(row.ship.totalTicks),
+          }))
+        : orderAt(live.segment, live.cursor).map((row) => ({
+            lane: row.ship,
+            place: row.place,
+            progress: row.progress,
+            // Only one ship leads, however close the one behind it is.
+            time: row.place === 1 ? 'leader' : `+${(row.behind / TICK_HZ).toFixed(2)}`,
+          }));
+
       bar.innerHTML = rows
-        .map((row) => {
-          const lane = field.ships.indexOf(row.ship);
+        .map(({ lane, place, progress, time }) => {
+          const entrant = field.ships[lane]?.entrant;
           const colour = SHIP_COLOURS[lane % SHIP_COLOURS.length] as string;
-          const progress = row.ship.waiting
-            ? 1
-            : Math.min(1, row.ship.state.distance / track.length);
-          const behind = leader === undefined ? 0 : row.ticks - leader.ticks;
-          const time =
-            field.phase === 'done' || field.phase === 'pit'
-              ? seconds(row.ship.totalTicks)
-              : gap(behind);
-          const who = row.ship.entrant.isPlayer ? 'You' : row.ship.entrant.name;
-          return `<div class="lane${row.ship.entrant.isPlayer ? ' me' : ''}">
+          const who = entrant?.isPlayer === true ? 'You' : (entrant?.name ?? '');
+          return `<div class="lane${entrant?.isPlayer === true ? ' me' : ''}">
             <span class="pip" style="background:${colour}"></span>
-            <span class="who">${row.place}. ${who}</span>
+            <span class="who">${place}. ${who}</span>
             <span class="track-bar"><i style="width:${(progress * 100).toFixed(1)}%;background:${colour}"></i></span>
             <span class="gap">${time}</span>
           </div>`;
         })
         .join('');
 
-      const me = field.ships.find((s) => s.entrant.isPlayer);
-      const mine = rows.find((r) => r.ship.entrant.isPlayer);
-      go.hidden = field.phase !== 'pit';
+      const me = field.ships.findIndex((s) => s.entrant.isPlayer);
+      const frame = frameAt(live.segment, me, live.cursor);
 
-      if (field.phase === 'pit') {
-        rState.textContent = `Pit stop — everyone restarts level, the clock keeps running. Change the plan, then Go.`;
-        rState.className = 'state pit';
-      } else if (field.phase === 'done') {
-        const result =
+      if (settled && done) {
+        const final = standings(field);
+        const mine = final.find((r) => r.ship.entrant.isPlayer);
+        const won = final[0];
+        rState.textContent =
           mine === undefined
             ? 'Heat over.'
             : mine.place === 1
               ? `Won the heat — ${seconds(mine.ship.totalTicks)} on total time.`
-              : `P${mine.place} of ${rows.length} — ${seconds(mine.ticks - (leader?.ticks ?? 0))} off the win.`;
-        rState.textContent = `${result} +1 slot. Race again to spend it.`;
+              : `P${mine.place} of ${final.length} — ${seconds(mine.ticks - (won?.ticks ?? 0))} off the win.`;
         rState.className = 'state done';
-      } else if (me?.state.wide === true) {
-        rState.textContent = `WIDE — off the path${condition(me)}`;
+      } else if (settled) {
+        rState.textContent = `Pit stop — everyone restarts level, the clock keeps running. Change the plan, then Go.`;
+        rState.className = 'state pit';
+      } else if (frame?.wide === true) {
+        rState.textContent = `WIDE — off the path${condition(frame)}`;
         rState.className = 'state wide';
       } else {
-        rState.textContent = `Lap ${field.lap + 1}${condition(me)}`;
+        rState.textContent = `Lap ${field.lap + 1}${condition(frame)}`;
         rState.className = 'state';
       }
     },
   };
+}
+
+/** How intact the ship is, what the shields have left, how spent the crew is. */
+function condition(
+  frame: { integrity: number; shields: number; worn: number } | undefined,
+): string {
+  if (frame === undefined) return '';
+  const parts = [`ship ${Math.round(frame.integrity * 100)}%`];
+  if (frame.shields > 0.5) parts.push(`shields ${Math.round(frame.shields)}`);
+  if (frame.worn > 0.25) parts.push(`crew ${Math.round((1 - frame.worn) * 100)}%`);
+  return ` · ${parts.join(' · ')}`;
 }

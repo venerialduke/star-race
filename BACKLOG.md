@@ -229,6 +229,40 @@ shrugged most of it off. 24 seeded heats a cell:
 break. That is a degenerate case rather than a strategy: an empty ship is far
 too slow to win anything.
 
+## S3.8 — the segment, and two screens — **done**
+
+Dictated: the unit of compute is whatever section of the track falls between
+decision points; playback and decisions become separate screens; anything
+bought during playback waits for the next decision point.
+
+**`src/sim/segment.ts`.** `recordSegment` steps the field to the next decision
+point up front and keeps the film — one small frame per ship per tick, holding
+only what the screen needs. `main.ts` then moves a cursor through it. Nothing is
+simulated while the player watches. The claim that makes this safe is that it
+changes nothing, and the test says so: a recorded segment has the same phase,
+the same lap ticks and the same standings as one stepped live.
+
+**Two screens**, swappable mid-lap, with the tracking bar on both. The player's
+entrant is rebuilt from the garage in exactly one place — `nextSegment` — which
+is what makes a mid-playback purchase land on the next lap and not this one.
+Damage follows a part by the id it was bought under (`Fitted.uid`), so
+refitting a part does not launder its damage off.
+
+**The one thing this broke, and the fix.** A bar reading `standings(segment.end)`
+announces the result over the race being shown — during lap 1 it read _+9.78_
+when the ships were still nose to tail. `orderAt` now reads the film at the
+cursor: placed by banked time plus ticks run, gap to the leader measured as how
+long ago the leader was where you are. Past the line each ship sits frozen at
+whatever overshoot its last tick left, so the road stops comparing there and
+finished ships are separated by their times instead. The test is that cutting
+the film off at the cursor changes no answer.
+
+**Worth knowing for S4 and S5:** on the Kestrel Loop with seed `segment`, a
+Charge runs **third the whole lap — 28 ticks down at half distance — and wins by
+one tick at the line**. That is the bet paying off, and it is invisible unless
+the bar tracks the road rather than the result. It is also an argument for the
+sector times in S1.3: the lap total hides where it was won.
+
 ## S4 — the route
 
 **S4 is done when:** a sector offers more than one way through it, the player's

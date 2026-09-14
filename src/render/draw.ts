@@ -1,7 +1,6 @@
 // Canvas drawing. Reads sim state, never writes it.
 
-import type { ShipProgress } from '../sim/field';
-import type { RaceState } from '../sim/race';
+import type { SwingEvent } from '../sim/race';
 import { normalOf, sampleAt, type Track, type Vec } from '../sim/track';
 import { PATH_HALF_WIDTH } from '../sim/tuning';
 
@@ -67,10 +66,26 @@ function project(view: View, p: Vec): Vec {
   return { x: view.width / 2 + dx * view.scale, y: view.height / 2 + dy * view.scale };
 }
 
+/**
+ * One ship as the screen needs it. The renderer reads this and nothing else,
+ * so it does not care whether the race is being stepped live or played back
+ * from a film that was computed before any of it was shown.
+ */
+export interface ShipView {
+  readonly distance: number;
+  readonly offset: number;
+  readonly wide: boolean;
+  readonly isPlayer: boolean;
+  /** Where it has just been, oldest first. */
+  readonly wake: readonly { distance: number; offset: number }[];
+  /** The bends that threw it, for the marks left behind.  */
+  readonly swings: readonly SwingEvent[];
+}
+
 export function drawField(
   ctx: CanvasRenderingContext2D,
   track: Track,
-  ships: readonly ShipProgress[],
+  ships: readonly ShipView[],
   width: number,
   height: number,
 ): void {
@@ -122,9 +137,9 @@ export function drawField(
       colour: SHIP_COLOURS[i % SHIP_COLOURS.length] as string,
       lane: (i - (ships.length - 1) / 2) * LANE_STEP,
     }))
-    .sort((a, b) => Number(a.ship.entrant.isPlayer) - Number(b.ship.entrant.isPlayer));
+    .sort((a, b) => Number(a.ship.isPlayer) - Number(b.ship.isPlayer));
   for (const { ship, colour, lane } of order) {
-    drawShip(ctx, view, track, ship.state, colour, ship.entrant.isPlayer, lane);
+    drawShip(ctx, view, track, ship, colour, lane);
   }
 
   // The track's name, quietly, so three tracks are tellable apart.
@@ -144,15 +159,15 @@ function drawShip(
   ctx: CanvasRenderingContext2D,
   view: View,
   track: Track,
-  state: RaceState,
+  ship: ShipView,
   colour: string,
-  isPlayer: boolean,
   lane: number,
 ): void {
+  const isPlayer = ship.isPlayer;
   const fade = isPlayer ? 1 : 0.6;
 
   if (isPlayer) {
-    const marks = state.swings.slice(-MARKS);
+    const marks = ship.swings.slice(-MARKS);
     marks.forEach((swing, i) => {
       if (swing.swing <= 0.5) return;
       const age = (i + 1) / marks.length;
@@ -169,9 +184,9 @@ function drawShip(
     });
   }
 
-  if (state.trail.length > 1) {
+  if (ship.wake.length > 1) {
     ctx.beginPath();
-    state.trail.slice(-TRAIL).forEach((point, i) => {
+    ship.wake.slice(-TRAIL).forEach((point, i) => {
       const at = sampleAt(track, point.distance);
       const n = normalOf(at);
       const p = project(view, {
@@ -181,21 +196,21 @@ function drawShip(
       if (i === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
     });
-    ctx.strokeStyle = withAlpha(state.wide ? SHIP_WIDE : colour, 0.35 * fade);
+    ctx.strokeStyle = withAlpha(ship.wide ? SHIP_WIDE : colour, 0.35 * fade);
     ctx.lineWidth = Math.max(1.5, view.scale * 2);
     ctx.lineCap = 'round';
     ctx.stroke();
   }
 
-  const here = sampleAt(track, state.distance);
+  const here = sampleAt(track, ship.distance);
   const n = normalOf(here);
   const p = project(view, {
-    x: here.pos.x + n.x * (state.offset + lane),
-    y: here.pos.y + n.y * (state.offset + lane),
+    x: here.pos.x + n.x * (ship.offset + lane),
+    y: here.pos.y + n.y * (ship.offset + lane),
   });
   const size = Math.max(isPlayer ? 7 : 6, (isPlayer ? 5 : 4.2) * view.scale);
 
-  if (Math.abs(state.offset) > 0.5) {
+  if (Math.abs(ship.offset) > 0.5) {
     const onPath = project(view, {
       x: here.pos.x + n.x * lane,
       y: here.pos.y + n.y * lane,
@@ -203,7 +218,10 @@ function drawShip(
     ctx.beginPath();
     ctx.moveTo(onPath.x, onPath.y);
     ctx.lineTo(p.x, p.y);
-    ctx.strokeStyle = withAlpha(state.wide ? SHIP_WIDE : colour, (state.wide ? 0.55 : 0.3) * fade);
+    ctx.strokeStyle = withAlpha(
+      ship.wide ? SHIP_WIDE : colour,
+      (ship.wide ? 0.55 : 0.3) * fade,
+    );
     ctx.lineWidth = Math.max(1, view.scale * 0.8);
     ctx.stroke();
   }
@@ -217,7 +235,7 @@ function drawShip(
   ctx.lineTo(-size * 0.35, 0);
   ctx.lineTo(-size * 0.7, -size * 0.62);
   ctx.closePath();
-  ctx.fillStyle = state.wide ? SHIP_WIDE : colour;
+  ctx.fillStyle = ship.wide ? SHIP_WIDE : colour;
   ctx.globalAlpha = fade;
   ctx.fill();
   if (isPlayer) {

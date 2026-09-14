@@ -56,9 +56,28 @@ export interface Component {
 
 /** A component as owned: which one, and how far it has been upgraded. */
 export interface Fitted {
+  /**
+   * This particular part, as opposed to another of the same kind. Damage
+   * follows the uid, so swapping your build at a pit stop does not hand you a
+   * repaired ship — what you kept keeps its dents.
+   */
+  readonly uid: string;
   readonly componentId: string;
   /** 1, 2 or 3. */
   readonly level: number;
+}
+
+/**
+ * Carry condition across a change of build: a part you kept keeps what it
+ * had, a part you just fitted arrives whole.
+ */
+export function carryCondition(
+  before: readonly Fitted[],
+  condition: Condition,
+  after: readonly Fitted[],
+): Condition {
+  const held = new Map(before.map((item, i) => [item.uid, condition.parts[i] ?? 1]));
+  return { parts: after.map((item) => held.get(item.uid) ?? 1) };
 }
 
 export const COMPONENTS: readonly Component[] = [

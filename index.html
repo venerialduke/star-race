@@ -49,6 +49,54 @@
         background: var(--panel);
         border-top: 1px solid var(--rule);
       }
+      /* The two screens. The tab row is the one thing both share. */
+      .screens {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .screen {
+        padding: 7px 4px;
+        border: 1px solid var(--rule);
+        border-radius: 7px;
+        background: #0e1730;
+        color: var(--soft);
+        font: 600 12px inherit;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+      }
+      .screen.on {
+        border-color: var(--gold);
+        background: #1b2a4d;
+        color: var(--gold);
+      }
+      /* The garage is a whole screen, not a drawer under the race. */
+      #app:has(.panel[data-screen='garage']) #game {
+        display: none;
+      }
+      #app:has(.panel[data-screen='garage']) #panel {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        border-top: 0;
+      }
+      #app:has(.panel[data-screen='garage']) .board {
+        max-height: none;
+        overflow-y: visible;
+      }
+      /* Why nothing you do here touches the lap on screen. */
+      .staged {
+        margin: 8px 0 0;
+        padding: 6px 8px;
+        border-left: 2px solid var(--gold);
+        border-radius: 0 5px 5px 0;
+        background: #0e1730;
+        font-size: 10.5px;
+        line-height: 1.35;
+        color: var(--soft);
+      }
       .bar {
         display: grid;
         gap: 3px;
@@ -292,6 +340,12 @@
         gap: 8px;
         align-items: center;
         margin-top: 8px;
+        /* The garage scrolls, so the way out of it has to come with you. */
+        position: sticky;
+        bottom: calc(-8px - env(safe-area-inset-bottom));
+        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+        background: var(--panel);
+        box-shadow: 0 -8px 12px -6px var(--panel);
       }
       .seedrow label {
         flex: 1 1 auto;

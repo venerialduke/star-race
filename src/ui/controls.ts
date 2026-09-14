@@ -57,6 +57,8 @@ export interface Controls {
   setNav(nav: number): void;
   /** How deep a mine rack is fitted, which is whether a mine can be laid at all. */
   setMines(level: number): void;
+  /** What the build can spend a charge on. Empty means the meter is hidden. */
+  setAbilities(ids: readonly AbilityId[]): void;
   /** The heat has started. Without Nav 3 the route is now fixed. */
   seal(): void;
   /** What the season is waiting for, so the Go button can say it. */
@@ -76,13 +78,29 @@ const seconds = (ticks: number): string => `${(ticks / TICK_HZ).toFixed(2)}s`;
 
 /** What to say when an ability goes off. Held for a moment so it can be read. */
 const FIRED_HOLD = 40;
-const FIRED: Record<AbilityId, string> = {
-  boost: 'BOOST',
-  'dark-boost': 'BOOST — and a black hole left behind it',
-  'three-bends': 'THREE PERFECT BENDS',
-  missile: 'MISSILE AWAY',
-  tractor: 'TRACTOR — holding the ship ahead',
-  mine: 'MINE LAID',
+
+/** What the charge meter calls each ability, in the space it has. */
+const SHORT: Record<AbilityId, string> = {
+  boost: 'boost',
+  'dark-boost': 'boost',
+  'three-bends': 'bend chain',
+  missile: 'missile',
+  tractor: 'tractor',
+  mine: 'mine',
+};
+
+/**
+ * What to say when an ability goes off. A weapon names who it went at, because
+ * "a ship bounced" and "my missile bounced that ship" are different events and
+ * only one of them tells the player their slot is doing something.
+ */
+const FIRED: Record<AbilityId, (at: string | undefined) => string> = {
+  boost: () => 'BOOST',
+  'dark-boost': () => 'BOOST — and a black hole left behind it',
+  'three-bends': () => 'PERFECT BENDS',
+  missile: (at) => (at === undefined ? 'MISSILE AWAY' : `MISSILE AWAY — at ${at}`),
+  tractor: (at) => (at === undefined ? 'TRACTOR BEAM' : `TRACTOR — holding ${at}`),
+  mine: () => 'MINE LAID',
 };
 
 export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
@@ -102,6 +120,11 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       <button type="button" data-screen="garage" class="screen">Garage</button>
     </div>
     <div id="bar" class="bar"></div>
+    <div id="charge" class="charge" hidden>
+      <span class="c-tag">CHARGE</span>
+      <span class="c-bar"><i id="c-fill"></i></span>
+      <span class="c-for" id="c-for"></span>
+    </div>
     <div id="r-state" class="state">on the path</div>
     <div id="garage-screen">
       <div id="season-slot"></div>
@@ -153,6 +176,9 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   const mineRow = byId<HTMLElement>('mine-row');
   const go = byId<HTMLButtonElement>('b-go');
   const skip = byId<HTMLButtonElement>('b-skip');
+  const charge = byId<HTMLElement>('charge');
+  const chargeFill = byId<HTMLElement>('c-fill');
+  const chargeFor = byId<HTMLElement>('c-for');
 
   const showScreen = (which: 'race' | 'garage'): void => {
     screen = which;
@@ -191,6 +217,8 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   let nav = 0;
   /** How deep a mine rack is fitted. Zero means there is nothing to lay. */
   let mines = 0;
+  /** What this build can spend a charge on. Nothing means no meter to show. */
+  let abilities: readonly AbilityId[] = [];
   /** True once the heat has started: without Nav 3 the route is then fixed. */
   let sealed = false;
 
@@ -293,6 +321,10 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       mines = level;
       renderMines();
     },
+    setAbilities(ids) {
+      abilities = ids;
+      chargeFor.textContent = ids.map((id) => SHORT[id]).join(' · ');
+    },
     seal() {
       sealed = true;
       renderRoutes();
@@ -383,12 +415,36 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
       // to read: what the player wants to know is that the thing they bought
       // just did something, not exactly which tick it did it on.
       let recentlyFired: AbilityId | undefined;
+      let firedAt: string | undefined;
+      let struck: string | undefined;
+      let struckBy: string | undefined;
+      const nameOf = (id: string | undefined): string | undefined =>
+        id === undefined
+          ? undefined
+          : (field.ships.find((s) => s.entrant.id === id)?.entrant.name ?? undefined);
       for (let back = 0; back <= FIRED_HOLD; back += 1) {
-        const was = frameAt(live.segment, me, live.cursor - back)?.fired;
-        if (was !== undefined) {
-          recentlyFired = was;
-          break;
+        const was = frameAt(live.segment, me, live.cursor - back);
+        if (recentlyFired === undefined && was?.fired !== undefined) {
+          recentlyFired = was.fired;
+          firedAt = nameOf(was.firedAt);
         }
+        if (struck === undefined && was?.hit !== undefined) {
+          struck = was.hit;
+          struckBy = nameOf(was.hitBy);
+        }
+        if (recentlyFired !== undefined && struck !== undefined) break;
+      }
+
+      // The charge meter. It is on both screens and it is always up while a
+      // ship that can spend a charge is racing, because a resource nobody can
+      // see is a resource nobody believes in.
+      charge.hidden = abilities.length === 0 || settled;
+      if (!charge.hidden) {
+        // Read the same rounded number for both, or the bar shows full a moment
+        // before the glow says ready and the two disagree on screen.
+        const filled = Math.min(100, Math.round((frame?.charge ?? 0) * 100));
+        chargeFill.style.width = `${filled}%`;
+        charge.classList.toggle('ready', filled >= 100);
       }
 
       if (settled && done && note !== undefined) {
@@ -409,8 +465,13 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
         rState.textContent = `Pit stop — everyone restarts level, the clock keeps running. Change the plan, then Go.`;
         rState.className = 'state pit';
       } else if (recentlyFired !== undefined) {
-        rState.textContent = `${FIRED[recentlyFired]}${condition(frame)}`;
+        rState.textContent = `${FIRED[recentlyFired](firedAt)}${condition(frame)}`;
         rState.className = 'state fired';
+      } else if (struck !== undefined) {
+        // Being bounced by nobody in particular is the thing that made this
+        // whole layer invisible. Somebody did it, and it says who.
+        rState.textContent = `HIT — ${struckBy === undefined ? struck : `${struckBy}'s ${struck.replace(/^an? /, '')}`}${condition(frame)}`;
+        rState.className = 'state struck';
       } else if (frame?.wide === true) {
         rState.textContent = `WIDE — off the path${condition(frame)}`;
         rState.className = 'state wide';

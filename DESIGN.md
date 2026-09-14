@@ -454,9 +454,30 @@ so — unless you fitted the system that can re-plan at a pit stop.
 **What is on the road is drawn where it is.** A mine is a ring you can see your
 line going through or past; a black hole is a bigger one, filled. Both are drawn
 under the ships in both views, because a ship must never be hidden by the thing
-that is about to hit it. When an ability goes off, the state line says so and
-holds it long enough to read — what the player wants to know is that the thing
-they bought just did something.
+that is about to hit it.
+
+**Interaction has to be legible or it may as well not exist.** The first build of
+S6 was correct and invisible: ships were bounced by nobody in particular, and
+there was no sign a charge was building or being spent. Four things fix that, and
+they are all about naming the cause rather than showing the effect.
+
+- **The charge meter** sits under the tracking bar, on both screens, and is up
+  whenever a ship that can spend a charge is racing. It says what the charge is
+  for and glows when it is full. A resource nobody can see is a resource nobody
+  believes in.
+- **A shot is drawn going somewhere** — a dashed line from whoever fired to
+  whoever it was aimed at, under both ships so neither end is hidden.
+- **A hit flashes where it landed**, a ring that opens out and fades over the
+  ticks after it.
+- **The state line names the cause.** Firing says who it was fired at; being hit
+  says what hit you *and whose it was*. "A ship bounced" and "Thessa Kyre's
+  gravity mine bounced me" are different events, and only one of them tells the
+  player their slot is doing something.
+
+A shot and a hit each last one tick in the simulation — a sixtieth of a second,
+long enough to happen and far too short to see — so the screen holds each for a
+few ticks after. Those are drawing numbers and live in `main.ts`; the simulation
+does not read them, and nothing about the race changes if they do.
 
 **The mine** is placed in the garage, a button per sector, and only when a rack is
 fitted. Laying none is a real choice: a placed mine is on the board before the

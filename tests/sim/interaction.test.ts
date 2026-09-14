@@ -338,6 +338,75 @@ describe('what answers a weapon', () => {
   });
 });
 
+describe('the screen can say who did it to you', () => {
+  // Being bounced by nobody in particular is what made this whole layer
+  // invisible on screen: the ship moved and nothing said why or whose fault it
+  // was. The sim has to carry the attacker and the moment, or no readout can.
+  it('records who fired what reached it, and on which tick', () => {
+    const build = [fit('speed-engine', 2)];
+    const stats = resolveBuild(build);
+    const quiet = stepRace(startRace(stats, build), {
+      track: MERIDIAN_RUN,
+      stats,
+      build,
+      plan: 'carry',
+      seed: 1,
+      id: 'a',
+    });
+    expect(quiet.lastHitBy).toBeUndefined();
+    expect(quiet.lastHitTick).toBeUndefined();
+
+    const shot = stepRace(quiet, {
+      track: MERIDIAN_RUN,
+      stats,
+      build,
+      plan: 'carry',
+      seed: 1,
+      id: 'a',
+      incoming: [{ from: 'rival-3', side: 1, power: 40, scrub: 0 }],
+    });
+    expect(shot.lastHit).toBe('a missile');
+    expect(shot.lastHitBy).toBe('rival-3');
+    expect(shot.lastHitTick).toBe(shot.tick);
+  });
+
+  it('names a mine by whoever laid it', () => {
+    const build = [fit('speed-engine', 2)];
+    const stats = resolveBuild(build);
+    const laid: Fixture = { ...fixtureAt('mine', 300, 50), owner: 'rival-7' };
+    let state = startRace(stats, build);
+    for (let i = 0; i < 800; i += 1) {
+      state = stepRace(state, {
+        track: KESTREL_LOOP,
+        stats,
+        build,
+        plan: 'carry',
+        seed: 1,
+        id: 'a',
+        world: { ships: [], fixtures: [laid] },
+      });
+    }
+    expect(state.lastHit).toBe('a gravity mine');
+    expect(state.lastHitBy).toBe('rival-7');
+  });
+
+  it('marks a shot with who it was aimed at', () => {
+    const shooter = entrant('a', [fit('missile-rack', 3), fit('crew-engineers', 3, 2)]);
+    const target = entrant('b', [fit('speed-engine', 1)]);
+    const config = { track: MERIDIAN_RUN, laps: 1, seed: 3 };
+    let field = startField([shooter, target], ['carry', 'carry']);
+    let aimed: string | undefined;
+    for (let i = 0; i < 6000 && field.phase === 'racing'; i += 1) {
+      field = stepField(field, config);
+      for (const emission of field.ships[0]?.state.emitted ?? []) {
+        if (emission.kind === 'push') aimed = emission.target;
+      }
+      if (aimed !== undefined) break;
+    }
+    expect(aimed).toBe('b');
+  });
+});
+
 describe('a black hole discriminates by build', () => {
   function through(build: readonly Fitted[]): RaceState {
     const stats = resolveBuild(build);

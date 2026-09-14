@@ -55,6 +55,8 @@ export function drawField(
   ships: readonly ShipView[],
   routes: RouteView,
   scene: Scene,
+  /** Wall-clock seconds since the last frame, so the camera eases by time. */
+  seconds: number,
   width: number,
   height: number,
 ): void {
@@ -69,7 +71,7 @@ export function drawField(
   const inset = insetRect(width, height);
 
   if (scene.big === 'chase') {
-    drawChase(ctx, track, ships, routes, sky, scene.chase, width, height);
+    drawChase(ctx, track, ships, routes, sky, scene.chase, seconds, width, height);
     drawMap(ctx, track, ships, routes, inset);
   } else {
     drawMap(ctx, track, ships, routes, { x: 0, y: 0, width, height });
@@ -80,7 +82,17 @@ export function drawField(
     ctx.rect(inset.x, inset.y, inset.width, inset.height);
     ctx.clip();
     ctx.translate(inset.x, inset.y);
-    drawChase(ctx, track, ships, routes, sky, scene.chase, inset.width, inset.height);
+    drawChase(
+      ctx,
+      track,
+      ships,
+      routes,
+      sky,
+      scene.chase,
+      seconds,
+      inset.width,
+      inset.height,
+    );
     ctx.restore();
   }
 

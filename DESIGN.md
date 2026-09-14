@@ -352,6 +352,14 @@ Both draw the same world from the same numbers. The chase camera is a pinhole
 over a flat plane, so a position is projected rather than modelled, and nothing
 in the sim knows either view exists.
 
+**A view interpolates where the simulation snaps.** The track is sampled every 3
+units and a ship covers 0.85 of one in a tick, so the position the tick loop
+reads holds still for three ticks and then jumps — which is correct for the
+simulation, where a bend's radius is a fact about the bend, and unwatchable for
+a camera. The views read an interpolated position and heading instead, and blend
+between the film's own ticks so the leftover wall-clock time is spent rather
+than dropped. Neither ever reaches back: the same nine lap times come out.
+
 **Space is three layers deep, and that is the whole point of it.** Stars are
 infinitely far and turn with the camera without ever sliding; bodies sit
 thousands of units out and drift over a lap; dust sits a few hundred out and

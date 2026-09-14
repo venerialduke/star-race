@@ -11,6 +11,7 @@ import {
   navFor,
   normalOf,
   placeOn,
+  placeSmooth,
   routeOf,
   sampleAt,
   type Route,
@@ -242,8 +243,11 @@ function drawShip(
     ctx.stroke();
   }
 
-  const here = placeOn(track, ship.distance, ship.route);
-  const n = normalOf(here);
+  // Interpolated, not snapped: at map scale a snapped ship only jitters by a
+  // pixel, but it is the same staircase the chase camera had and it is free
+  // to be rid of.
+  const here = placeSmooth(track, ship.distance, ship.route);
+  const n = { x: -Math.sin(here.heading), y: Math.cos(here.heading) };
   const p = project(view, {
     x: here.pos.x + n.x * (ship.offset + lane),
     y: here.pos.y + n.y * (ship.offset + lane),

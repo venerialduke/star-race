@@ -362,6 +362,51 @@ all move together says nothing about moving.
 there is no sense of the ship banking into a bend. Frame cost is 16.7ms median
 at 420×900 with 520 stars, so there is room.
 
+## V1.1 — the camera stops shaking — **done**
+
+Reported: a little shake in the chase camera. Two causes, neither of them the
+camera.
+
+**The track is sampled every 3 units and a ship covers 0.85 in a tick.** So a
+snapped lookup held the ship still for three ticks and then moved it the whole
+3 units at once, and a snapped heading turned 0 radians twice and then 0.043 in
+one go. A camera following that staircase shakes. `placeSmooth` interpolates
+between samples and lives **alongside** `sampleOn` rather than replacing it: a
+bend's radius is a fact about the bend and must not be averaged across its edge,
+so the tick loop still reads the snapped one.
+
+**The film is one frame per tick and the screen refreshes on its own schedule.**
+Some display frames advanced the ship a whole tick, some none. The leftover time
+is now spent rather than dropped — `frameBetween` blends the two neighbouring
+frames. Position blends; whether a ship is wide and which way it went at a fork
+do not, because half of either is not a thing.
+
+Two smaller fixes fell out of it. Route headings came from a forward difference,
+so every heading lagged its own sample by half a step; they are central
+differences now. And a route's endpoint headings are taken from the main line
+exactly, rather than estimated one-sidedly from the route's own points — every
+route of a sector leaves and arrives on the checkpoint with the lateral profile
+flat there, so it genuinely is tangent, and saying so exactly is what stops a
+ship flicking as it crosses into the next sector's route. Without that the
+Cinder Coil still turned 0.119 rad in a tick where its tightest bend allows
+0.033.
+
+**Measured, before and after**, as the per-frame change in one scanline of the
+canvas — how much the drawn scene jumps between frames:
+
+| | median | 90th | worst |
+| --- | --- | --- | --- |
+| before | 1.59 | 3.75 | 11.81 |
+| after | **0.17** | **0.28** | **2.66** |
+
+The camera's easing is also a time now rather than a share per frame, which it
+should have been from the start: a share per frame gives a 120Hz screen a
+camera twice as tight as a 60Hz one.
+
+**Nine lap times across three tracks and three corner plans are identical before
+and after**, which is the check that says a drawing fix stayed a drawing fix.
+`tests/sim/smooth.test.ts` pins all of it.
+
 ## S5 — the season
 
 **S5 is done when:** a run is several heats with a cut at the end of a phase,

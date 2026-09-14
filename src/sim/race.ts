@@ -82,8 +82,12 @@ import {
   PERFECT_WINDOW,
   PUSH_PER_POWER,
   SALVAGE_PER_POWER,
+  COLLECT_SHARE,
   TRACTOR_RANGE,
   TRACTOR_SCRUB,
+  TRACTOR_TOW,
+  TRACTOR_TOW_PULL,
+  TRACTOR_TOW_TICKS,
 } from './tuning';
 import {
   EMPTY_WORLD,
@@ -199,6 +203,8 @@ export interface RaceState {
   readonly charge: number;
   /** Ticks of boost still running. */
   readonly boostLeft: number;
+  /** Ticks of tow still running: a tractor beam pulls its owner along too. */
+  readonly towLeft: number;
   /** Bends still to be taken perfectly by the handling engine's chain. */
   readonly perfectLeft: number;
   /** When the last bend of that chain was taken, so a quick one can pay extra. */
@@ -288,6 +294,7 @@ export function startRace(
     trail: [],
     charge: 0,
     boostLeft: 0,
+    towLeft: 0,
     perfectLeft: 0,
     lastPerfectTick: undefined,
     emitted: [],
@@ -387,9 +394,17 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
 
   const boosting = fired?.id === 'boost' || fired?.id === 'dark-boost';
   const boostLeft = boosting ? BOOST_TICKS : Math.max(0, state.boostLeft - 1);
+  // A tether pulls both ways. Holding the ship ahead back is also being pulled
+  // along by it, which is the whole of what a tractor beam is for and the only
+  // reason to fit one over a missile.
+  const towLeft =
+    fired?.id === 'tractor' ? TRACTOR_TOW_TICKS : Math.max(0, state.towLeft - 1);
   // A boost is speed the engine did not have to build up to, so it lifts the
   // ceiling rather than the acceleration: what it buys is a faster straight.
-  const topSpeed = SPEED_PER_THRUST * thrust + (boostLeft > 0 ? BOOST_SPEED : 0);
+  const topSpeed =
+    SPEED_PER_THRUST * thrust +
+    (boostLeft > 0 ? BOOST_SPEED : 0) +
+    (towLeft > 0 ? TRACTOR_TOW : 0);
   const accel = ACCEL_PER_THRUST * thrust;
 
   // 1. Speed. The corner plan decides what happens about a bend — unless the
@@ -397,7 +412,10 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   //
   // A tractor beam is taken off the top: no shield answers a pull, and a black
   // hole read as a corner is speed the ship gains rather than loses.
-  let speed = state.speed * (1 - arrived.scrub) + arrived.carry;
+  let speed =
+    state.speed * (1 - arrived.scrub) +
+    arrived.carry +
+    (towLeft > 0 ? TRACTOR_TOW_PULL : 0);
   const chaining = state.perfectLeft > 0 || fired?.id === 'three-bends';
   if (onBend) {
     // What this plan is willing to take the bend at. Charge ignores it.
@@ -615,6 +633,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     // A charge spent is a charge gone, whatever it bought.
     charge: fired === undefined ? charge : 0,
     boostLeft,
+    towLeft,
     perfectLeft,
     lastPerfectTick,
     emitted: emissionsFor(fired, state, stats, world, track, me),
@@ -730,6 +749,13 @@ function arrivals(
       hit = `captured ${what}`;
       hitBy = from;
       return;
+    }
+    // Below a capture, a collector still keeps a piece of what hit it. Without
+    // this the part collected nothing at all until level 3 and full shields,
+    // which made its first two levels strictly worse than plain shielding.
+    if (stats.collects > 0 && !hazard) {
+      salvage +=
+        power * SALVAGE_PER_POWER * (COLLECT_SHARE[stats.collects - 1] ?? 0);
     }
     const soaked = Math.min(left, power);
     left -= soaked;

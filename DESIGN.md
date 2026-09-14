@@ -97,7 +97,8 @@ refitting it does not launder the damage off it.
 ## What is built
 
 **S1 — the swing**, **S2 — the heat**, **S3 — the ship and the shop**,
-**S4 — the route**, **S5 — the season**, and **S6 — interaction**.
+**S4 — the route**, **S5 — the season**, **S6 — interaction**, and the
+measurement half of **S7 — the shop**.
 Three ships fly one of three authored loops for two laps, with a pit stop
 between them. The player fits components into slots in the garage between laps,
 sets the corner plan and the route, and races; the rivals are bots that read the
@@ -636,7 +637,7 @@ person rather than a bot.
 | **Boost, dark** | dark matter engine L2 | the same — and it leaves a black hole where it fired |
 | **Three perfect bends** | handling engine L3 | `PERFECT_WANTS_BENDS` bends lie close together ahead |
 | **Missile** | missile rack | a rival is within reach up the road |
-| **Tractor beam** | tractor beam | the same, and it takes their speed rather than their line |
+| **Tractor beam** | tractor beam | the same — and a tether pulls both ways, so it tows you too |
 | **Mine** | gravity mines | somebody is close behind — the one ability aimed backwards |
 
 The order they are offered in is fixed, so two ships with the same build in the
@@ -654,8 +655,16 @@ just no longer has the ability in it. That is how damage costs a ship a weapon.
 A weapon costs you **the line you were on**, which is the currency the swing is
 already paid in. A missile shoves a rival further off whatever line they are on;
 what the shields do not soak is what moves the ship; the corridor holds it in the
-same way it holds a swing. A tractor beam is the exception in the other
-direction — it takes speed straight off, and no shield answers a pull.
+same way it holds a swing.
+
+**The tractor beam is the exception twice over.** It takes speed straight off,
+and no shield answers a pull — and because a tether pulls both ways, holding the
+ship ahead back also tows the ship holding it. That is the only reason to fit
+one: it is the single weapon that helps its owner directly rather than only
+hurting somebody, and without that it had no answer to "why this instead of a
+missile or a mine". The tow both lifts the ceiling and pulls every tick, because
+lifting the ceiling alone is worth nothing to a ship still climbing toward it —
+the same flaw that made a short boost worth almost nothing.
 
 Being shot at a fork can therefore cost you a split, exactly as being thrown wide
 can. Nothing else about it is new.
@@ -682,9 +691,13 @@ not: the lap restarts and the road is clear again.
 
 ### Collection
 
-**Salvage** is a weapon a collector shield kept. At level 3 a collector keeps
-whatever hits it at full shields — the weapon never lands at all — and sells it
-when the race ends. It is the only way a ship profits from being shot at.
+**Salvage** is what a collector shield keeps of whatever hits it. At level 3 and
+full shields it keeps the weapon **whole** — it never lands at all — and sells it
+when the race ends. Below that it keeps a piece of every weapon that does land,
+more of it the deeper the collector. That is the part's job at every level: it
+turns being shot at into money. Needing level 3 *and* full shields to collect
+anything left the first two levels doing nothing, which is a part nobody buys
+twice.
 
 **Dark matter** is gathered by flying through a black hole with a collector
 aboard. At level 3 that collector cashes it in for credits; below that it is fuel
@@ -694,6 +707,55 @@ Both are paid at the end of the heat, on top of the purse. So a ship can come
 third and leave the heat richer than the ship that beat it — which is the first
 income in the game that does not come from beating somebody, and the first reason
 to spend late-season credits on something that is not a stat.
+
+## The shop, and what a level is worth
+
+**Levels must be worth more than copies.** This is the rule the whole shop rests
+on, and until S7 it was the wrong way round.
+
+Only two categories add up at all. A crew, a navigation system and a weapon are
+each **the best one aboard** — a second crew does nothing, a second navigation
+system does nothing, and a second missile rack fires no extra missile. Engines
+and shields are the exception: their numbers sum. So those two are the only
+places where "buy another" competes with "buy deeper", and the arithmetic said
+buy another: 106 credits bought a level 3 balanced engine for +0.30, or three
+level 1s for +0.45. Upgrading was strictly the worse deal.
+
+Nothing priced that difference, because **slots arrive free** — one for every
+race finished, so thirteen by the end of a season. A build with nothing to spend
+credits on could bolt on another engine at no cost but the credits, and twelve
+cheap engines put both thrust and handling on their caps. The whole shop
+collapsed into one move, and every question about *which* part was drowned out
+by *how many*.
+
+Two things fix it:
+
+- **Every level now adds more than the level below it**, at a cost that rises
+  more slowly than the effect. A maxed engine beats the copies the same credits
+  would buy, and does it in one slot instead of three. That is what makes "one
+  maxed part is most of a ship" true rather than aspirational.
+- **Each further copy of the same component is worth less than the last** —
+  `STACK_FALLOFF`, 60% of the one before. Two of a thing is still a build;
+  twelve is not.
+
+The falloff is deliberately **per component, not per category**. The framework
+is explicit that two shields is a build rather than a mistake, and that a
+collector's storage scales with the ship's *total* shielding — so two different
+shields each count in full. What is stopped is the same part twelve times over,
+not variety within a category.
+
+**Rivals shop through a seam, not a special case.** `settleHeat` takes a
+`Shopper`: today every rival is a bot, but nothing in the season assumes that. A
+rival is whoever hands in a garage, which is the same shape a networked player's
+shopping would arrive in — and it is what lets the balance harness race two ways
+of spending against each other rather than against a bot.
+
+**Balance is measured in seasons, not in ticks.** `npm run balance` runs whole
+seasons where every racer follows a **policy** — a build they are shopping
+toward — and reports how often each survives the cuts and wins. A heat-clock
+measurement cannot answer the question the shop asks, because the season pays by
+place and the cut is on points: a part that wins races while losing time is a
+good part, and ticks call it bad.
 
 ## Tuning
 

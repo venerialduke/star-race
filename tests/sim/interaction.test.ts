@@ -309,8 +309,12 @@ describe('what answers a weapon', () => {
     // And the next one lands, because the shields are no longer full. That is
     // the whole of what stops a collector being immune to weapons.
     const next = stepRace(caught, { ...config, incoming: [big] });
-    expect(next.salvage).toBe(caught.salvage);
     expect(Math.abs(next.offset)).toBeGreaterThan(0);
+    // It still keeps a piece of what hit it — that is what a collector is at
+    // every level — but a good deal less than catching it whole would pay.
+    const kept = next.salvage - caught.salvage;
+    expect(kept).toBeGreaterThan(0);
+    expect(kept).toBeLessThan(caught.salvage);
   });
 
   it('takes speed off with a pull, which no shield answers', () => {

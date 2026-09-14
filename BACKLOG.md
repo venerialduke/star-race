@@ -691,23 +691,145 @@ mechanic they do not have.
 **S7 is done when:** two builds that spend the same credits differently both win
 seasons, and neither is "buy engines".
 
-The measurement at the end of S6 is the brief: a second engine beats every weapon
-in every slot on every track by five to nine times. Nothing in the shop is priced
-against a stat ladder that steep.
+- **S7.1 Measure in seasons, not ticks.** — **done**. `npm run balance`.
+- **S7.2 The engine ladder.** — **half done**: the level curve and stacking are
+  fixed, the cap is not. See below.
+- **S7.3 Give the tractor beam a job.** — **done, and it did not help much**.
+- **S7.4 Levels 1 and 2 of the collector shield.** — **done, and it did not help
+  at all**. Both below.
 
-- **S7.1 Measure in seasons, not ticks.** Everything so far has been measured on
-  the clock over a heat. The season pays by place and the cut is on points, so a
-  part that wins races while losing time may already be good and the measurement
-  simply cannot see it. Build the season-level harness first; it may move several
-  of the answers below before anything is changed.
-- **S7.2 The engine ladder.** Costs and stat steps in `ship.ts`, measured in
-  seasons won. `STAT_MAX` is part of this: S5 found handling pinned at the cap in
-  24 of 24 seasons, so the top of the ladder is already flat and the ships that
-  get there stop differing.
-- **S7.3 Give the tractor beam a job, or cut it.** It is the one part with no
-  answer to "why this instead of the other two".
-- **S7.4 Levels 1 and 2 of the collector shield.** A part whose first two levels
-  do nothing is a part nobody buys twice.
+### S7.1 — the harness
+
+`scripts/balance.ts` runs whole seasons where every racer follows a **policy** —
+a build they are shopping toward — and reports how often each survives the cuts
+and wins. `settleHeat` takes a `Shopper` so rivals are not hardcoded bots, which
+is what lets policies race each other rather than race bots. A heat-clock
+measurement cannot answer what the shop asks, because the season pays by place
+and the cut is on points.
+
+**It told two lies before it told the truth, and both looked like tables.**
+Buying the first affordable thing each heat ended every policy with eleven
+engines bolted on and washed out the differences it existed to measure. Giving
+each policy three parts had them finish shopping by heat three and bank three
+hundred credits while the degenerate build kept buying — it was reading "stopped
+shopping" and reporting "spent differently". Both are recorded in the script's
+header. A harness is a thing to be suspicious of in exactly the way a result is.
+
+**It is slow**: a 72-season, 12-policy run is about fifteen minutes. 24 seasons
+is a couple of minutes and is enough for a direction, not for a ranking — the
+standard error on a win count at 24 is about 2.3, so the 9/8/7 top three in the
+first run were one number.
+
+### S7.2 — what was wrong, and what is still wrong
+
+**Fixed: a level is now worth more than a copy.** Only engines and shields add up
+at all, and in those two the arithmetic said buy another — 106 credits bought a
+level 3 balanced engine for +0.30, or three level 1s for +0.45. Every level now
+adds at least what its own first level did, and each further copy of the same
+component is worth 60% of the last. `DESIGN.md` has the rule.
+
+**Not fixed: bolting on cheap engines is still the best build in the game.**
+Over 72 seasons with every policy racing the others:
+
+| policy | seasons won | | policy | seasons won |
+| --- | --- | --- | --- | --- |
+| **engine-spam** | **25 / 72** | | speed | 6 |
+| handling | 17 | | collector | 6 |
+| nav | 15 | | shields | 6 |
+| engines | 8 | | dark | 3 |
+| bot | 7 | | mines | 1 |
+| | | | armed · tractor | 0 |
+
+An even share of twelve policies is 6. So spam is four times its share, and two
+of the top three are engine builds — the bar S7 set is not met.
+
+**Why the falloff did not finish the job.** Two numbers explain it.
+
+- **The headroom is tiny.** `STAT_MAX` is 1.6 against a base thrust of 0.78 and
+  a base handling of 0.7, so there is 0.82 and 0.90 of room. Eleven cheap engines
+  plus a maxed one clear it even at a 60% falloff: handling lands on 1.59 against
+  a cap of 1.60. Steepening the falloff barely moves that — 0.40 gives 1.47, and
+  0.25 gives 1.42 — because a geometric series converges and the cap is close.
+- **The balanced engine has no downside.** Every other part in the shop trades
+  something: the speed engine gives up grip, the handling engine gives up thrust,
+  a weapon gives up thrust, a deep part gives up a slot. A balanced engine at
+  +0.15/+0.15 costs only credits, and slots arrive free at one a race. So
+  stacking generalists is never a trade, and a ship of twelve reaches **both**
+  caps where a two-part specialist build reaches one: spam finishes on thrust
+  1.60 / handling 1.59, against 1.28 / 1.60 for a maxed handling engine beside a
+  maxed balanced one.
+
+**The remaining choice is the owner's**, because every version of it changes how
+the game feels rather than what a part costs:
+
+1. **Raise `STAT_MAX`.** S5 already found handling pinned at the cap in 24 of 24
+   seasons, so the top of the ladder is flat and the ships that reach it stop
+   differing. Room above it is what lets a deep specialist beat a wide generalist
+   at its own stat. It also makes every ship faster and every bend quicker, and
+   the tracks were authored against the current range.
+2. **Make fitting a part cost something.** Mass is the obvious candidate and the
+   framework gestures at it — gravity "acts on the crew *and* on the ship" — but
+   it is a new rule, not a number, and it is not in `DESIGN.md`.
+3. **Fall off per category rather than per component**, for engines only. Cheap
+   to try and it needs no new rule, but it contradicts "a category may be fitted
+   more than once" and it would also weaken the honest two-engine builds.
+
+None of the three is a tuning pass, which is why none of them is in this one.
+The owner chose to leave it and take S7.3 and S7.4 instead.
+
+### S7.3 and S7.4 — two parts that now have a reason to exist, and still lose
+
+Both had the same thing wrong: nothing to do. A tractor beam took speed off the
+ship ahead, which is not a reason to fit one over a missile. A collector shield
+needed level 3 *and* full shields to keep anything, so its first two levels
+collected nothing and were strictly worse than plain shielding.
+
+Both are fixed as designs. **A tether pulls both ways**, so holding the ship
+ahead back now tows the ship holding it — the only weapon that helps its owner
+rather than only hurting somebody. **A collector keeps a piece of every weapon
+that lands**, more of it the deeper the part, with the whole-weapon capture still
+reserved for level 3 at full shields.
+
+Neither made its build competitive, and the numbers say so plainly. Seventy-two
+seasons, every policy racing the others, before and after:
+
+| policy | before | after | | policy | before | after |
+| --- | --- | --- | --- | --- | --- | --- |
+| engine-spam | 25 | **21** | | shields | 6 | 8 |
+| handling | 17 | **21** | | speed | 6 | 7 |
+| **dark** | 3 | **16** | | collector | 6 | **7** |
+| nav | 15 | 12 | | bot | 7 | 7 |
+| engines | 8 | 9 | | **tractor** | 0 | **2** |
+| | | | | armed · mines | 0 · 1 | **0 · 0** |
+
+- **The tether moved the tractor beam from 0 to 2 of 72.** That is about one
+  standard error. It is a better part and it is still near the bottom.
+- **Collecting at every level moved the collector from 6 to 7.** That is nothing.
+  The income is real and it does not buy enough to change a season.
+- **The thing that actually moved was neither.** `dark` went from 3 to 16, and
+  that was the *level curve* — the dark matter engine was added in S6 and never
+  repriced, so it still had the old diminishing ladder. The shop test caught it;
+  no one would have found it by playing. Repricing one mediocre part was worth
+  five times what redesigning two parts was.
+
+**The lesson worth keeping: "has a reason to exist" is not "is worth buying".**
+Both parts are better designed than they were and neither is competitive, because
+the problem was never that they had no job — it was that a slot spent on a stat
+pays every tick of every lap and a slot spent on a weapon pays a few dozen ticks
+a heat. That gap is the same one S6 measured on the clock, and it is untouched.
+
+**Weapons win nothing, now measured three ways**: on the heat clock in S6, over
+seasons against bots, and over seasons against other policies. `armed` and
+`mines` won 0 of 72 each. Nothing in `tuning.ts` fixes this — a push big enough
+to compete with a permanent stat is the one-hit-to-the-wall problem the corridor
+work exists to stop — so it belongs with the three rule changes above rather than
+with another tuning pass.
+
+**And the S7 bar is not met.** "Two builds that spend the same credits
+differently both win seasons, and neither is buy engines": the top five are
+engine-spam, handling, dark, nav and engines. Every one of them is led by an
+engine. The non-engine ideas — weapons, collection, shields — are the whole
+bottom half.
 
 ## Not scheduled
 

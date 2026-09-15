@@ -332,17 +332,6 @@ export const NAV_FOR_DARK = 2;
 /** Nav at which the route may be re-planned at a pit stop rather than only before the heat. */
 export const NAV_FOR_REPLAN = 3;
 
-/**
- * How much of a sector the fan-out either side of a fork takes up.
- *
- * Generous on purpose. A split now leaves the golden path by tens of units
- * rather than a few, and moving that far sideways in a short run is a tighter
- * corner than anything the track authors — at 0.22 the fork itself was the
- * hardest bend on the Kestrel. Spread over most of the sector it reads as two
- * roads parting and meeting again, which is what a fork is.
- */
-export const FORK_SHARE = 0.4;
-
 /** How far a bot leans toward the shorter line when its handling can take one. */
 export const BOT_ROUTE_NERVE = 0.55;
 

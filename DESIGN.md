@@ -163,6 +163,11 @@ meet its checkpoint, or stray across another part of the circuit. Both are
 checked, because a road that crosses another road is a junction the game has no
 rules for.
 
+**A road that does not arrive is refused, not drawn.** Assembling a track runs
+the check and throws, naming the road and how far out it is. A split that misses
+its checkpoint teleports the ship at one end, and it draws and exports perfectly
+happily — so warning would not be enough.
+
 **Pieces carry properties as well as shape** — environment, a pocket that pays,
 danger on the path rather than only off it. See **What a stretch of road is
 like**, below, for what each of them costs. They are what "a split worth taking

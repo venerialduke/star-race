@@ -124,7 +124,6 @@ const sectionOf = (sector: DraftSector): Section => ({
   id: sector.id,
   name: sector.name,
   pieces: piecesOfSector(sector),
-  splits: [],
   ...(saysNothing(sector.properties) ? {} : { properties: sector.properties }),
 });
 
@@ -278,7 +277,7 @@ export function planOf(draft: Draft): TrackPlan | undefined {
     splits.push({
       from: split.from,
       grade: split.grade,
-      sector: { id: split.id, name: split.name, pieces, splits: [] },
+      sector: { id: split.id, name: split.name, pieces },
     });
   }
   return {

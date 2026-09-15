@@ -314,21 +314,6 @@ export function normalOf(sample: Sample): Vec {
   return { x: -Math.sin(sample.heading), y: Math.cos(sample.heading) };
 }
 
-/** The next bend at or after a distance, and how far ahead it starts. */
-export function nextBend(
-  track: Track,
-  distance: number,
-): { bend: Bend; gap: number } | undefined {
-  const wrapped = ((distance % track.length) + track.length) % track.length;
-  let best: { bend: Bend; gap: number } | undefined;
-  for (const bend of track.bends) {
-    const raw = bend.start - wrapped;
-    const gap = raw < 0 ? raw + track.length : raw;
-    if (best === undefined || gap < best.gap) best = { bend, gap };
-  }
-  return best;
-}
-
 /** Which sector a distance falls in, counting from 0 at the start line. */
 export function sectorAt(track: Track, distance: number): number {
   const wrapped = ((distance % track.length) + track.length) % track.length;
@@ -554,7 +539,6 @@ export const sector = (
   id,
   name,
   pieces,
-  splits: [],
   ...(properties === undefined ? {} : { properties }),
 });
 
@@ -946,15 +930,6 @@ export function legalRoutes(track: Track, nav: number): readonly (readonly numbe
   );
 }
 
-/** Splits on this track a given navigation still cannot read. */
-export function unreadable(track: Track, nav: number): number {
-  return track.sectors.reduce(
-    (count, sector) =>
-      count + sector.routes.filter((route) => navFor(route.grade) > nav).length,
-    0,
-  );
-}
-
 /** Give a built track its sectors: the main line, plus whatever splits it has. */
 /**
  * A way through a sector that is **its own road**: a sector in its own right,
@@ -1095,6 +1070,18 @@ export function assemblePlan(plan: TrackPlan): Track {
         `${((closure.turn * 180) / Math.PI).toFixed(1)}° out.`,
     );
   }
+  // Every road has to arrive. A split that misses its checkpoint is not a
+  // slightly-wrong road, it is a road that teleports the ship at one end — and
+  // it draws and exports perfectly happily, which is exactly why this refuses
+  // rather than warns. `splitFaults` was written for this in stage 3 and then
+  // nothing called it, so a bad plan was only ever caught by eye.
+  const faults = splitFaults(plan);
+  if (faults.length > 0) {
+    const worst = faults
+      .map((f) => `${f.split.sector.id} misses checkpoint ${(f.split.from + 1) % plan.ring.length} by ${f.gap.toFixed(1)} units and ${((f.turn * 180) / Math.PI).toFixed(1)}°`)
+      .join('; ');
+    throw new Error(`${plan.name}: ${worst}.`);
+  }
   const marks = checkpointsOf(plan.ring);
   const poses = checkpointPoses(plan.ring);
   const base = buildTrack(plan.name, plan.ring.flatMap(resolvePieces), marks);
@@ -1186,7 +1173,7 @@ export function splitThrough(
       `${id}: no way back to checkpoint ${(from + 1) % poses.length} at radius ${radius}`,
     );
   }
-  return { id, name, pieces: [...lead, ...tail], splits: [] };
+  return { id, name, pieces: [...lead, ...tail] };
 }
 
 /**

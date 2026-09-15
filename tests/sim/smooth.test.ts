@@ -140,10 +140,32 @@ describe('the simulation is untouched by any of it', () => {
     // Measured on this commit and on the one before the smoothing landed; all
     // nine agreed. If one of these moves, something that should only ever have
     // been drawing has reached into the race.
+    //
+    // Five of the nine moved once since, deliberately, when tracks became
+    // sections and the checkpoints went from even fractions of the lap to the
+    // joins between shapes. The geometry did not change at all — every lap is
+    // the same length to four decimal places with the same six bends at the
+    // same radii — but two things downstream of a checkpoint did, and it is
+    // worth knowing which, because only one of them is luck.
+    //
+    // A bend's position *within its sector* is part of the key its swing is
+    // drawn from, so every draw re-rolled. That moves Carry and Charge, and it
+    // moves them a long way on a tight track: the Cinder's Carry went 1080 to
+    // 1231, which sounds alarming until you measure the spread across sixty
+    // seeds and find it is 1035 to 1350 with both numbers comfortably inside.
+    // One seed's luck, re-rolled.
+    //
+    // Lift is the one that is not luck. It takes no swing, so no draw touches
+    // it and its lap is deterministic — the spread across sixty seeds is a
+    // single value. It still moved four ticks on the Cinder, because braking
+    // looks ahead past the end of the current sector into the next one, so
+    // moving a checkpoint changes which bend a ship is slowing for and when.
+    // That is a real behavioural change from a real design change, and it is
+    // four ticks.
     const expected: Record<string, [number, number, number]> = {
-      'Kestrel Loop': [2066, 1909, 1788],
+      'Kestrel Loop': [2066, 1912, 1788],
       'Meridian Run': [2982, 2944, 2909],
-      'Cinder Coil': [1411, 1080, 1042],
+      'Cinder Coil': [1407, 1231, 1258],
     };
     for (const track of TRACKS) {
       const lap = (plan: 'lift' | 'carry' | 'charge'): number => {

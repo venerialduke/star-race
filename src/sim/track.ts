@@ -4,6 +4,13 @@
 //
 // The pieces are level data, not tuning: the shape of a track is content.
 
+import {
+  checkpointsOf,
+  closureOf,
+  piecesOf,
+  type Section,
+  type Split,
+} from './section';
 import { FORK_SHARE, HOLD_GRIP, NAV_FOR_DARK, NAV_FOR_DIM } from './tuning';
 
 export interface Vec {
@@ -155,7 +162,13 @@ export function sectorAt(track: Track, distance: number): number {
 export function buildTrack(
   name: string,
   pieces: readonly Piece[],
-  sectorCount: number,
+  /**
+   * Either how many sectors to cut the lap into evenly, or exactly where the
+   * checkpoints go. A count was all there was when a track was one continuous
+   * walk; a list is what an assembled set of sections hands over, so that a
+   * checkpoint sits at every join rather than at an arbitrary fraction.
+   */
+  sectors: number | readonly number[],
 ): Track {
   const samples: Sample[] = [];
   const bends: Bend[] = [];
@@ -246,9 +259,14 @@ export function buildTrack(
     max = { x: Math.max(max.x, s.pos.x), y: Math.max(max.y, s.pos.y) };
   }
 
-  const checkpoints: number[] = [];
-  for (let i = 0; i < sectorCount; i += 1) {
-    checkpoints.push((travelled * i) / sectorCount);
+  let checkpoints: number[];
+  if (typeof sectors === 'number') {
+    checkpoints = [];
+    for (let i = 0; i < sectors; i += 1) {
+      checkpoints.push((travelled * i) / sectors);
+    }
+  } else {
+    checkpoints = [...sectors];
   }
 
   const bare: Track = {
@@ -270,137 +288,199 @@ export function buildTrack(
 }
 
 /**
- * A loop from a half that turns through 180°, walked twice. The second copy is
- * the first rotated half a turn, so the circuit closes exactly.
+ * A track assembled from sections. One sector per section, a checkpoint at
+ * every join, and the splits carried by the sections themselves.
+ *
+ * It refuses a set that does not close. That is not the old global constraint
+ * coming back: `closingSection` will build the run home for any arrangement, so
+ * the way to satisfy this is to ask for one rather than to re-author by hand.
  */
-function loopFromHalf(
+export function assemble(
   name: string,
   shape: string,
   par: number,
-  half: readonly Piece[],
-  sectorCount: number,
-  splits: readonly (readonly Split[])[] = [],
+  sections: readonly Section[],
 ): Track {
-  const sweep = half.reduce((sum, p) => sum + (p.kind === 'bend' ? p.sweep : 0), 0);
-  if (Math.abs(sweep - 180) > 1e-9) {
-    throw new Error(`${name}: a half must sweep 180°, not ${sweep}°`);
+  const closure = closureOf(sections);
+  if (!closure.closed) {
+    throw new Error(
+      `${name}: these sections do not close — ${closure.gap.toFixed(1)} units and ` +
+        `${((closure.turn * 180) / Math.PI).toFixed(1)}° out. Add a closing section.`,
+    );
   }
-  const track = buildTrack(name, [...half, ...half], sectorCount);
-  return { ...withSplits(track, splits), shape, par };
+  const track = buildTrack(name, piecesOf(sections), checkpointsOf(sections));
+  return {
+    ...withSplits(
+      track,
+      sections.map((section) => section.splits),
+    ),
+    shape,
+    par,
+  };
 }
 
 /**
  * The splits on a track: for each sector, the ways through it besides the
  * golden path. A bulge is a lateral push on the sector's own line, positive to
  * the left of travel — everything else about the split falls out of that.
- */
-type Split = { bulge: number; name: string; grade: Grade };
-
-/**
- * The splits on each track: for every sector, the ways through it besides the
- * golden path. A bulge is how far the line leaves the golden path, and which
- * side — positive is left of travel — held for the whole sector.
  *
- * These are **forks, not racing lines**. A bulge of 50 against an 18-wide path
- * puts the two roads far enough apart that neither is in the other's corridor:
- * two ways through, meeting at the checkpoints and nowhere in between. The
- * earlier version deviated by 6 to 20 units, which on screen was one road with
- * a wobble in it.
+ * `loopFromHalf` used to live here: a half that swept exactly 180°, walked
+ * twice so the circuit closed. It is gone, and with it the rule that closure is
+ * something the author gets right by hand. Sections carry their own ends and
+ * `assemble` checks the set; `closingSection` builds the run home for any
+ * arrangement that does not already close.
+ */
+
+/**
+ * The three tracks, as sections.
  *
- * The grades are not sprinkled at random. **A split you need a navigation
- * system to read is a better split than one anybody can see**, or the system
- * would not be worth its slot.
+ * Each is the same shape it has always been — the same pieces in the same
+ * order, so the golden path and its lap time are untouched and `par` still
+ * stands. What has changed is that the lap is now **authored in sections with
+ * ends** rather than walked as one list and chopped into equal fractions
+ * afterwards, so a checkpoint sits at a join between two shapes instead of at
+ * an arbitrary distance that could land halfway through a bend.
+ *
+ * Each track is still a half walked twice, which is why the sections repeat.
+ * That is now a property of these particular tracks rather than a rule the
+ * builder enforces on everybody.
  */
-const KESTREL_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: -40, name: 'The long way round', grade: 'clear' }],
-  [{ bulge: 42, name: 'The cut', grade: 'dim' }],
-  // Sector 2 has no fork. It is three-quarters straight, so every way through
-  // it other than the straight one is simply longer — measured at five bulges
-  // and three handlings, and not one of them was ever worth taking.
-  [],
-  [{ bulge: 46, name: 'The needle', grade: 'dark' }],
-];
+const section = (
+  id: string,
+  name: string,
+  pieces: readonly Piece[],
+  splits: readonly Split[] = [],
+): Section => ({ id, name, pieces, splits });
 
-/**
- * The Meridian's bends barely bind — a stock ship takes its r85 sweepers at
- * almost top speed — so cutting inside one is close to free and running wide
- * round it buys nothing. That makes it the track where the route is a question
- * about navigation rather than handling: the good lines are real, and they are
- * behind a system.
- */
-const MERIDIAN_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: 70, name: 'The late apex', grade: 'clear' }],
-  [{ bulge: 70, name: 'The shortcut', grade: 'dim' }],
-  [
-    { bulge: -40, name: 'The outer arc', grade: 'clear' },
-    { bulge: 35, name: 'The tight line', grade: 'dim' },
-  ],
-  [{ bulge: 70, name: 'The inside sweep', grade: 'dark' }],
-];
-
-/**
- * The Coil is half bends, so leaving the golden path costs in length far
- * faster than it pays in speed. Nearly every line off it is worth nothing to a
- * ship that can corner and nothing much to one that cannot — which makes its
- * two wide lines an inversion, free to a slow ship and dear to a quick one,
- * and its one real prize the thing you need the best system to see.
- */
-const CINDER_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: 35, name: 'The squeeze', grade: 'dark' }],
-  [{ bulge: -40, name: 'The relief road', grade: 'dim' }],
-  [{ bulge: 35, name: 'The needle', grade: 'clear' }],
-];
-
-/** A middling circuit: a sweeper, a tight right, a hairpin. Where the game started. */
-export const KESTREL_LOOP = loopFromHalf(
-  'Kestrel Loop',
-  'medium · mixed bends',
-  2100,
-  [
+/** A medium loop of mixed bends: the one that asks for a bit of everything. */
+export const KESTREL_LOOP = assemble('Kestrel Loop', 'medium · mixed bends', 2100, [
+  section(
+    'kestrel-main',
+    'The long straight',
+    [
+      { kind: 'straight', length: 260 },
+      { kind: 'bend', radius: 70, sweep: 70 },
+      { kind: 'straight', length: 90 },
+    ],
+    [{ bulge: -40, name: 'The long way round', grade: 'clear' }],
+  ),
+  section(
+    'kestrel-esses',
+    'The esses',
+    [
+      { kind: 'bend', radius: 42, sweep: -55 },
+      { kind: 'straight', length: 70 },
+      { kind: 'bend', radius: 55, sweep: 165 },
+    ],
+    [{ bulge: 42, name: 'The cut', grade: 'dim' }],
+  ),
+  section('kestrel-main-2', 'The long straight again', [
     { kind: 'straight', length: 260 },
     { kind: 'bend', radius: 70, sweep: 70 },
     { kind: 'straight', length: 90 },
-    { kind: 'bend', radius: 42, sweep: -55 },
-    { kind: 'straight', length: 70 },
-    { kind: 'bend', radius: 55, sweep: 165 },
-  ],
-  4,
-  KESTREL_SPLITS,
-);
+  ]),
+  section(
+    'kestrel-esses-2',
+    'The esses again',
+    [
+      { kind: 'bend', radius: 42, sweep: -55 },
+      { kind: 'straight', length: 70 },
+      { kind: 'bend', radius: 55, sweep: 165 },
+    ],
+    // 55 rather than the 46 it carried before the sections landed. This
+    // section is the same shape as 'kestrel-esses' — the track is one half
+    // walked twice — and a checkpoint now sits at the join rather than 84 units
+    // earlier, so the old bulge made a line that was simply faster for
+    // everybody. Measured over 16 seeds at two handlings: at 55 it costs a
+    // 0.7-handling ship 14 ticks and pays a 1.4-handling one 50, which is the
+    // handling gate this split is for.
+    [{ bulge: 55, name: 'The needle', grade: 'dark' }],
+  ),
+]);
 
 /** Long straights and open sweepers: a track that pays for top speed. */
-export const MERIDIAN_RUN = loopFromHalf(
-  'Meridian Run',
-  'long · open sweepers',
-  3250,
-  [
-    { kind: 'straight', length: 420 },
-    { kind: 'bend', radius: 85, sweep: 60 },
-    { kind: 'straight', length: 300 },
-    { kind: 'bend', radius: 110, sweep: 55 },
-    { kind: 'straight', length: 200 },
-    { kind: 'bend', radius: 62, sweep: 65 },
-  ],
-  4,
-  MERIDIAN_SPLITS,
-);
+export const MERIDIAN_RUN = assemble('Meridian Run', 'long · open sweepers', 3250, [
+  section(
+    'meridian-drag',
+    'The drag',
+    [
+      { kind: 'straight', length: 420 },
+      { kind: 'bend', radius: 85, sweep: 60 },
+      { kind: 'straight', length: 300 },
+    ],
+    [{ bulge: 70, name: 'The outer arc', grade: 'clear' }],
+  ),
+  section(
+    'meridian-sweep',
+    'The sweep',
+    [
+      { kind: 'bend', radius: 110, sweep: 55 },
+      { kind: 'straight', length: 200 },
+      { kind: 'bend', radius: 62, sweep: 65 },
+    ],
+    [{ bulge: 70, name: 'The wide line', grade: 'dim' }],
+  ),
+  section(
+    'meridian-drag-2',
+    'The drag again',
+    [
+      { kind: 'straight', length: 420 },
+      { kind: 'bend', radius: 85, sweep: 60 },
+      { kind: 'straight', length: 300 },
+    ],
+    [
+      { bulge: -40, name: 'The inside line', grade: 'clear' },
+      { bulge: 35, name: 'The long curve', grade: 'dim' },
+    ],
+  ),
+  section(
+    'meridian-sweep-2',
+    'The sweep again',
+    [
+      { kind: 'bend', radius: 110, sweep: 55 },
+      { kind: 'straight', length: 200 },
+      { kind: 'bend', radius: 62, sweep: 65 },
+    ],
+    [{ bulge: 70, name: 'The far side', grade: 'dark' }],
+  ),
+]);
 
 /** Short and tight, barely a straight on it: a track that punishes carrying speed. */
-export const CINDER_COIL = loopFromHalf(
-  'Cinder Coil',
-  'short · tight and busy',
-  1320,
-  [
-    { kind: 'straight', length: 80 },
-    { kind: 'bend', radius: 30, sweep: 90 },
-    { kind: 'straight', length: 50 },
-    { kind: 'bend', radius: 26, sweep: -70 },
-    { kind: 'straight', length: 40 },
-    { kind: 'bend', radius: 34, sweep: 160 },
-  ],
-  3,
-  CINDER_SPLITS,
-);
+export const CINDER_COIL = assemble('Cinder Coil', 'short · tight and busy', 1320, [
+  section(
+    'cinder-hook',
+    'The hook',
+    [
+      { kind: 'straight', length: 80 },
+      { kind: 'bend', radius: 30, sweep: 90 },
+      { kind: 'straight', length: 50 },
+      { kind: 'bend', radius: 26, sweep: -70 },
+    ],
+    [{ bulge: 35, name: 'The tight line', grade: 'dark' }],
+  ),
+  section(
+    'cinder-coil',
+    'The coil',
+    [
+      { kind: 'straight', length: 40 },
+      { kind: 'bend', radius: 34, sweep: 160 },
+      { kind: 'straight', length: 80 },
+      { kind: 'bend', radius: 30, sweep: 90 },
+    ],
+    [{ bulge: -40, name: 'The outside', grade: 'dim' }],
+  ),
+  section(
+    'cinder-whip',
+    'The whip',
+    [
+      { kind: 'straight', length: 50 },
+      { kind: 'bend', radius: 26, sweep: -70 },
+      { kind: 'straight', length: 40 },
+      { kind: 'bend', radius: 34, sweep: 160 },
+    ],
+    [{ bulge: 35, name: 'The slingshot', grade: 'clear' }],
+  ),
+]);
 
 /** Every track, in the order the player sees them. */
 export const TRACKS: readonly Track[] = [KESTREL_LOOP, MERIDIAN_RUN, CINDER_COIL];

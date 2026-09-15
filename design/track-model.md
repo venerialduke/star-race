@@ -7,7 +7,7 @@ edges, and a split is simply a second edge between the same two nodes. That one
 sentence is the whole change, and everything below follows from it.
 
 What is there today is a list with decorations: an ordered run of sections, with
-splits hung off each one as a *number* that pushes the golden path sideways.
+splits hung off each one as a _number_ that pushes the golden path sideways.
 
 ## The four things
 
@@ -18,8 +18,7 @@ describing what the stretch is like beyond its shape.
 
 ```ts
 type Shape =
-  | { kind: 'straight'; length: number }
-  | { kind: 'bend'; radius: number; sweep: number };   // degrees, + turns left
+  { kind: 'straight'; length: number } | { kind: 'bend'; radius: number; sweep: number }; // degrees, + turns left
 
 interface Piece {
   readonly shape: Shape;
@@ -35,7 +34,7 @@ size a gap needs.
 
 ### Properties
 
-What a stretch is *like*. Everything optional, everything additive; a piece's
+What a stretch is _like_. Everything optional, everything additive; a piece's
 own properties override the sector's.
 
 ```ts
@@ -68,7 +67,7 @@ interface Sector {
 ```
 
 This is `Section` renamed to the owner's word, plus properties, minus the
-`splits` field — because splits stop being something a sector *has*.
+`splits` field — because splits stop being something a sector _has_.
 
 ### A track
 
@@ -128,7 +127,7 @@ Unchanged in principle, and already built:
   curve-straight-curve path between two poses, of the four that exist.
 
 What changes is that **the same machinery serves splits**. A split has to leave
-its checkpoint and arrive at the next one *at the same poses the ring has* —
+its checkpoint and arrive at the next one _at the same poses the ring has_ —
 which is a start pose and a goal pose, which is the problem the closer already
 solves. So authoring a split is: lay some pieces, then close back to the
 checkpoint. One mechanism, two uses.
@@ -180,6 +179,18 @@ When it gets one, that assumption is the work, not the geometry.
    exact the moment a knob is turned. And **the ranges have to tile**: a 90°
    bend at radius 30 was too tight for a corner and too open for a hairpin, so
    the Cinder Coil contained a piece the builder could not name.
+
+   A third rule came later, from the first person to use the tool. **A sector
+   can be put in anywhere, and every index into the ring moves with it.** The
+   builder could only append, and a ring is a loop: the end of it is the road
+   immediately before the start line, which is the one place a new sector is
+   never wanted. Inserting is the same edit at a chosen place — and because a
+   split's only handle on the ring is a sector index, an edit that does not
+   shift those indices leaves the split beside a different piece of road. It
+   still exports, still draws, and is not the track that was built. `insertSector`
+   and `dropSector` in `src/builder/plan.ts` own that, and are the only way the
+   page is allowed to change the ring's length.
+
 5. **Properties do something.** Environment drawn first, since it is visible and
    safe; pocket and hazard after, since they are balance.
 6. **S4.4** — the ring grows between phases.

@@ -15,6 +15,8 @@ import {
   closeRing,
   closure,
   draftPiece,
+  dropSector,
+  insertSector,
   newDraft,
   piecesFrom,
   piecesOfSector,
@@ -89,7 +91,11 @@ function render(): void {
       return `<div class="row${i === selected ? ' on' : ''}" data-pick="${i}">
         <span class="n">${i + 1}</span>
         <span class="t">${sector.name}<em>${sector.pieces.length} pieces · ${span.toFixed(0)} units</em></span>
-        <button type="button" data-drop="${i}" title="Remove this sector">×</button>
+        <span class="acts">
+          <button type="button" data-insert="${i}"
+            title="Put a new sector here, pushing this one and everything after it down">+</button>
+          <button type="button" data-drop="${i}" title="Remove this sector">×</button>
+        </span>
       </div>`;
     })
     .join('');
@@ -154,7 +160,9 @@ function render(): void {
 
     <h3>Sectors</h3>
     <div class="rows">${sectorRows}</div>
-    <button type="button" id="add-sector" class="wide">Add a sector</button>
+    <button type="button" id="add-sector" class="wide">Add a sector at the end</button>
+    <p class="hint">+ puts a new sector <em>before</em> that row. The ring is a loop,
+      so the end of it is the road just before the start line.</p>
 
     <h3>Sector ${selected + 1}: pieces</h3>
     <div class="shelf">${shelf}</div>
@@ -189,25 +197,37 @@ panel.addEventListener('input', (event) => {
 });
 
 panel.addEventListener('click', (event) => {
-  const el = (event.target as HTMLElement).closest('button, [data-pick]') as HTMLElement | null;
+  const el = (event.target as HTMLElement).closest(
+    'button, [data-pick]',
+  ) as HTMLElement | null;
   if (el === null) return;
   const d = el.dataset;
   const sector = draft.ring[selected];
 
-  if (el.id === 'new') { draft = newDraft(); selected = 0; render(); return; }
-  if (d['load'] !== undefined) { load(d['load'] as 'kestrel'); return; }
+  if (el.id === 'new') {
+    draft = newDraft();
+    selected = 0;
+    render();
+    return;
+  }
+  if (d['load'] !== undefined) {
+    load(d['load'] as 'kestrel');
+    return;
+  }
   if (el.id === 'close') {
-    if (!closeRing(draft)) window.alert('No way home at any radius. Try another piece first.');
+    if (!closeRing(draft))
+      window.alert('No way home at any radius. Try another piece first.');
     render();
     return;
   }
   if (el.id === 'add-sector') {
-    draft.ring.push({
-      id: `sector-${draft.ring.length + 1}`,
-      name: `Sector ${draft.ring.length + 1}`,
-      pieces: [],
-    });
-    selected = draft.ring.length - 1;
+    selected = insertSector(draft, draft.ring.length);
+    render();
+    return;
+  }
+  if (d['insert'] !== undefined) {
+    // Select the new one: the reason to put a sector somewhere is to fill it.
+    selected = insertSector(draft, Number(d['insert']));
     render();
     return;
   }
@@ -242,10 +262,7 @@ panel.addEventListener('click', (event) => {
     return;
   }
   if (d['drop'] !== undefined) {
-    draft.ring.splice(Number(d['drop']), 1);
-    // A split hangs off a checkpoint by index, so removing a sector takes the
-    // splits that pointed past the end with it rather than leaving them adrift.
-    draft.splits = draft.splits.filter((s) => s.from < draft.ring.length);
+    dropSector(draft, Number(d['drop']));
     selected = Math.min(selected, Math.max(0, draft.ring.length - 1));
     render();
     return;

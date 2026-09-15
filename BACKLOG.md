@@ -887,9 +887,13 @@ pocket is a wide line worth?** The Meridian's outer arc costs about 30 ticks; at
 
 Two smaller things left behind by the same stage:
 
-- **The chase view does not draw environment.** The map does, and the map is
-  where a route is chosen, so this is cosmetic rather than blocking — but flying
-  into a nebula currently looks like flying into nothing.
+- ~~**The chase view does not draw environment.**~~ _Done._ Both views draw it
+  now, and the chase camera labels each stretch and each fixture by name. The
+  shapes are placeholders — a tint, a post, a word — and the art is a separate
+  job whenever it is worth doing.
+- **Nothing that ships is balanced around any of it.** The Proving Ground exists
+  to be looked at, not played: its numbers were picked to be visible, not fair.
+  The three real tracks still say nothing about themselves.
 - **A fixture cannot be dragged on the canvas.** The builder places one with
   three sliders (sector, road, how far along), which is enough to author with
   and is not enough to author *comfortably*.

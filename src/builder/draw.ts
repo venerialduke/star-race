@@ -15,6 +15,7 @@ import {
   type Sample,
 } from '../sim/track';
 import { PATH_HALF_WIDTH } from '../sim/tuning';
+import { ENVIRONMENT_COLOURS, HAZARD, POCKET, withAlpha } from '../render/view';
 import {
   closure,
   fixturePose,
@@ -24,23 +25,20 @@ import {
 } from './plan';
 
 /**
- * What each environment looks like. Colour is the whole of what "drawn first"
- * means: a nebula has to be recognisable before anybody can be asked to decide
- * whether the long way round one is worth it.
+ * The road, and what each environment makes of it. The colours come from the
+ * renderer's own table so that a nebula is the same purple in the builder, on
+ * the map and from behind the ship.
  */
-const GROUND: Record<Environment, string> = {
-  open: 'rgba(126, 224, 255, 0.10)',
-  nebula: 'rgba(168, 130, 255, 0.30)',
-  debris: 'rgba(255, 150, 90, 0.28)',
-  shadow: 'rgba(10, 14, 32, 0.75)',
-};
+const groundOf = (environment: Environment): string =>
+  environment === 'open'
+    ? 'rgba(126, 224, 255, 0.10)'
+    : withAlpha(ENVIRONMENT_COLOURS[environment], environment === 'shadow' ? 0.75 : 0.3);
 
 const PATH = '#ffd166';
 const SPLIT = '#6ee7a8';
 const GAP = '#ff5f7a';
 const MARK = '#7ee0ff';
-const POCKET = 'rgba(110, 231, 168, 0.55)';
-const HAZARD = '#ff9a5a';
+
 const DIM = 'rgba(232, 238, 255, 0.25)';
 
 interface View {
@@ -158,7 +156,7 @@ export function drawDraft(
   // The ground the road sits on, so the loop reads as a track and not a wire —
   // and coloured by what it is, which is the whole of "environment is drawn".
   for (const walk of walks) {
-    line(ctx, view, walk.samples, GROUND.open, PATH_HALF_WIDTH * 2);
+    line(ctx, view, walk.samples, groundOf('open'), PATH_HALF_WIDTH * 2);
     paint(ctx, view, walk.samples, walk.length, walk.bands);
   }
   for (const walk of splitWalks) {
@@ -220,13 +218,15 @@ function paint(
     const to = Math.ceil((band.end / length) * (samples.length - 1));
     const slice = samples.slice(Math.max(0, from), Math.min(samples.length, to + 1));
     const environment = band.properties.environment ?? 'open';
-    line(ctx, view, slice, GROUND[environment], PATH_HALF_WIDTH * 2);
+    line(ctx, view, slice, groundOf(environment), PATH_HALF_WIDTH * 2);
     // Pocket and hazard are numbers rather than places, so they read as an
     // edging on the stretch rather than as ground of their own — a stretch can
     // be a nebula *and* pay, and one colour cannot say both.
     const effect = effectOf(band.properties);
-    if (effect.pocket > 0) line(ctx, view, slice, POCKET, PATH_HALF_WIDTH * 0.7, true);
-    if (effect.hazard > 0) line(ctx, view, slice, HAZARD, PATH_HALF_WIDTH * 0.35, true);
+    if (effect.pocket > 0)
+      line(ctx, view, slice, withAlpha(POCKET, 0.55), PATH_HALF_WIDTH * 0.7, true);
+    if (effect.hazard > 0)
+      line(ctx, view, slice, HAZARD, PATH_HALF_WIDTH * 0.35, true);
   }
 }
 

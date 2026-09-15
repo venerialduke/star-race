@@ -172,6 +172,10 @@ describe('the simulation is untouched by any of it', () => {
       'Kestrel Loop': [2066, 1911, 1797],
       'Meridian Run': [2981, 2944, 2910],
       'Cinder Coil': [1407, 1282, 1240],
+      // The properties track. Lift is slowest and Charge fastest here as
+      // everywhere, but the gap is narrow: three of its four stretches do
+      // something to the ship, and two of those do it to Charge hardest.
+      'The Proving Ground': [1600, 1484, 1455],
     };
     for (const track of TRACKS) {
       const lap = (plan: 'lift' | 'carry' | 'charge'): number => {

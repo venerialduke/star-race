@@ -163,6 +163,21 @@ export const effectOn = (route: Route, along: number): Effect =>
   effectOf(bandIn(route.bands, along)?.properties);
 
 /**
+ * The stretch a ship is standing in, given where it is round the lap and which
+ * way it went. The same question the race tick asks, for anything that has a
+ * canonical distance and wants to know what the road there is like.
+ */
+export function bandAt(
+  track: Track,
+  distance: number,
+  routeIndex: number,
+): Band | undefined {
+  const sector = sectorOf(track, distance);
+  const route = routeOf(sector, routeIndex);
+  return bandIn(route.bands, alongOf(track, sector, route, distance));
+}
+
+/**
  * The smallest unit of track: a shape, and what that stretch is like.
  *
  * The shape stays parametric — a length, a radius, an angle — which is what
@@ -720,8 +735,71 @@ export const CINDER_COIL = assemblePlan({
   ],
 });
 
+/**
+ * A ring that says something about itself on every stretch.
+ *
+ * This track exists so that properties and fixtures can be *seen* — from the
+ * chase camera, on the map, and from inside the game rather than only in a
+ * test. Its shape is deliberately plain, four near-identical stretches, because
+ * the shape is not what is being shown: what differs between one sector and the
+ * next is only what the road is made of.
+ *
+ * It is a fourth track rather than a nebula bolted onto the Kestrel because the
+ * three that ship carry every balance measurement taken so far, and a property
+ * cannot be cosmetic — grip, sight, hazard and pocket all move a lap. Adding
+ * one track disturbs none of it; editing one would have quietly re-tuned the
+ * lot. Delete this and its entry in `TRACKS` when real content replaces it.
+ */
+const PROVING_RING: readonly Section[] = [
+  sector('proving-clear', 'The clear run', [S(220), B(70, 90)]),
+  // Thick: the same entry throws you wider here than it did on the stretch
+  // before, which is the one comparison the whole track exists to make.
+  sector('proving-nebula', 'The nebula', [S(140), B(45, 90)], {
+    environment: 'nebula',
+  }),
+  // It scrapes, and the straight through it is worth flying.
+  sector('proving-debris', 'The scrapyard', [P(S(220), { pocket: 9 }), B(70, 90)], {
+    environment: 'debris',
+  }),
+  sector('proving-shadow', 'The dark', [S(140), B(45, 90)], { environment: 'shadow' }),
+];
+
+/** Four stretches of plain road, each made of something different. */
+export const PROVING_GROUND = assemblePlan({
+  name: 'The Proving Ground',
+  shape: 'plain · every property there is',
+  par: 1500,
+  ring: PROVING_RING,
+  splits: [
+    {
+      from: 0,
+      grade: 'dim',
+      // Searched, not guessed: 15 units clear of the main line at its closest
+      // and 57 from the rest of the circuit, at 21% longer. Wide enough to be a
+      // different road, short enough to be a choice.
+      sector: splitThrough(
+        PROVING_RING,
+        0,
+        'proving-wide',
+        'The long way round',
+        [B(90, -50)],
+        120,
+      ),
+    },
+  ],
+  fixtures: [
+    { id: 'mine', kind: 'mine', sector: 1, route: 0, at: 0.45, offset: 0, power: 26 },
+    { id: 'hole', kind: 'black-hole', sector: 3, route: 0, at: 0.5, offset: 4, power: 22 },
+  ],
+});
+
 /** Every track, in the order the player sees them. */
-export const TRACKS: readonly Track[] = [KESTREL_LOOP, MERIDIAN_RUN, CINDER_COIL];
+export const TRACKS: readonly Track[] = [
+  KESTREL_LOOP,
+  MERIDIAN_RUN,
+  CINDER_COIL,
+  PROVING_GROUND,
+];
 
 // ---------------------------------------------------------------------------
 // Routes: the ways through a sector.

@@ -25,8 +25,10 @@ import { bareShip } from '../../src/sim/ship';
 import {
   B,
   P,
+  PROVING_GROUND,
   S,
   assemblePlan,
+  bandAt,
   effectOf,
   mergeProperties,
   resolvePieces,
@@ -38,6 +40,7 @@ import {
   type Track,
 } from '../../src/sim/track';
 import { ENVIRONMENTS } from '../../src/sim/tuning';
+import { labelOf } from '../../src/render/view';
 
 /** A ring that closes: two halves of 180°, the second the first turned round. */
 const half: readonly Piece[] = [S(200), B(60, 90), S(120), B(60, 90)];
@@ -319,5 +322,81 @@ describe('what the author left on the road', () => {
 
   it('leaves a track with nothing on it with nothing on it', () => {
     expect(startField([entrant('one')], ['carry'], loop()).fixtures).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// What a camera can find.
+//
+// The chase view walks canonical distance ahead of the ship and asks what the
+// road there is made of, exactly as the race tick does. None of the drawing can
+// be tested headlessly, but the lookup it stands on can — and that is the part
+// that would silently paint the wrong stretch.
+// ---------------------------------------------------------------------------
+
+describe('reading the road ahead', () => {
+  it('finds each stretch as one run, in the order they are flown', () => {
+    const track = PROVING_GROUND;
+    // Sample the way the camera does: a step at a time round the whole lap.
+    const runs: { name: string; from: number; to: number }[] = [];
+    for (let d = 0; d < track.length; d += 3) {
+      const band = bandAt(track, d, 0);
+      const name = band?.properties.environment ?? 'open';
+      const last = runs[runs.length - 1];
+      if (last !== undefined && last.name === name) last.to = d;
+      else runs.push({ name, from: d, to: d });
+    }
+    expect(runs.map((r) => r.name)).toEqual(['open', 'nebula', 'debris', 'shadow']);
+    // And each is a real stretch of road, not a sliver at a seam.
+    for (const run of runs) expect(run.to - run.from).toBeGreaterThan(100);
+  });
+
+  it('hands back the same band object across a stretch, so a run can be grouped', () => {
+    // The camera groups consecutive samples by band *identity*. If the lookup
+    // built a new object each call, every sample would be its own run — the
+    // road would be striped and every stripe would carry its own label.
+    const track = PROVING_GROUND;
+    const inNebula = track.checkpoints[1] ?? 0;
+    const first = bandAt(track, inNebula + 10, 0);
+    const second = bandAt(track, inNebula + 40, 0);
+    expect(first).toBeDefined();
+    expect(second).toBe(first);
+  });
+
+  it('says nothing on a road that says nothing', () => {
+    expect(bandAt(loop(), 50, 0)).toBeUndefined();
+  });
+
+  it('names what it found, short enough to float over the road', () => {
+    expect(labelOf({ environment: 'nebula' })).toBe('NEBULA');
+    expect(labelOf({ environment: 'debris', pocket: 9 })).toBe('DEBRIS · pays 9');
+    expect(labelOf({ pocket: 4, hazard: 2 })).toBe('pays 4 · bites 2');
+    expect(labelOf(undefined)).toBe('');
+    // An open stretch has nothing to announce, so it announces nothing.
+    expect(labelOf({ environment: 'open' })).toBe('');
+  });
+});
+
+describe('the track that exists to be looked at', () => {
+  it('says something different on every stretch but one', () => {
+    const said = PROVING_GROUND.sectors.map(
+      (s) => bandAt(PROVING_GROUND, (s.start + s.end) / 2, 0)?.properties.environment,
+    );
+    expect(said).toEqual([undefined, 'nebula', 'debris', 'shadow']);
+  });
+
+  it('carries one of each kind of fixture, on the road', () => {
+    const kinds = PROVING_GROUND.fixtures.map((f) => f.kind);
+    expect(kinds).toEqual(['mine', 'black-hole']);
+    for (const fixture of PROVING_GROUND.fixtures) {
+      expect(PROVING_GROUND.sectors[fixture.sector]).toBeDefined();
+      expect(fixture.at).toBeGreaterThan(0);
+      expect(fixture.at).toBeLessThan(1);
+    }
+  });
+
+  it('pays somebody who flies its scrapyard', () => {
+    const paid = fly(PROVING_GROUND, 'carry').state.salvage;
+    expect(paid).toBeGreaterThan(0);
   });
 });

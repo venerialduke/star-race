@@ -226,6 +226,15 @@ numbers. What a stretch comes to is four numbers:
 Nothing here is a new thing for a player to learn. Every one of the four is
 spent in currency the game already had.
 
+**All of it is drawn, from both views.** The map colours the stretch, because
+the map is where a route is chosen. The chase camera colours it too and floats
+the thing's name over it, because the chase camera is where a route is *flown* —
+a player who cannot see the nebula coming has no way to connect being thrown
+wide with the reason for it. Fixtures stand up out of the road rather than lying
+flat on it, and say what they are: a ring on the ground is the thing's reach,
+and at any distance in a perspective view a ring on the ground is three pixels
+under the horizon. The shapes are placeholders; the labels are not.
+
 **A hazardous stretch bites once, on the way in** — not every tick the ship is
 stood in it. That is the rule the excursion hazard already follows, for the
 reason this codebase has now learned three separate times (S3.6's parts, V1.2's
@@ -256,6 +265,15 @@ everywhere. They do not:
 | **Kestrel Loop** | 1408 | mixed, tightest r42 | balanced build, Charge — 28.0s |
 | **Meridian Run** | 2370 | open, tightest r62 | reckless build, Carry — 39.3s |
 | **Cinder Coil** | 688 | tight, tightest r26 | nimble build, Charge — 16.9s |
+
+A fourth, **The Proving Ground** (1081 units, tightest r45), is not one of them.
+Its shape is deliberately plain — four near-identical stretches — because shape
+is not what it is for: each of its sectors is made of something different, and
+it carries one of each kind of fixture. It exists so that properties can be seen
+from inside the game rather than only in a test, and it is a separate track
+rather than a nebula bolted onto the Kestrel because the three above carry every
+balance measurement taken so far and no property is cosmetic. It goes when real
+content replaces it.
 
 A loop is authored as a **half** that turns through 180°, walked twice: the
 second copy is the first rotated half a turn, so the circuit closes exactly and

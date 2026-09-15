@@ -166,8 +166,20 @@ When it gets one, that assumption is the work, not the geometry.
    `bendsOfCurve` retired; the three tracks' splits re-authored as geometry.
 3. **Checkpoints become poses**, and a validator that says which split does not
    meet its checkpoint and by how much.
-4. **The catalogue, and the builder.** Place pieces, see the loop, close the
-   gap, name it, export it.
+4. **The catalogue, and the builder.** — **done**. `builder.html`, its own page
+   on the same site. Five piece families on a shelf, each a shape plus the knobs
+   that vary it; sectors built from them; the loop drawn live with its
+   checkpoints; "close the loop" when it is open; and an export that writes the
+   TypeScript to paste into `track.ts`.
+
+   Two rules came out of building it, both learned by getting them wrong.
+   **The catalogue must not clamp a piece it cannot describe** — the connector
+   invents pieces at whatever size a gap needs, and a track may be authored
+   outside every range, so squeezing them into the nearest family silently
+   rewrites the track. A piece with no family is held exactly and stops being
+   exact the moment a knob is turned. And **the ranges have to tile**: a 90°
+   bend at radius 30 was too tight for a corner and too open for a hairpin, so
+   the Cinder Coil contained a piece the builder could not name.
 5. **Properties do something.** Environment drawn first, since it is visible and
    safe; pocket and hazard after, since they are balance.
 6. **S4.4** — the ring grows between phases.

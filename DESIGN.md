@@ -111,6 +111,72 @@ what you take into the next one. And the ships can now reach each other: weapons
 push a rival off their line, mines wait on the road, and an engine's boost can
 leave a black hole behind it.
 
+## How a track is built
+
+**A track is a graph.** Checkpoints are its nodes, sectors are its edges, and a
+split is a second edge between the same two nodes. `design/track-model.md` is
+the spec; this is what is built of it.
+
+**A section is a stretch of track that knows its own two ends.** It starts at
+the origin facing along +x, and its exit says where it leaves you. Snapping one
+onto another is composing those poses, which always works — so any section fits
+any other, which is what the framework asked for.
+
+A track used to be one flat list of pieces walked from the origin, closed by a
+rule: author a half that sweeps exactly 180°, then walk it twice. That made
+**closure a global constraint on the whole list**, which is the opposite of
+snapping and the reason there could be no builder. Sectors were not authored at
+all — checkpoints were even divisions of the total arc length, so a sector was a
+slice of a continuous walk rather than a thing you could lift out, reuse, or
+splice in.
+
+Now:
+
+- **A sector is a section.** There is one checkpoint per section and it sits at
+  the join, so a sector boundary falls between two shapes rather than at an
+  arbitrary distance that could land halfway through a bend.
+- **Closure is a property of an assembled set.** `closureOf` says how far a run
+  of sections is from coming home, in units and in degrees. `assemble` refuses a
+  set that does not close.
+- **The loop is closed for you.** `closingSection` builds the run home from
+  wherever the last section left off: a curve, a straight, and a curve — the
+  shortest of the four such paths that exists between two poses. So the answer
+  to "these do not close" is to ask for a closing section, not to re-author by
+  hand.
+
+**A split is a road, not a number.** It used to be a single figure — a lateral
+shove applied to the golden path, tapering to nothing at each end — so it had no
+pieces, no authored bends, and no meaning independent of whatever shape it was
+applied to. It is a sector of its own now, walked from its own pieces, joining
+the same two checkpoints the golden path joins.
+
+Authoring one is **peel off, then find the way back**: lay the pieces that give
+the road its character, and the connector works out the curve-straight-curve
+that returns it to the next checkpoint. Closing a ring and closing a split are
+the same problem, so they use the same machinery.
+
+Two things follow that a bulge could never have. A split has **authored bends at
+authored radii**, so the curvature-reading that used to infer them — and that
+lied about exactly the corners that mattered, turning a 42-radius hairpin into a
+60 — is gone from the codebase. And a split can be **wrong**: it can fail to
+meet its checkpoint, or stray across another part of the circuit. Both are
+checked, because a road that crosses another road is a junction the game has no
+rules for.
+
+**Pieces carry properties as well as shape** — environment, a pocket that pays,
+danger on the path rather than only off it. Nothing reads them yet. They are the
+vocabulary, laid down before there is anything to say with it, and they are what
+"a split worth taking because it is safer" has been waiting on since S4.
+
+The three tracks that ship are the same shape they always were, piece for
+piece — what moved is where their checkpoints sit. Two things follow from that
+and only one of them is luck. A bend's position *within its sector* is part of
+the key its swing is drawn from, so every draw re-rolled and Carry and Charge
+laps moved, a long way on a tight track and entirely inside the spread across
+seeds. And braking looks ahead past the end of the current sector into the next,
+so a swing-free Lift lap moved too — four ticks on the Cinder Coil. That one is
+a real behavioural change from a real design change.
+
 ## The track
 
 A track is a closed **loop** walked out from an ordered list of **pieces**:

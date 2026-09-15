@@ -4,17 +4,66 @@
 //
 // The pieces are level data, not tuning: the shape of a track is content.
 
-import { FORK_SHARE, HOLD_GRIP, NAV_FOR_DARK, NAV_FOR_DIM } from './tuning';
+import {
+  ORIGIN,
+  checkpointsOf,
+  closureOf,
+  connector,
+  piecesOf,
+  poseAfter,
+  wrapAngle,
+  type Pose,
+  type Section,
+} from './section';
+import { HOLD_GRIP, NAV_FOR_DARK, NAV_FOR_DIM } from './tuning';
 
 export interface Vec {
   readonly x: number;
   readonly y: number;
 }
 
-export type Piece =
+/**
+ * What a stretch of track is **like**, beyond its shape.
+ *
+ * Everything here is optional and additive, and a piece's own properties beat
+ * the sector's. Nothing reads them yet — they are the vocabulary, laid down
+ * before there is anything to say with it.
+ *
+ * This is the thing the track model has never had. Until now a stretch of track
+ * could say nothing about itself except how long it was and how hard it turned,
+ * which is exactly why every split has had to be balanced on the clock: "worth
+ * taking because it is safer, or because it holds something" has had no way to
+ * be written down.
+ */
+export interface Properties {
+  /** What surrounds it. Drawn first, and eventually what lives there. */
+  readonly environment?: 'open' | 'nebula' | 'debris' | 'shadow';
+  /** Pays a ship that flies it: dark matter, salvage. */
+  readonly pocket?: number;
+  /** Danger **on** the path, rather than only off it. */
+  readonly hazard?: number;
+}
+
+/**
+ * The smallest unit of track: a shape, and what that stretch is like.
+ *
+ * The shape stays parametric — a length, a radius, an angle — which is what
+ * lets a builder offer a slider rather than a text box, and what lets the
+ * connector invent a piece of exactly the size a gap needs.
+ *
+ * Properties sit alongside the shape rather than nested under it. Nesting reads
+ * better on paper and would have cost a rewrite of every piece in the game and
+ * every `piece.kind` that reads one, for no gain in what can be expressed.
+ */
+export type Piece = (
   | { readonly kind: 'straight'; readonly length: number }
   /** `sweep` is in degrees: positive turns left, negative turns right. */
-  | { readonly kind: 'bend'; readonly radius: number; readonly sweep: number };
+  | { readonly kind: 'bend'; readonly radius: number; readonly sweep: number }
+) & {
+  /** Half-width of the golden path here. The track's own when unset. */
+  readonly halfWidth?: number;
+  readonly properties?: Properties;
+};
 
 /** One sample of the centreline, every SAMPLE_STEP units of arc. */
 export interface Sample {
@@ -93,14 +142,6 @@ export interface Track {
   readonly bounds: { readonly min: Vec; readonly max: Vec };
 }
 
-/* Reading a split's own curvature. Structural, like the sample step. */
-/** How many samples either side curvature is measured across. About 12 units. */
-const CURVE_WINDOW = 2;
-/** Above this radius a line is running straight, whatever the arithmetic says. */
-const STRAIGHT_RADIUS = 320;
-/** A turn shorter than this is the line easing, not a corner. */
-const MIN_BEND_ARC = 16;
-
 /** Arc length between centreline samples. Structural: the resolution of the polyline. */
 const SAMPLE_STEP = 3;
 
@@ -152,15 +193,27 @@ export function sectorAt(track: Track, distance: number): number {
  * is then repeated twice closes exactly: the second copy is the first rotated
  * half a turn, so its displacement cancels the first's.
  */
-export function buildTrack(
-  name: string,
-  pieces: readonly Piece[],
-  sectorCount: number,
-): Track {
+/** What walking a run of pieces produces: the line, its bends, and its length. */
+export interface Walk {
+  readonly samples: readonly Sample[];
+  readonly bends: readonly Bend[];
+  readonly length: number;
+}
+
+/**
+ * Walk pieces from a pose, emitting the centreline every `SAMPLE_STEP` units
+ * and recording where each bend begins and ends.
+ *
+ * Used for the golden path and for every split alike, which is the point: a
+ * split is a road walked from its own pieces now, not the golden path pushed
+ * sideways, so there is one way of turning pieces into a line and everything
+ * uses it.
+ */
+export function walkPieces(pieces: readonly Piece[], from: Pose = ORIGIN): Walk {
   const samples: Sample[] = [];
   const bends: Bend[] = [];
-  let pos: Vec = { x: 0, y: 0 };
-  let heading = 0;
+  let pos: Vec = { x: from.x, y: from.y };
+  let heading = from.heading;
   /** Arc length already emitted, so samples stay evenly spaced across pieces. */
   let emitted = 0;
   let travelled = 0;
@@ -180,64 +233,74 @@ export function buildTrack(
     const pieceStart = travelled;
     if (piece.kind === 'straight') {
       const dir = { x: Math.cos(heading), y: Math.sin(heading) };
-      const from = pos;
+      const start = pos;
       const held = heading;
       emitUpTo(
         pieceStart + piece.length,
         (into) => ({
-          pos: { x: from.x + dir.x * into, y: from.y + dir.y * into },
+          pos: { x: start.x + dir.x * into, y: start.y + dir.y * into },
           heading: held,
           radius: 0,
           turn: 0,
         }),
         pieceStart,
       );
-      pos = { x: from.x + dir.x * piece.length, y: from.y + dir.y * piece.length };
+      pos = { x: start.x + dir.x * piece.length, y: start.y + dir.y * piece.length };
       travelled += piece.length;
-    } else {
-      const turn = Math.sign(piece.sweep);
-      const sweepRad = (piece.sweep * Math.PI) / 180;
-      const arc = Math.abs(sweepRad) * piece.radius;
-      // Centre of the arc sits perpendicular to travel, on the inside: to the
-      // left of travel for a left turn, to the right for a right one.
-      const centre: Vec = {
-        x: pos.x - Math.sin(heading) * piece.radius * turn,
-        y: pos.y + Math.cos(heading) * piece.radius * turn,
-      };
-      const startAngle = Math.atan2(pos.y - centre.y, pos.x - centre.x);
-      const held = heading;
-      emitUpTo(
-        pieceStart + arc,
-        (into) => {
-          const t = into / piece.radius;
-          const angle = startAngle + t * turn;
-          return {
-            pos: {
-              x: centre.x + Math.cos(angle) * piece.radius,
-              y: centre.y + Math.sin(angle) * piece.radius,
-            },
-            heading: held + t * turn,
-            radius: piece.radius,
-            turn,
-          };
-        },
-        pieceStart,
-      );
-      bends.push({
-        start: pieceStart,
-        end: pieceStart + arc,
-        radius: piece.radius,
-        turn,
-      });
-      const endAngle = startAngle + Math.abs(sweepRad) * turn;
-      pos = {
-        x: centre.x + Math.cos(endAngle) * piece.radius,
-        y: centre.y + Math.sin(endAngle) * piece.radius,
-      };
-      heading = held + Math.abs(sweepRad) * turn;
-      travelled += arc;
+      continue;
     }
+    const turn = Math.sign(piece.sweep);
+    const sweepRad = (piece.sweep * Math.PI) / 180;
+    const arc = Math.abs(sweepRad) * piece.radius;
+    // Centre of the arc sits perpendicular to travel, on the inside: to the
+    // left of travel for a left turn, to the right for a right one.
+    const centre: Vec = {
+      x: pos.x - Math.sin(heading) * piece.radius * turn,
+      y: pos.y + Math.cos(heading) * piece.radius * turn,
+    };
+    const startAngle = Math.atan2(pos.y - centre.y, pos.x - centre.x);
+    const held = heading;
+    emitUpTo(
+      pieceStart + arc,
+      (into) => {
+        const t = into / piece.radius;
+        const angle = startAngle + t * turn;
+        return {
+          pos: {
+            x: centre.x + Math.cos(angle) * piece.radius,
+            y: centre.y + Math.sin(angle) * piece.radius,
+          },
+          heading: held + t * turn,
+          radius: piece.radius,
+          turn,
+        };
+      },
+      pieceStart,
+    );
+    bends.push({ start: pieceStart, end: pieceStart + arc, radius: piece.radius, turn });
+    const endAngle = startAngle + Math.abs(sweepRad) * turn;
+    pos = {
+      x: centre.x + Math.cos(endAngle) * piece.radius,
+      y: centre.y + Math.sin(endAngle) * piece.radius,
+    };
+    heading = held + Math.abs(sweepRad) * turn;
+    travelled += arc;
   }
+  return { samples, bends, length: travelled };
+}
+
+export function buildTrack(
+  name: string,
+  pieces: readonly Piece[],
+  /**
+   * Either how many sectors to cut the lap into evenly, or exactly where the
+   * checkpoints go. A count was all there was when a track was one continuous
+   * walk; a list is what an assembled set of sections hands over, so that a
+   * checkpoint sits at every join rather than at an arbitrary fraction.
+   */
+  sectors: number | readonly number[],
+): Track {
+  const { samples, bends, length: travelled } = walkPieces(pieces);
 
   let min = { x: Infinity, y: Infinity };
   let max = { x: -Infinity, y: -Infinity };
@@ -246,12 +309,20 @@ export function buildTrack(
     max = { x: Math.max(max.x, s.pos.x), y: Math.max(max.y, s.pos.y) };
   }
 
-  const checkpoints: number[] = [];
-  for (let i = 0; i < sectorCount; i += 1) {
-    checkpoints.push((travelled * i) / sectorCount);
+  let checkpoints: number[];
+  if (typeof sectors === 'number') {
+    checkpoints = [];
+    for (let i = 0; i < sectors; i += 1) {
+      checkpoints.push((travelled * i) / sectors);
+    }
+  } else {
+    checkpoints = [...sectors];
   }
 
-  const bare: Track = {
+  // The bare line and where its checkpoints fall. Sectors and their roads are
+  // `assemblePlan`'s job, because a road is walked from its own pieces and this
+  // function has not been given any.
+  return {
     name,
     shape: '',
     par: 0,
@@ -262,145 +333,217 @@ export function buildTrack(
     length: travelled,
     bounds: { min, max },
   };
-  // Every track has sectors; a track with no splits has one route in each.
-  return withSplits(
-    bare,
-    checkpoints.map(() => []),
-  );
-}
-
-/**
- * A loop from a half that turns through 180°, walked twice. The second copy is
- * the first rotated half a turn, so the circuit closes exactly.
- */
-function loopFromHalf(
-  name: string,
-  shape: string,
-  par: number,
-  half: readonly Piece[],
-  sectorCount: number,
-  splits: readonly (readonly Split[])[] = [],
-): Track {
-  const sweep = half.reduce((sum, p) => sum + (p.kind === 'bend' ? p.sweep : 0), 0);
-  if (Math.abs(sweep - 180) > 1e-9) {
-    throw new Error(`${name}: a half must sweep 180°, not ${sweep}°`);
-  }
-  const track = buildTrack(name, [...half, ...half], sectorCount);
-  return { ...withSplits(track, splits), shape, par };
 }
 
 /**
  * The splits on a track: for each sector, the ways through it besides the
  * golden path. A bulge is a lateral push on the sector's own line, positive to
  * the left of travel — everything else about the split falls out of that.
- */
-type Split = { bulge: number; name: string; grade: Grade };
-
-/**
- * The splits on each track: for every sector, the ways through it besides the
- * golden path. A bulge is how far the line leaves the golden path, and which
- * side — positive is left of travel — held for the whole sector.
  *
- * These are **forks, not racing lines**. A bulge of 50 against an 18-wide path
- * puts the two roads far enough apart that neither is in the other's corridor:
- * two ways through, meeting at the checkpoints and nowhere in between. The
- * earlier version deviated by 6 to 20 units, which on screen was one road with
- * a wobble in it.
+ * `loopFromHalf` used to live here: a half that swept exactly 180°, walked
+ * twice so the circuit closed. It is gone, and with it the rule that closure is
+ * something the author gets right by hand. Sections carry their own ends and
+ * `assemble` checks the set; `closingSection` builds the run home for any
+ * arrangement that does not already close.
+ */
+
+/**
+ * The three tracks, as plans: a ring of sectors, and the roads beside it.
  *
- * The grades are not sprinkled at random. **A split you need a navigation
- * system to read is a better split than one anybody can see**, or the system
- * would not be worth its slot.
+ * Each ring is the same shape it has always been, piece for piece. What has
+ * changed is the splits. They used to be a single number each — a lateral shove
+ * applied to the golden path — and they are roads now, authored by peeling off
+ * the checkpoint and letting the connector find the way back to the next one.
+ *
+ * The rings are still a half walked twice, which is why the sections repeat.
+ * That is a property of these three tracks rather than a rule anybody obeys.
  */
-const KESTREL_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: -40, name: 'The long way round', grade: 'clear' }],
-  [{ bulge: 42, name: 'The cut', grade: 'dim' }],
-  // Sector 2 has no fork. It is three-quarters straight, so every way through
-  // it other than the straight one is simply longer — measured at five bulges
-  // and three handlings, and not one of them was ever worth taking.
-  [],
-  [{ bulge: 46, name: 'The needle', grade: 'dark' }],
+const S = (length: number): Piece => ({ kind: 'straight', length });
+const B = (radius: number, sweep: number): Piece => ({ kind: 'bend', radius, sweep });
+const sector = (id: string, name: string, pieces: readonly Piece[]): Section => ({
+  id,
+  name,
+  pieces,
+  splits: [],
+});
+
+const KESTREL_RING: readonly Section[] = [
+  sector('kestrel-main', 'The long straight', [S(260), B(70, 70), S(90)]),
+  sector('kestrel-esses', 'The esses', [B(42, -55), S(70), B(55, 165)]),
+  sector('kestrel-main-2', 'The long straight again', [S(260), B(70, 70), S(90)]),
+  sector('kestrel-esses-2', 'The esses again', [B(42, -55), S(70), B(55, 165)]),
 ];
 
-/**
- * The Meridian's bends barely bind — a stock ship takes its r85 sweepers at
- * almost top speed — so cutting inside one is close to free and running wide
- * round it buys nothing. That makes it the track where the route is a question
- * about navigation rather than handling: the good lines are real, and they are
- * behind a system.
- */
-const MERIDIAN_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: 70, name: 'The late apex', grade: 'clear' }],
-  [{ bulge: 70, name: 'The shortcut', grade: 'dim' }],
-  [
-    { bulge: -40, name: 'The outer arc', grade: 'clear' },
-    { bulge: 35, name: 'The tight line', grade: 'dim' },
+/** A medium loop of mixed bends: the one that asks for a bit of everything. */
+export const KESTREL_LOOP = assemblePlan({
+  name: 'Kestrel Loop',
+  shape: 'medium · mixed bends',
+  par: 2100,
+  ring: KESTREL_RING,
+  splits: [
+    {
+      from: 0,
+      grade: 'clear',
+      sector: splitThrough(
+        KESTREL_RING,
+        0,
+        'kestrel-wide',
+        'The long way round',
+        [B(90, -60)],
+        85,
+      ),
+    },
+    {
+      from: 1,
+      grade: 'dim',
+      sector: splitThrough(
+        KESTREL_RING,
+        1,
+        'kestrel-cut',
+        'The cut',
+        [B(26, 22), S(60)],
+        26,
+      ),
+    },
+    {
+      from: 3,
+      grade: 'dark',
+      sector: splitThrough(
+        KESTREL_RING,
+        3,
+        'kestrel-needle',
+        'The needle',
+        [B(45, 46)],
+        26,
+      ),
+    },
   ],
-  [{ bulge: 70, name: 'The inside sweep', grade: 'dark' }],
-];
+});
 
-/**
- * The Coil is half bends, so leaving the golden path costs in length far
- * faster than it pays in speed. Nearly every line off it is worth nothing to a
- * ship that can corner and nothing much to one that cannot — which makes its
- * two wide lines an inversion, free to a slow ship and dear to a quick one,
- * and its one real prize the thing you need the best system to see.
- */
-const CINDER_SPLITS: readonly (readonly Split[])[] = [
-  [{ bulge: 35, name: 'The squeeze', grade: 'dark' }],
-  [{ bulge: -40, name: 'The relief road', grade: 'dim' }],
-  [{ bulge: 35, name: 'The needle', grade: 'clear' }],
+const MERIDIAN_RING: readonly Section[] = [
+  sector('meridian-drag', 'The drag', [S(420), B(85, 60), S(300)]),
+  sector('meridian-sweep', 'The sweep', [B(110, 55), S(200), B(62, 65)]),
+  sector('meridian-drag-2', 'The drag again', [S(420), B(85, 60), S(300)]),
+  sector('meridian-sweep-2', 'The sweep again', [B(110, 55), S(200), B(62, 65)]),
 ];
-
-/** A middling circuit: a sweeper, a tight right, a hairpin. Where the game started. */
-export const KESTREL_LOOP = loopFromHalf(
-  'Kestrel Loop',
-  'medium · mixed bends',
-  2100,
-  [
-    { kind: 'straight', length: 260 },
-    { kind: 'bend', radius: 70, sweep: 70 },
-    { kind: 'straight', length: 90 },
-    { kind: 'bend', radius: 42, sweep: -55 },
-    { kind: 'straight', length: 70 },
-    { kind: 'bend', radius: 55, sweep: 165 },
-  ],
-  4,
-  KESTREL_SPLITS,
-);
 
 /** Long straights and open sweepers: a track that pays for top speed. */
-export const MERIDIAN_RUN = loopFromHalf(
-  'Meridian Run',
-  'long · open sweepers',
-  3250,
-  [
-    { kind: 'straight', length: 420 },
-    { kind: 'bend', radius: 85, sweep: 60 },
-    { kind: 'straight', length: 300 },
-    { kind: 'bend', radius: 110, sweep: 55 },
-    { kind: 'straight', length: 200 },
-    { kind: 'bend', radius: 62, sweep: 65 },
+export const MERIDIAN_RUN = assemblePlan({
+  name: 'Meridian Run',
+  shape: 'long · open sweepers',
+  par: 3250,
+  ring: MERIDIAN_RING,
+  splits: [
+    {
+      from: 0,
+      grade: 'clear',
+      sector: splitThrough(
+        MERIDIAN_RING,
+        0,
+        'meridian-outer',
+        'The outer arc',
+        [B(90, -60), S(60)],
+        85,
+      ),
+    },
+    {
+      from: 1,
+      grade: 'dim',
+      sector: splitThrough(
+        MERIDIAN_RING,
+        1,
+        'meridian-wide',
+        'The wide line',
+        [B(70, -14)],
+        160,
+      ),
+    },
+    {
+      from: 2,
+      grade: 'clear',
+      sector: splitThrough(
+        MERIDIAN_RING,
+        2,
+        'meridian-inside',
+        'The inside line',
+        [B(120, 46), S(320)],
+        34,
+      ),
+    },
+    {
+      from: 3,
+      grade: 'dark',
+      sector: splitThrough(
+        MERIDIAN_RING,
+        3,
+        'meridian-far',
+        'The far side',
+        [B(120, -14)],
+        160,
+      ),
+    },
   ],
-  4,
-  MERIDIAN_SPLITS,
-);
+});
+
+const CINDER_RING: readonly Section[] = [
+  sector('cinder-hook', 'The hook', [S(80), B(30, 90), S(50), B(26, -70)]),
+  sector('cinder-coil', 'The coil', [S(40), B(34, 160), S(80), B(30, 90)]),
+  sector('cinder-whip', 'The whip', [S(50), B(26, -70), S(40), B(34, 160)]),
+];
 
 /** Short and tight, barely a straight on it: a track that punishes carrying speed. */
-export const CINDER_COIL = loopFromHalf(
-  'Cinder Coil',
-  'short · tight and busy',
-  1320,
-  [
-    { kind: 'straight', length: 80 },
-    { kind: 'bend', radius: 30, sweep: 90 },
-    { kind: 'straight', length: 50 },
-    { kind: 'bend', radius: 26, sweep: -70 },
-    { kind: 'straight', length: 40 },
-    { kind: 'bend', radius: 34, sweep: 160 },
+export const CINDER_COIL = assemblePlan({
+  name: 'Cinder Coil',
+  shape: 'short · tight and busy',
+  par: 1320,
+  ring: CINDER_RING,
+  splits: [
+    {
+      from: 0,
+      grade: 'dark',
+      // The Cinder is 687 units of curl, and it folds back on itself hard
+      // enough that no road beside this sector clears the *rest* of the
+      // circuit by two corridors — searched exhaustively; the best available is
+      // 36 units against a corridor of 26. So the roads do not cross and their
+      // corridors do overlap, which means a ship thrown badly wide here could
+      // reach the other road. That is a property of a track this small rather
+      // than a mistake in this split, and it is the kind of thing a builder
+      // will have to say out loud.
+      sector: splitThrough(
+        CINDER_RING,
+        0,
+        'cinder-tight',
+        'The tight line',
+        [B(30, 55), S(40)],
+        52,
+      ),
+    },
+    {
+      from: 1,
+      grade: 'dim',
+      sector: splitThrough(
+        CINDER_RING,
+        1,
+        'cinder-outside',
+        'The outside',
+        [B(45, 60), S(30)],
+        60,
+      ),
+    },
+    {
+      from: 2,
+      grade: 'clear',
+      sector: splitThrough(
+        CINDER_RING,
+        2,
+        'cinder-sling',
+        'The slingshot',
+        [B(55, -46), S(100)],
+        26,
+      ),
+    },
   ],
-  3,
-  CINDER_SPLITS,
-);
+});
 
 /** Every track, in the order the player sees them. */
 export const TRACKS: readonly Track[] = [KESTREL_LOOP, MERIDIAN_RUN, CINDER_COIL];
@@ -415,94 +558,6 @@ export const TRACKS: readonly Track[] = [KESTREL_LOOP, MERIDIAN_RUN, CINDER_COIL
 // cuts the inside of a bend is shorter *and* tighter because it is the same
 // line, not because two numbers were chosen to agree.
 // ---------------------------------------------------------------------------
-
-/** The lateral profile of a split: nothing at the checkpoints, all of it between. */
-function profileAt(t: number): number {
-  const ramp = (x: number): number => 0.5 - 0.5 * Math.cos(Math.PI * x);
-  if (t < FORK_SHARE) return ramp(t / FORK_SHARE);
-  if (t > 1 - FORK_SHARE) return ramp((1 - t) / FORK_SHARE);
-  return 1;
-}
-
-/** Where a polyline points and how long it is. Curvature does not come from here. */
-function measureLine(points: readonly Vec[]): {
-  headings: number[];
-  cum: number[];
-  length: number;
-} {
-  const n = points.length;
-  const cum: number[] = [0];
-  for (let i = 1; i < n; i += 1) {
-    const a = points[i - 1] as Vec;
-    const b = points[i] as Vec;
-    cum.push((cum[i - 1] as number) + Math.hypot(b.x - a.x, b.y - a.y));
-  }
-  // Central differences: the direction from the point before to the point
-  // after is the tangent *at* this point. A forward difference is the tangent
-  // half a step later, which leaves every heading lagging its own sample and
-  // makes the joins between routes worse than they need to be.
-  const headings: number[] = [];
-  for (let i = 0; i < n; i += 1) {
-    const a = points[Math.max(0, i - 1)] as Vec;
-    const b = points[Math.min(n - 1, i + 1)] as Vec;
-    headings.push(Math.atan2(b.y - a.y, b.x - a.x));
-  }
-  return { headings, cum, length: cum[n - 1] as number };
-}
-
-/**
- * Read the bends off a curve, rather than being told them.
- *
- * This is only ever used for a split, and that matters: reading curvature back
- * off a polyline smears a short, sharp, authored arc — a 40-unit r42 hairpin
- * came back as r60 when this was tried on the main line. A split is a smooth
- * generated curve with no sharp arcs in it, so there is nothing to smear, and
- * there is no authored truth for it to disagree with. The main line still
- * keeps the bends the track wrote down.
- *
- * Curvature is measured over a window rather than between neighbours: one
- * sample step is 3 units and the headings either side of it differ by very
- * little, so the ratio is mostly rounding.
- */
-function bendsOfCurve(headings: readonly number[], cum: readonly number[]): Bend[] {
-  const n = headings.length;
-  const radius: number[] = [];
-  const turn: number[] = [];
-  for (let i = 0; i < n; i += 1) {
-    const a = Math.max(0, i - CURVE_WINDOW);
-    const b = Math.min(n - 1, i + CURVE_WINDOW);
-    const swing = shortestTurn(headings[a] as number, headings[b] as number);
-    const arc = (cum[b] as number) - (cum[a] as number);
-    const r = arc <= 0 || Math.abs(swing) < 1e-9 ? Infinity : arc / Math.abs(swing);
-    radius.push(r);
-    turn.push(r > STRAIGHT_RADIUS ? 0 : Math.sign(swing));
-  }
-
-  const bends: Bend[] = [];
-  let i = 0;
-  while (i < n) {
-    if (turn[i] === 0) {
-      i += 1;
-      continue;
-    }
-    let end = i;
-    while (end < n && turn[end] === turn[i]) end += 1;
-    const from = cum[i] as number;
-    const to = cum[end - 1] as number;
-    if (to - from >= MIN_BEND_ARC) {
-      let total = 0;
-      for (let k = i; k < end; k += 1) total += radius[k] as number;
-      bends.push({
-        start: from,
-        end: to,
-        radius: total / (end - i),
-        turn: turn[i] as number,
-      });
-    }
-    i = end;
-  }
-  return bends;
-}
 
 /**
  * One route through a sector, as a lateral bulge on the sector's own line.
@@ -524,91 +579,6 @@ function bendsOfCurve(headings: readonly number[], cum: readonly number[]): Bend
  * short bend is smeared by the samples either side of it. The arithmetic is
  * exact anyway: hugging the inside of a bend of radius `r` by `b` leaves `r-b`.
  */
-function routeFrom(
-  track: Track,
-  start: number,
-  end: number,
-  bulge: number,
-  id: string,
-  name: string,
-  grade: Grade,
-): Route {
-  const span = end - start;
-  const steps = Math.max(8, Math.round(span / SAMPLE_STEP));
-
-  const base = [];
-  for (let i = 0; i <= steps; i += 1)
-    base.push(sampleAt(track, start + (i / steps) * span));
-
-  // One side, the whole way. A split leaves the golden path, runs out wide and
-  // comes back — it does not weave.
-  const points: Vec[] = base.map((sample, i) => {
-    const off = bulge * profileAt(i / steps);
-    const n = normalOf(sample);
-    return { x: sample.pos.x + n.x * off, y: sample.pos.y + n.y * off };
-  });
-  const { headings, cum, length } = measureLine(points);
-
-  /** Where a point of the sector, as a fraction of it, falls along this route. */
-  const alongAt = (t: number): number => {
-    const raw = Math.min(steps, Math.max(0, t * steps));
-    const low = Math.floor(raw);
-    const high = Math.min(steps, low + 1);
-    const frac = raw - low;
-    return (cum[low] as number) * (1 - frac) + (cum[high] as number) * frac;
-  };
-
-  // The golden path keeps the bends the track authored, exactly. A split reads
-  // its own: it leaves the main line far enough that "the same bend, moved
-  // sideways" stops being true — offset a 42-radius bend by 60 and the
-  // arithmetic gives a negative radius, because at that distance the offset
-  // curve is a different curve, not a parallel one.
-  const bends: Bend[] =
-    bulge === 0
-      ? track.bends.flatMap((bend) => {
-          const from = Math.max(bend.start, start);
-          const to = Math.min(bend.end, end);
-          if (to - from <= 1e-9) return [];
-          return [
-            {
-              start: alongAt((from - start) / span),
-              end: alongAt((to - start) / span),
-              radius: bend.radius,
-              turn: bend.turn,
-            },
-          ];
-        })
-      : bendsOfCurve(headings, cum);
-
-  // Samples take their curvature from the bends, so the line the ship flies and
-  // the corners it meets are the same object.
-  //
-  // Both ends take the main line's own heading rather than an estimate. Every
-  // route of a sector leaves and arrives on the checkpoint, and the lateral
-  // profile is flat there — its slope at both ends is zero — so the route
-  // really is tangent to the main line at each end, and saying so exactly is
-  // what keeps a ship from flicking as it crosses from one sector's route to
-  // the next one's.
-  const samples: Sample[] = points.map((pos, i) => {
-    const at = cum[i] as number;
-    const bend = bends.find((b) => at >= b.start && at < b.end);
-    const ends =
-      i === 0
-        ? sampleAt(track, start).heading
-        : i === points.length - 1
-          ? sampleAt(track, end - 1e-6).heading
-          : undefined;
-    return {
-      pos,
-      heading: ends ?? (headings[i] as number),
-      radius: bend?.radius ?? 0,
-      turn: bend?.turn ?? 0,
-    };
-  });
-
-  return { id, name, grade, samples, cum, bends, length, entryOffset: bulge };
-}
-
 /** Where a route is at a distance along it, clamped to its ends. */
 export function sampleOn(route: Route, along: number): Sample {
   const cum = route.cum;
@@ -795,38 +765,159 @@ export function unreadable(track: Track, nav: number): number {
 }
 
 /** Give a built track its sectors: the main line, plus whatever splits it has. */
-export function withSplits(
+/**
+ * A way through a sector that is **its own road**: a sector in its own right,
+ * connecting the same two checkpoints as the golden path does.
+ *
+ * The thing it replaces was a number. A split used to be `{ bulge: 46 }`, and
+ * the route was the golden path sampled and shoved sideways — so a split had no
+ * pieces, no authored bends, and no meaning independent of whatever shape it
+ * happened to be applied to. Move a checkpoint and the road silently became a
+ * different road, which is exactly what happened when sections landed and the
+ * Kestrel's dark split had to be re-measured to get its character back.
+ */
+export interface SplitEdge {
+  readonly sector: Section;
+  /** The checkpoint it leaves, as an index into the ring. */
+  readonly from: number;
+  readonly grade: Grade;
+}
+
+/** A whole track, as it is authored: a ring of sectors, and the roads beside it. */
+export interface TrackPlan {
+  readonly name: string;
+  readonly shape: string;
+  readonly par: number;
+  /** The golden path in order. A checkpoint falls between consecutive sectors. */
+  readonly ring: readonly Section[];
+  readonly splits?: readonly SplitEdge[];
+}
+
+/** Where each checkpoint is and which way it faces. Walked, never authored. */
+export function checkpointPoses(ring: readonly Section[]): readonly Pose[] {
+  const poses: Pose[] = [];
+  let at: Pose = ORIGIN;
+  for (const sector of ring) {
+    poses.push(at);
+    at = poseAfter(sector.pieces, at);
+  }
+  return poses;
+}
+
+/**
+ * A route from its own pieces, walked from the checkpoint it leaves.
+ *
+ * `entryOffset` — how far off the golden path this road commits to — is
+ * measured rather than declared: the furthest the road gets from the line,
+ * signed, comparing them at the same fraction of the way through the sector,
+ * which is the same mapping `alongOf` and `rateOf` use to trade one for the
+ * other.
+ */
+function routeOfPieces(
   track: Track,
-  splits: readonly (readonly { bulge: number; name: string; grade: Grade }[])[],
-): Track {
-  const sectors: Sector[] = track.checkpoints.map((start, index) => {
-    const end =
-      index + 1 < track.checkpoints.length
-        ? (track.checkpoints[index + 1] as number)
-        : track.length;
-    const here = splits[index] ?? [];
+  start: number,
+  span: number,
+  pieces: readonly Piece[],
+  from: Pose,
+  id: string,
+  name: string,
+  grade: Grade,
+): Route {
+  const walked = walkPieces(pieces, from);
+  const { bends, length } = walked;
+  // A route has to **arrive**. The walk emits every SAMPLE_STEP and stops short
+  // of the end, which is right for a closed lap — its last sample is a step
+  // before the line it is about to cross — and wrong for a road that must meet
+  // the next checkpoint exactly. So the end is added if the walk did not land
+  // on it, and `cum` says where each sample really is rather than assuming
+  // they are evenly spaced, because that last step is a short one.
+  const samples = [...walked.samples];
+  const cum = samples.map((_, i) => i * SAMPLE_STEP);
+  const lastAt = cum[cum.length - 1] ?? 0;
+  if (length - lastAt > 1e-6) {
+    const end = poseAfter(pieces, from);
+    const tail = bends.find((b) => b.end >= length - 1e-6);
+    samples.push({
+      pos: { x: end.x, y: end.y },
+      heading: end.heading,
+      radius: tail?.radius ?? 0,
+      turn: tail?.turn ?? 0,
+    });
+    cum.push(length);
+  }
+
+  let entryOffset = 0;
+  samples.forEach((sample, i) => {
+    const fraction = length === 0 ? 0 : (cum[i] as number) / length;
+    const online = sampleAt(track, start + fraction * span);
+    const n = normalOf(online);
+    const off =
+      (sample.pos.x - online.pos.x) * n.x + (sample.pos.y - online.pos.y) * n.y;
+    if (Math.abs(off) > Math.abs(entryOffset)) entryOffset = off;
+  });
+
+  return { id, name, grade, samples, cum, length, bends, entryOffset };
+}
+
+/**
+ * Build a track from a plan: a ring of sectors, and the splits beside them.
+ *
+ * Every route — the golden path's own included — is walked from its pieces, so
+ * there is one way a road becomes a line. A split has to leave its checkpoint
+ * and arrive at the next one at the poses the ring has, and this says so rather
+ * than assuming it.
+ */
+export function assemblePlan(plan: TrackPlan): Track {
+  const closure = closureOf(plan.ring);
+  if (!closure.closed) {
+    throw new Error(
+      `${plan.name}: the ring does not close — ${closure.gap.toFixed(1)} units and ` +
+        `${((closure.turn * 180) / Math.PI).toFixed(1)}° out.`,
+    );
+  }
+  const marks = checkpointsOf(plan.ring);
+  const poses = checkpointPoses(plan.ring);
+  const base = buildTrack(plan.name, piecesOf(plan.ring), marks);
+
+  const sectors: Sector[] = plan.ring.map((sector, index) => {
+    const start = marks[index] as number;
+    const end = index + 1 < marks.length ? (marks[index + 1] as number) : base.length;
+    const span = end - start;
+    const here = poses[index] as Pose;
+    const mine = (plan.splits ?? []).filter((split) => split.from === index);
     return {
       index,
       start,
       end,
       routes: [
-        routeFrom(track, start, end, 0, `s${index}-main`, 'The golden path', 'clear'),
-        ...here.map((split, i) =>
-          routeFrom(
-            track,
+        routeOfPieces(
+          base,
+          start,
+          span,
+          sector.pieces,
+          here,
+          `s${index}-main`,
+          'The golden path',
+          'clear',
+        ),
+        ...mine.map((split, i) =>
+          routeOfPieces(
+            base,
             start,
-            end,
-            split.bulge,
+            span,
+            split.sector.pieces,
+            here,
             `s${index}-${i}`,
-            split.name,
+            split.sector.name,
             split.grade,
           ),
         ),
       ],
     };
   });
-  let min = track.bounds.min;
-  let max = track.bounds.max;
+
+  let min = base.bounds.min;
+  let max = base.bounds.max;
   for (const sector of sectors) {
     for (const route of sector.routes) {
       for (const sample of route.samples) {
@@ -835,5 +926,66 @@ export function withSplits(
       }
     }
   }
-  return { ...track, sectors, bounds: { min, max } };
+  return {
+    ...base,
+    shape: plan.shape,
+    par: plan.par,
+    sectors,
+    bounds: { min, max },
+  };
 }
+
+/**
+ * A split authored the way a builder authors one: **peel off, then find the way
+ * back.** You lay the pieces that give the road its character — swing out, run
+ * wide, dive inside — and the connector works out the curve-straight-curve that
+ * returns it to the checkpoint the golden path is about to reach.
+ *
+ * This is why the connector was worth generalising. Closing a ring and closing a
+ * split are the same problem: a start pose, a goal pose, and the smallest thing
+ * that joins them.
+ */
+export function splitThrough(
+  ring: readonly Section[],
+  from: number,
+  id: string,
+  name: string,
+  lead: readonly Piece[],
+  radius: number,
+): Section {
+  const poses = checkpointPoses(ring);
+  const here = poses[from];
+  const next = poses[(from + 1) % poses.length];
+  if (here === undefined || next === undefined) {
+    throw new Error(`${id}: no checkpoint ${from}`);
+  }
+  const tail = connector(poseAfter(lead, here), next, radius);
+  if (tail === undefined) {
+    throw new Error(
+      `${id}: no way back to checkpoint ${(from + 1) % poses.length} at radius ${radius}`,
+    );
+  }
+  return { id, name, pieces: [...lead, ...tail], splits: [] };
+}
+
+/**
+ * How far each split is from meeting the checkpoint it should arrive at. Empty
+ * when every road in the plan joins up — which is what a builder needs to say.
+ */
+export function splitFaults(
+  plan: TrackPlan,
+): readonly { readonly split: SplitEdge; readonly gap: number; readonly turn: number }[] {
+  const poses = checkpointPoses(plan.ring);
+  const faults = [];
+  for (const split of plan.splits ?? []) {
+    const here = poses[split.from];
+    const next = poses[(split.from + 1) % poses.length];
+    if (here === undefined || next === undefined) continue;
+    const landed = poseAfter(split.sector.pieces, here);
+    const gap = Math.hypot(landed.x - next.x, landed.y - next.y);
+    const turn = Math.abs(wrapAngle(landed.heading - next.heading));
+    if (gap > 0.5 || turn > 0.01) faults.push({ split, gap, turn });
+  }
+  return faults;
+}
+

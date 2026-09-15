@@ -65,7 +65,13 @@ npm run lint         # eslint .
 npm test             # vitest run
 npm run build        # vite build → dist/ (base path /star-race/)
 npm run mechanics-page   # design/catalogue/ → public/design/mechanics.html
+npm run balance          # whole seasons, policy against policy
 ```
+
+The **track builder** is a second page of the same site: `/star-race/builder.html`,
+or `builder.html` under `npm run dev`. Pieces from a catalogue into sectors, the
+loop closed for you when it is open, and TypeScript out at the bottom to paste
+into `src/sim/track.ts`. `design/track-model.md` is the model it is built on.
 
 Before reporting a task done: `npm run typecheck && npm run lint && npm test`.
 Before opening a PR, also `npm run build`, or use the `deploy-checker`

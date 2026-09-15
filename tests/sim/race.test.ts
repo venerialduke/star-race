@@ -123,12 +123,28 @@ describe('hazards, shields and the crew', () => {
       { uid: 'a', componentId: 'speed-engine', level: 1 },
       { uid: 'b', componentId: 'speed-engine', level: 1 },
     ];
-    const raced = (plan: 'lift' | 'charge'): number =>
-      integrity(
-        simulate(base({ stats: resolveBuild(build), build, plan }), 3000).condition,
+    // Over many seeds rather than one. A single seed was enough while the draws
+    // never moved; then a checkpoint moved, the one seed this stood on happened
+    // to stop going wide, and the test failed without the claim being any less
+    // true. Measured at 26 laps in 40 for a Charge and 0 in 40 for a Lift, so
+    // twenty seeds and a quarter is a floor this clears comfortably and a
+    // genuine regression would not.
+    const seeds = Array.from({ length: 20 }, (_, i) => `s${i}`);
+    const raced = (plan: 'lift' | 'charge'): readonly number[] =>
+      seeds.map((seed) =>
+        integrity(
+          simulate(
+            base({ stats: resolveBuild(build), build, plan, seed: seedFrom(seed) }),
+            3000,
+          ).condition,
+        ),
       );
-    expect(raced('charge')).toBeLessThan(1);
-    expect(raced('lift')).toBe(1);
+    // Charging is not guaranteed to go wide on any given lap; it is guaranteed
+    // to be the plan that does.
+    expect(raced('charge').filter((worth) => worth < 1).length).toBeGreaterThan(
+      seeds.length / 4,
+    );
+    expect(raced('lift').every((worth) => worth === 1)).toBe(true);
   });
 
   it('bills an excursion once, not once per tick spent outside', () => {

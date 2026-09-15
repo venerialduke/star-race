@@ -162,10 +162,16 @@ describe('the simulation is untouched by any of it', () => {
     // moving a checkpoint changes which bend a ship is slowing for and when.
     // That is a real behavioural change from a real design change, and it is
     // four ticks.
+    // And once more when splits became roads of their own. The golden path did
+    // not move at all, but its bends are now read off the pieces that make it
+    // rather than off the curvature of a sampled line, so they sit a fraction
+    // differently and both the swing keys and the braking points shift with
+    // them. The largest change to a lap that takes no swing at all — and so has
+    // no luck in it — is **one tick**, on the Meridian.
     const expected: Record<string, [number, number, number]> = {
-      'Kestrel Loop': [2066, 1912, 1788],
-      'Meridian Run': [2982, 2944, 2909],
-      'Cinder Coil': [1407, 1231, 1258],
+      'Kestrel Loop': [2066, 1911, 1797],
+      'Meridian Run': [2981, 2944, 2910],
+      'Cinder Coil': [1407, 1282, 1240],
     };
     for (const track of TRACKS) {
       const lap = (plan: 'lift' | 'carry' | 'charge'): number => {

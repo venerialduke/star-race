@@ -235,24 +235,29 @@ function piecesOfCsc(path: Csc, radius: number): readonly Piece[] {
 }
 
 /**
- * A section that runs from wherever `sections` leave off back to the start
- * line, so the circuit closes. Undefined when the two ends are so close and so
- * badly aligned that no curve-straight-curve at this radius reaches — in which
- * case a wider radius, or one more section before it, is the answer.
+ * Pieces running from one pose to another: a curve, a straight and a curve.
+ *
+ * This is the whole of snapping. Wherever a run of pieces has got to, and
+ * wherever it needs to arrive, this is the minimal thing that joins the two —
+ * so "fill the gap" is always available and always small. It serves two jobs
+ * that look different and are the same problem: closing a ring back to its
+ * start line, and bringing a split back to the checkpoint the golden path is
+ * about to reach.
+ *
+ * Undefined when the two poses are so close and so badly aligned that no such
+ * path exists at this radius; a wider radius is then the answer.
  */
-export function closingSection(
-  sections: readonly Section[],
+export function connector(
+  from: Pose,
+  to: Pose,
   radius: number,
-  id = 'closing',
-  name = 'The run home',
-): Section | undefined {
-  const from = poseOfAll(sections);
-  const dx = ORIGIN.x - from.x;
-  const dy = ORIGIN.y - from.y;
+): readonly Piece[] | undefined {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
   const span = Math.hypot(dx, dy);
   const theta = Math.atan2(dy, dx);
   const alpha = mod2pi(from.heading - theta);
-  const beta = mod2pi(ORIGIN.heading - theta);
+  const beta = mod2pi(to.heading - theta);
 
   const candidates = cscPaths(alpha, beta, span / radius)
     .map((path) => ({ path, cost: path.t + path.p + path.q }))
@@ -262,16 +267,27 @@ export function closingSection(
     const pieces = piecesOfCsc(path, radius);
     if (pieces.length === 0) continue;
     // Trust the arithmetic only after walking it: the formulae have four
-    // branches and a sign error in one of them would close nothing.
+    // branches and a sign error in one of them would join nothing.
     const landed = poseAfter(pieces, from);
     if (
-      Math.hypot(landed.x - ORIGIN.x, landed.y - ORIGIN.y) < 0.5 &&
-      Math.abs(wrapAngle(landed.heading - ORIGIN.heading)) < 0.01
+      Math.hypot(landed.x - to.x, landed.y - to.y) < 0.5 &&
+      Math.abs(wrapAngle(landed.heading - to.heading)) < 0.01
     ) {
-      return { id, name, pieces, splits: [] };
+      return pieces;
     }
   }
   return undefined;
+}
+
+/** A section running from wherever `sections` leave off back to the start line. */
+export function closingSection(
+  sections: readonly Section[],
+  radius: number,
+  id = 'closing',
+  name = 'The run home',
+): Section | undefined {
+  const pieces = connector(poseOfAll(sections), ORIGIN, radius);
+  return pieces === undefined ? undefined : { id, name, pieces, splits: [] };
 }
 
 // ---------------------------------------------------------------------------

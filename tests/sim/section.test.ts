@@ -21,6 +21,7 @@ import {
   type Section,
 } from '../../src/sim/section';
 import { TRACKS, type Piece } from '../../src/sim/track';
+import { TRACK_HALF_WIDTH } from '../../src/sim/tuning';
 
 const S = (length: number): Piece => ({ kind: 'straight', length });
 const B = (radius: number, sweep: number): Piece => ({ kind: 'bend', radius, sweep });
@@ -152,6 +153,43 @@ describe('the tracks that ship', () => {
       expect(track.checkpoints[track.checkpoints.length - 1] as number).toBeLessThan(
         track.length,
       );
+    }
+  });
+
+  it('keep every split clear of the rest of the circuit', () => {
+    // A split is a road now, not a bulge, so it can be authored anywhere —
+    // including straight across the infield into another sector. Two roads
+    // closer than a corridor is a junction the game has no rules for, and the
+    // only thing that catches it is looking.
+    for (const track of TRACKS) {
+      for (const sector of track.sectors) {
+        for (const route of sector.routes.slice(1)) {
+          // How far round the lap two distances are, the short way.
+          const apart = (a: number, b: number): number => {
+            const d = Math.abs(((a - b) % track.length + track.length) % track.length);
+            return Math.min(d, track.length - d);
+          };
+          let nearest = Infinity;
+          for (const point of route.samples) {
+            track.samples.forEach((online, i) => {
+              const at = i * 3;
+              // Its own sector's stretch is shared ground: they meet at both
+              // checkpoints by construction. Wrapped, because a split arriving
+              // at checkpoint 0 meets the line at 0, which is also the lap.
+              if (apart(at, sector.start) <= 60 || apart(at, sector.end) <= 60) return;
+              if (at > sector.start && at < sector.end) return;
+              nearest = Math.min(
+                nearest,
+                Math.hypot(point.pos.x - online.pos.x, point.pos.y - online.pos.y),
+              );
+            });
+          }
+          expect(
+            nearest,
+            `${track.name} ${route.name} runs ${nearest.toFixed(0)} from another part of the circuit`,
+          ).toBeGreaterThan(TRACK_HALF_WIDTH);
+        }
+      }
     }
   });
 

@@ -164,9 +164,10 @@ checked, because a road that crosses another road is a junction the game has no
 rules for.
 
 **Pieces carry properties as well as shape** — environment, a pocket that pays,
-danger on the path rather than only off it. Nothing reads them yet. They are the
-vocabulary, laid down before there is anything to say with it, and they are what
-"a split worth taking because it is safer" has been waiting on since S4.
+danger on the path rather than only off it. See **What a stretch of road is
+like**, below, for what each of them costs. They are what "a split worth taking
+because it is safer, or because it holds something" has been waiting on since
+S4: until they meant something, every split could only be balanced on the clock.
 
 The three tracks that ship are the same shape they always were, piece for
 piece — what moved is where their checkpoints sit. Two things follow from that
@@ -176,6 +177,58 @@ laps moved, a long way on a tight track and entirely inside the spread across
 seeds. And braking looks ahead past the end of the current sector into the next,
 so a swing-free Lift lap moved too — four ticks on the Cinder Coil. That one is
 a real behavioural change from a real design change.
+
+## What a stretch of road is like
+
+Shape is not the only thing a piece of track can say about itself. A piece, or a
+whole sector, also carries **properties**: what surrounds it, whether it pays,
+and whether it is dangerous on the path rather than only off it.
+
+A sector's properties reach every piece in it, and a piece may override any one
+field without cancelling the rest — so "this whole stretch is a nebula, but the
+third bend of it pays" is two sentences rather than four. Resolution happens
+once, when the track is assembled; the race never asks a sector anything.
+
+| Property      | What an author writes                   |
+| ------------- | --------------------------------------- |
+| `environment` | `open`, `nebula`, `debris` or `shadow`  |
+| `pocket`      | how much flying it pays                 |
+| `hazard`      | how hard it bites, on top of the ground |
+
+An environment is a **named bundle** of what it does, because an author picks
+"this bit is a nebula" and should not also have to decide what a nebula is —
+that is a property of the game and it lives in `tuning.ts` with the other
+numbers. What a stretch comes to is four numbers:
+
+| Effect   | What it does                                                    |
+| -------- | --------------------------------------------------------------- |
+| `grip`   | multiplies the speed a bend there can be held at                 |
+| `sight`  | how well the road can be read, which decides how set you are     |
+| `hazard` | damage on entering the stretch, scaled by the speed you meet it at |
+| `pocket` | salvage for the ground flown through it                          |
+
+- **Nebula** is thick: it lowers the holding speed, so the same entry swings
+  wider. That is the bet the whole game rests on, applied to a place instead of
+  to a build.
+- **Debris** scrapes. Cheap on the line, expensive at speed.
+- **Shadow** hides the bend until you are into it. It is spent the way Charge's
+  own penalty is — the swing is drawn from a worse place — rather than as a new
+  kind of loss. Which means **Lift is immune to it**: the plan that gives up all
+  its speed for certainty takes no swing at anything, so there is nothing for a
+  surprise to make worse. That is deliberate, and it is what Lift is paying for
+  everywhere else.
+
+Nothing here is a new thing for a player to learn. Every one of the four is
+spent in currency the game already had.
+
+**A hazardous stretch bites once, on the way in** — not every tick the ship is
+stood in it. That is the rule the excursion hazard already follows, for the
+reason this codebase has now learned three separate times (S3.6's parts, V1.2's
+wall, S6's mines): per-tick damage is a ban on a build rather than a risk to it.
+
+A stretch that says nothing costs nothing: it contributes no band at all, so a
+track that uses none of this carries an empty table and pays nothing for the
+feature existing.
 
 ## The track
 
@@ -765,6 +818,16 @@ it doubled a lap time. It never bites the ship that laid it.
   engine's boost, they are not announced, and **they discriminate by build**: a
   ship with a dark matter engine reads the hole as a corner — through it faster,
   unharmed, and gathering what it sheds — and everybody else meets a hazard.
+
+- **The track's own** are level data: a mine or a hole the *author* put there,
+  before anybody has raced on it. They belong to nobody — an owner no entrant
+  can have — which is what makes them bite the whole field rather than
+  everybody-but-one, and they are there for the whole heat because they are part
+  of the track and the track does not get cleared away. They are authored as a
+  sector, a road through it and a fraction of the way along, never as a distance,
+  so moving a checkpoint or re-cutting a sector carries them along instead of
+  leaving them stranded — the same reason checkpoint poses are derived and never
+  authored.
 
 Fixtures laid before the heat survive the pit stop. Ones dropped during a lap do
 not: the lap restarts and the road is clear again.

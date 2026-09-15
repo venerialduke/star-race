@@ -870,3 +870,26 @@ is to make a navigation system worth its slot.
 nothing while the golden path is free: damage today comes only from being
 thrown off it, so there is no danger on it to buy safety from. Hazards that sit
 *on* the track have to land before "safer" is a reason to go anywhere.
+
+_Unblocked — stage 5 of the track model landed the mechanism._ A stretch of
+road can now be thick, dangerous, hard to read, or worth money, and the track
+can carry the author's own mines and holes. What has **not** happened is anybody
+using it: the three tracks that ship still say nothing about themselves, so
+every split is still balanced on the clock alone and the Meridian's wide lines
+are still 26 to 48 ticks of nothing.
+
+That is the next job, and it is a content and balance job rather than an
+engineering one. The question to answer with seeded runs, not by eye: **how much
+pocket is a wide line worth?** The Meridian's outer arc costs about 30 ticks; at
+`POCKET_PER` = 100 units per point, a pocket of 10 over a 400-unit stretch pays
+40 salvage. Whether 40 salvage is worth 30 ticks is a season-level question and
+`npm run balance` is the thing that answers it. Do not guess it into `track.ts`.
+
+Two smaller things left behind by the same stage:
+
+- **The chase view does not draw environment.** The map does, and the map is
+  where a route is chosen, so this is cosmetic rather than blocking — but flying
+  into a nebula currently looks like flying into nothing.
+- **A fixture cannot be dragged on the canvas.** The builder places one with
+  three sliders (sector, road, how far along), which is enough to author with
+  and is not enough to author *comfortably*.

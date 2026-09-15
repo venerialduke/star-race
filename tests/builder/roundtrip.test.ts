@@ -37,6 +37,7 @@ function draftOf(track: Track): Draft {
       pieces: piecesFrom(track, sector.start, sector.end).map(asDraft),
     })),
     splits: [],
+    fixtures: [],
   };
 }
 

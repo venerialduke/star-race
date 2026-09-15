@@ -137,7 +137,7 @@ export function startField(
       waiting: false,
     };
   });
-  const placed = placedFixtures(entrants, commands, ships, track);
+  const placed = [...trackFixtures(track), ...placedFixtures(entrants, commands, ships, track)];
   return {
     tick: 0,
     lap: 0,
@@ -148,6 +148,48 @@ export function startField(
     placed,
   };
 }
+
+/**
+ * What the **author** left on the road, turned into ordinary fixtures.
+ *
+ * A track's own furniture is level data, not a ship's doing, so it belongs to
+ * nobody: `owner` is a name no entrant can have, which is what makes it bite
+ * everyone rather than everyone-but-one. It lives for the whole heat and comes
+ * back at every pit stop, because it is part of the track and the track does not
+ * get cleared away.
+ *
+ * It becomes a `Fixture` here rather than staying a `Placement` in the race so
+ * that nothing in the tick has to learn a second kind of thing on the road —
+ * everything that already knows how to meet a mine meets these unchanged.
+ */
+function trackFixtures(track: Track | undefined): readonly Fixture[] {
+  if (track === undefined) return [];
+  return track.fixtures.flatMap((placement) => {
+    const sector = track.sectors[placement.sector];
+    if (sector === undefined) return [];
+    const at = Math.min(1, Math.max(0, placement.at));
+    return [
+      {
+        id: `track:${placement.id}`,
+        kind: placement.kind,
+        owner: TRACK_OWNER,
+        distance: sector.start + at * (sector.end - sector.start),
+        sector: placement.sector,
+        route: placement.route,
+        offset: placement.offset,
+        power: placement.power,
+        life: Number.MAX_SAFE_INTEGER,
+      },
+    ];
+  });
+}
+
+/**
+ * The owner of everything the track itself put on the road. No entrant can be
+ * called this, which is the whole point: a fixture never bites its owner, and
+ * the track's furniture has to bite everybody.
+ */
+export const TRACK_OWNER = '::track';
 
 /**
  * The mines laid before the heat. Everyone in the heat can see these — they are

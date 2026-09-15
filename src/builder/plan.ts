@@ -21,11 +21,15 @@ import {
 import {
   assemblePlan,
   checkpointPoses,
+  saysNothing,
+  walkPieces,
   type Grade,
   type Piece,
+  type Properties,
   type Track,
   type TrackPlan,
 } from '../sim/track';
+import type { FixtureKind } from '../sim/world';
 
 /** A piece as the builder holds it: which family, turned how far, facing where. */
 export interface DraftPiece {
@@ -47,12 +51,39 @@ export interface DraftPiece {
    * is the point — it is exact until somebody edits it.
    */
   readonly exact?: Piece;
+  /**
+   * What this one piece is like, over whatever its sector says. Kept beside the
+   * shape rather than inside `values`, because a knob is a number a family
+   * understands and this is not — a straight and a hairpin carry properties the
+   * same way, and no catalogue entry has an opinion about them.
+   */
+  readonly properties?: Properties;
 }
 
 export interface DraftSector {
   id: string;
   name: string;
   pieces: DraftPiece[];
+  /** What the whole stretch is like. Every piece in it inherits these. */
+  properties?: Properties;
+}
+
+/**
+ * Something the author puts on the road, as the builder holds it.
+ *
+ * `route` is an index into the sector's roads — 0 is the golden path, 1 and up
+ * are its splits in the order they were added — which is the same index the
+ * race uses, so a fixture on a split is no danger on the main line.
+ */
+export interface DraftFixture {
+  id: string;
+  kind: FixtureKind;
+  sector: number;
+  route: number;
+  /** How far through the sector, 0 to 1. */
+  at: number;
+  offset: number;
+  power: number;
 }
 
 /** A road beside the ring, authored as a lead and a way back. */
@@ -72,13 +103,18 @@ export interface Draft {
   par: number;
   ring: DraftSector[];
   splits: DraftSplit[];
+  fixtures: DraftFixture[];
 }
 
 /** A drafted piece, resolved to the thing the simulation walks. */
 export function pieceOf(draft: DraftPiece): Piece {
-  if (draft.exact !== undefined) return draft.exact;
   const entry = entryOf(draft.entryId) ?? (CATALOGUE[0] as Entry);
-  return entry.make(draft.values, draft.turn);
+  const shape = draft.exact ?? entry.make(draft.values, draft.turn);
+  // Properties ride on top of whichever shape came out, exact or made. A piece
+  // the catalogue cannot describe is still a piece that can sit in a nebula.
+  return saysNothing(draft.properties)
+    ? shape
+    : { ...shape, properties: draft.properties as Properties };
 }
 
 export const piecesOfSector = (sector: DraftSector): readonly Piece[] =>
@@ -89,6 +125,7 @@ const sectionOf = (sector: DraftSector): Section => ({
   name: sector.name,
   pieces: piecesOfSector(sector),
   splits: [],
+  ...(saysNothing(sector.properties) ? {} : { properties: sector.properties }),
 });
 
 export const ringOf = (draft: Draft): readonly Section[] => draft.ring.map(sectionOf);
@@ -107,6 +144,7 @@ export function newDraft(): Draft {
       },
     ],
     splits: [],
+    fixtures: [],
   };
 }
 
@@ -195,7 +233,10 @@ export function asDraft(piece: Piece): DraftPiece {
       const value = values[knob.key];
       return value !== undefined && value >= knob.min && value <= knob.max;
     });
-  return described ? { entryId: id, values, turn } : { entryId: id, values, turn, exact: piece };
+  const kept = saysNothing(piece.properties) ? {} : { properties: piece.properties };
+  return described
+    ? { entryId: id, values, turn, ...kept }
+    : { entryId: id, values, turn, exact: piece, ...kept };
 }
 
 /**
@@ -246,6 +287,7 @@ export function planOf(draft: Draft): TrackPlan | undefined {
     par: draft.par,
     ring: ringOf(draft),
     splits,
+    fixtures: draft.fixtures.filter((f) => draft.ring[f.sector] !== undefined),
   };
 }
 
@@ -299,6 +341,11 @@ export function insertSector(draft: Draft, at: number): number {
     pieces: [],
   });
   draft.splits = draft.splits.map((s) => (s.from >= index ? { ...s, from: s.from + 1 } : s));
+  // A fixture is authored against a sector index for the same reason a split is,
+  // and moves for the same reason.
+  draft.fixtures = draft.fixtures.map((f) =>
+    f.sector >= index ? { ...f, sector: f.sector + 1 } : f,
+  );
   renumber(draft);
   return index;
 }
@@ -319,5 +366,96 @@ export function dropSector(draft: Draft, at: number): void {
   draft.splits = draft.splits
     .filter((s) => s.from !== index)
     .map((s) => (s.from > index ? { ...s, from: s.from - 1 } : s));
+  draft.fixtures = draft.fixtures
+    .filter((f) => f.sector !== index)
+    .map((f) => (f.sector > index ? { ...f, sector: f.sector - 1 } : f));
   renumber(draft);
+}
+
+/**
+ * Every road through a sector, in the order the race indexes them: the golden
+ * path first, then its splits.
+ *
+ * It skips a split that cannot reach its checkpoint for the same reason
+ * `planOf` does, and that matching matters more than it looks — a fixture is
+ * authored against a route *index*, so if the builder counted a broken split
+ * and the track did not, every fixture past it would sit on the wrong road.
+ */
+export function roadsOf(
+  draft: Draft,
+  sector: number,
+): readonly { readonly name: string; readonly pieces: readonly Piece[] }[] {
+  const here = draft.ring[sector];
+  if (here === undefined) return [];
+  const roads = [{ name: 'The golden path', pieces: piecesOfSector(here) }];
+  for (const split of draft.splits) {
+    if (split.from !== sector) continue;
+    const pieces = splitPieces(draft, split);
+    if (pieces !== undefined) roads.push({ name: split.name, pieces });
+  }
+  return roads;
+}
+
+/** Where a fixture sits and which way the road faces there, for drawing it. */
+export function fixturePose(draft: Draft, fixture: DraftFixture): Pose | undefined {
+  const roads = roadsOf(draft, fixture.sector);
+  const road = roads[fixture.route] ?? roads[0];
+  const from = checkpointPoses(ringOf(draft))[fixture.sector];
+  if (road === undefined || from === undefined) return undefined;
+  const samples = walkPieces(road.pieces, from).samples;
+  if (samples.length === 0) return undefined;
+  const at = Math.min(1, Math.max(0, fixture.at));
+  const sample = samples[Math.round(at * (samples.length - 1))];
+  if (sample === undefined) return undefined;
+  const n = { x: -Math.sin(sample.heading), y: Math.cos(sample.heading) };
+  return {
+    x: sample.pos.x + n.x * fixture.offset,
+    y: sample.pos.y + n.y * fixture.offset,
+    heading: sample.heading,
+  };
+}
+
+/** A fixture at its default: half way down the golden path, on the line. */
+export function newFixture(draft: Draft, sector: number): DraftFixture {
+  // The first free number, not the count. A fixture's id is what the race keys
+  // "already bitten by this" on, so two sharing one means the second never
+  // bites anybody — and counting would hand out a duplicate the moment one in
+  // the middle is deleted.
+  const taken = new Set(draft.fixtures.map((f) => f.id));
+  let n = 1;
+  while (taken.has(`fixture-${n}`)) n += 1;
+  return {
+    id: `fixture-${n}`,
+    kind: 'mine',
+    sector,
+    route: 0,
+    at: 0.5,
+    offset: 0,
+    power: DEFAULT_FIXTURE_POWER,
+  };
+}
+
+/**
+ * What a fixture carries when it is first placed. Level data rather than
+ * balance: it is the number a builder immediately drags, and every track will
+ * have a different answer.
+ */
+const DEFAULT_FIXTURE_POWER = 30;
+
+/**
+ * Set one field of a set of properties, dropping it when it goes back to
+ * nothing. Properties that say nothing are left absent rather than written as
+ * zeroes, so a sector that has never been touched exports as a sector rather
+ * than as a sector with three empty opinions.
+ */
+export function setProperty(
+  properties: Properties | undefined,
+  key: 'environment' | 'pocket' | 'hazard',
+  value: string | number,
+): Properties | undefined {
+  const next: Record<string, string | number> = { ...properties };
+  if (value === '' || value === 0 || value === 'open') delete next[key];
+  else next[key] = value;
+  const cleaned = next as Properties;
+  return saysNothing(cleaned) ? undefined : cleaned;
 }

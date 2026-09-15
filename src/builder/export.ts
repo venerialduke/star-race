@@ -12,23 +12,60 @@
 // again.
 
 import { entryOf } from '../sim/catalogue';
-import type { Piece } from '../sim/track';
-import { pieceOf, type Draft, type DraftPiece, type DraftSector } from './plan';
+import { saysNothing, type Piece, type Properties } from '../sim/track';
+import {
+  pieceOf,
+  type Draft,
+  type DraftFixture,
+  type DraftPiece,
+  type DraftSector,
+} from './plan';
 
 const round = (n: number): string => {
   const r = Math.round(n * 100) / 100;
   return Number.isInteger(r) ? String(r) : r.toFixed(2);
 };
 
-const pieceSource = (piece: Piece): string =>
-  piece.kind === 'straight'
-    ? `S(${round(piece.length)})`
-    : `B(${round(piece.radius)}, ${round(piece.sweep)})`;
+/**
+ * Properties as an object literal, or empty when the stretch says nothing.
+ *
+ * Nothing is written for a stretch that has no opinion, which is what keeps a
+ * plain track's export exactly as short as it was before any of this existed.
+ */
+const propsSource = (properties: Properties | undefined): string => {
+  if (saysNothing(properties) || properties === undefined) return '';
+  const parts: string[] = [];
+  if (properties.environment !== undefined && properties.environment !== 'open') {
+    parts.push(`environment: '${properties.environment}'`);
+  }
+  if ((properties.pocket ?? 0) !== 0) parts.push(`pocket: ${round(properties.pocket ?? 0)}`);
+  if ((properties.hazard ?? 0) !== 0) parts.push(`hazard: ${round(properties.hazard ?? 0)}`);
+  return `{ ${parts.join(', ')} }`;
+};
+
+// A piece with properties is written through `P`, which is `S`/`B` with a
+// second argument — so the common case stays a bare `S(260)` and only the
+// pieces that say something pay for saying it.
+const pieceSource = (piece: Piece): string => {
+  const shape =
+    piece.kind === 'straight'
+      ? `S(${round(piece.length)})`
+      : `B(${round(piece.radius)}, ${round(piece.sweep)})`;
+  const props = propsSource(piece.properties);
+  return props === '' ? shape : `P(${shape}, ${props})`;
+};
 
 const sectorSource = (sector: DraftSector): string => {
   const pieces = sector.pieces.map((p) => pieceSource(pieceOf(p))).join(', ');
-  return `  sector('${sector.id}', '${sector.name.replace(/'/g, "\\'")}', [${pieces}]),`;
+  const props = propsSource(sector.properties);
+  const tail = props === '' ? '' : `, ${props}`;
+  return `  sector('${sector.id}', '${sector.name.replace(/'/g, "\\'")}', [${pieces}]${tail}),`;
 };
+
+const fixtureSource = (fixture: DraftFixture): string =>
+  `    { id: '${fixture.id}', kind: '${fixture.kind}', sector: ${fixture.sector}, ` +
+  `route: ${fixture.route}, at: ${round(fixture.at)}, offset: ${round(fixture.offset)}, ` +
+  `power: ${round(fixture.power)} },`;
 
 const leadSource = (lead: readonly DraftPiece[]): string =>
   `[${lead.map((p) => pieceSource(pieceOf(p))).join(', ')}]`;
@@ -60,6 +97,8 @@ export function sourceOf(draft: Draft): string {
     })
     .join('\n');
 
+  const fixtures = draft.fixtures.map(fixtureSource).join('\n');
+
   return `const ${ring}: readonly Section[] = [
 ${sectors}
 ];
@@ -74,6 +113,13 @@ export const ${ringName(draft.name).replace('_RING', '')} = assemblePlan({
       : `
   splits: [
 ${splits}
+  ],`
+  }${
+    fixtures === ''
+      ? ''
+      : `
+  fixtures: [
+${fixtures}
   ],`
   }
 });

@@ -150,6 +150,27 @@
         font-style: normal;
         color: var(--gold);
       }
+      .props {
+        border-top: 1px dashed var(--line);
+        margin-top: 6px;
+        padding-top: 3px;
+      }
+      .props .says {
+        color: var(--gold);
+        font-size: 11px;
+        margin: 4px 0 0;
+        text-align: right;
+      }
+      select {
+        width: 100%;
+        background: #0d1428;
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        font: inherit;
+        font-size: 11px;
+        padding: 2px 4px;
+      }
       .row .t {
         display: flex;
         flex-direction: column;
@@ -180,7 +201,8 @@
       .phead span {
         flex: 1;
       }
-      .piece label {
+      .piece label,
+      .props label {
         display: grid;
         grid-template-columns: 56px 1fr 38px;
         gap: 6px;
@@ -189,7 +211,8 @@
         color: var(--soft);
         margin-top: 4px;
       }
-      .piece b {
+      .piece b,
+      .props b {
         color: var(--gold);
         text-align: right;
         font-variant-numeric: tabular-nums;

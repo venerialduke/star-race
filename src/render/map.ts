@@ -8,13 +8,17 @@
 
 import {
   canonicalOf,
+  effectOf,
   navFor,
   normalOf,
   placeOn,
   placeSmooth,
   routeOf,
   sampleAt,
+  type Band,
+  type Environment,
   type Route,
+  type Sample,
   type Track,
   type Vec,
 } from '../sim/track';
@@ -135,6 +139,10 @@ export function drawMap(
   // the lines the ship is thrown across, so crossing one reads as an event.
   ribbon(PATH_HALF_WIDTH * 6 * view.scale, OFF_PATH);
   ribbon(PATH_HALF_WIDTH * 2 * view.scale, PATH_EDGE);
+  // What the road is made of, before the line down the middle of it. A nebula
+  // has to be recognisable from up here, because the map is where a player
+  // decides whether the long way round one is worth the time it costs.
+  paintBands(ctx, view, track.samples, track.length, track.bands);
   ribbon(Math.max(1.5, PATH_HALF_WIDTH * 0.4 * view.scale), PATH);
   edge(ctx, view, track, PATH_HALF_WIDTH);
   edge(ctx, view, track, -PATH_HALF_WIDTH);
@@ -150,6 +158,10 @@ export function drawMap(
       if (need > routes.nav + 1) return;
       const readable = need <= routes.nav;
       const taken = readable && routes.planned[sector.index] === index;
+      // A split you can read shows what it is made of too — which is how a
+      // road that is longer but pays, or shorter but bites, can be chosen on
+      // anything other than the clock.
+      if (readable) paintBands(ctx, view, route.samples, route.length, route.bands);
       splitLine(
         ctx,
         view,
@@ -392,6 +404,67 @@ function drawShip(
   }
   ctx.restore();
   ctx.globalAlpha = 1;
+}
+
+/**
+ * What each environment looks like from above. Alpha rather than colour, so it
+ * lies over whatever road it is on and a split reads as a split underneath it.
+ */
+const GROUND: Record<Environment, string> = {
+  open: 'rgba(0, 0, 0, 0)',
+  nebula: 'rgba(168, 130, 255, 0.34)',
+  debris: 'rgba(255, 150, 90, 0.30)',
+  shadow: 'rgba(6, 9, 22, 0.66)',
+};
+
+/**
+ * The stretches of a line that say something about themselves.
+ *
+ * Bands are in the line's own distances and its samples are evenly spaced, so a
+ * band is a slice of the sample array — which is why the line's length is
+ * passed in rather than measured here.
+ */
+function paintBands(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  samples: readonly Sample[],
+  length: number,
+  bands: readonly Band[],
+): void {
+  if (bands.length === 0 || length <= 0 || samples.length < 2) return;
+  for (const band of bands) {
+    const from = Math.max(0, Math.floor((band.start / length) * (samples.length - 1)));
+    const to = Math.min(
+      samples.length - 1,
+      Math.ceil((band.end / length) * (samples.length - 1)),
+    );
+    if (to <= from) continue;
+    const stroke = (style: string, width: number, dash: readonly number[]): void => {
+      ctx.beginPath();
+      for (let i = from; i <= to; i += 1) {
+        const p = project(view, (samples[i] as Sample).pos);
+        if (i === from) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.setLineDash(dash as number[]);
+      ctx.lineWidth = width;
+      ctx.strokeStyle = style;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+    stroke(GROUND[band.properties.environment ?? 'open'], PATH_HALF_WIDTH * 2 * view.scale, []);
+    // Pocket and hazard are numbers rather than places, so they edge the
+    // stretch instead of colouring it: a stretch can be a nebula *and* pay, and
+    // one colour cannot say both.
+    const effect = effectOf(band.properties);
+    if (effect.pocket > 0) {
+      stroke('rgba(110, 231, 168, 0.7)', Math.max(1.2, PATH_HALF_WIDTH * 0.9 * view.scale), [3, 5]);
+    }
+    if (effect.hazard > 0) {
+      stroke('rgba(255, 120, 60, 0.8)', Math.max(1, PATH_HALF_WIDTH * 0.4 * view.scale), [2, 6]);
+    }
+  }
 }
 
 /** One edge of the golden path, offset from the centreline. */

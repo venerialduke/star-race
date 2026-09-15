@@ -191,6 +191,34 @@ When it gets one, that assumption is the work, not the geometry.
    and `dropSector` in `src/builder/plan.ts` own that, and are the only way the
    page is allowed to change the ring's length.
 
-5. **Properties do something.** Environment drawn first, since it is visible and
-   safe; pocket and hazard after, since they are balance.
+5. **Properties do something.** — **done**. A stretch resolves to an `Effect`:
+   `grip` on the holding speed, `sight` on how set you are for a bend you could
+   not see coming, `hazard` as damage, `pocket` as salvage. A sector's word
+   reaches every piece in it and a piece may override one field of it; resolution
+   happens once, at assembly, so the race tick never asks a sector anything. The
+   result is a small `bands` table per line, in that line's own distances — the
+   same shape `bends` has, and for the same reason: a property is a fact about a
+   stretch, and a field on every sample would smear it. A stretch that says
+   nothing contributes no band, so a track using none of this is bit-identical to
+   what it was.
+
+   Environment is drawn, on the map and in the builder alike, because the map is
+   where a player decides whether the long way round a nebula is worth the time.
+
+   Two things came out of building it. **A hazard bites once on the way in**, as
+   the excursion hazard does; per-tick damage is a ban on a build rather than a
+   risk to it, and pinning that took flying a Lift ship that spends 963 ticks
+   inside a debris field and is bitten on two of them. And **the first version of
+   `sight` was backwards**: it moved the braking point, which meant braking late,
+   which meant carrying more speed down the straight — and since Lift clamps to
+   the holding speed on the bend anyway, a track built out of shadow came out
+   fractionally *quicker*. Measured, 374.2 against 372.3. Sight is a term on the
+   swing's excess now, beside Charge's own, which also makes Lift immune to it:
+   the plan that takes no swing has nothing for a surprise to make worse.
+
+   The builder edits properties at both levels and places the track's own
+   fixtures. A fixture is authored as a sector, a road index and a fraction — so
+   `insertSector` and `dropSector` remap them exactly as they remap splits, and
+   the builder's list of roads through a sector has to be counted the way the
+   race indexes them or a fixture lands on the wrong road.
 6. **S4.4** — the ring grows between phases.

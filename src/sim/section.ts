@@ -17,7 +17,7 @@
 //
 // Pure and deterministic like everything in `src/sim`.
 
-import type { Grade, Piece } from './track';
+import type { Grade, Piece, Properties } from './track';
 
 /** A place and a direction: where a section leaves you. */
 export interface Pose {
@@ -47,6 +47,12 @@ export interface Section {
   readonly pieces: readonly Piece[];
   /** The ways through it besides the golden path. */
   readonly splits: readonly Split[];
+  /**
+   * What the whole stretch is like. Every piece in it inherits these, and any
+   * piece may override them field by field — which is what makes "this sector
+   * is a nebula, but the third bend of it pays" one sentence instead of four.
+   */
+  readonly properties?: Properties;
 }
 
 /** How long a piece is along its own arc. */

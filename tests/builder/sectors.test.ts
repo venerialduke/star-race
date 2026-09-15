@@ -9,18 +9,32 @@
 // built. That is what this suite is watching.
 
 import { describe, expect, it } from 'vitest';
-import { checkpointPoses } from '../../src/sim/track';
+import {
+  B,
+  P,
+  S,
+  assemblePlan,
+  checkpointPoses,
+  sector,
+  splitThrough,
+} from '../../src/sim/track';
 import {
   asDraft,
   closure,
   draftPiece,
   dropSector,
   insertSector,
+  newFixture,
   piecesFrom,
   ringOf,
+  roadsOf,
+  setProperty,
+  trackOf,
   type Draft,
+  type DraftFixture,
   type DraftSplit,
 } from '../../src/builder/plan';
+import { sourceOf } from '../../src/builder/export';
 import { KESTREL_LOOP } from '../../src/sim/track';
 
 /** The Kestrel in the builder, which is a real closed ring to cut into. */
@@ -35,6 +49,7 @@ function kestrel(): Draft {
       pieces: piecesFrom(KESTREL_LOOP, sector.start, sector.end).map(asDraft),
     })),
     splits: [],
+    fixtures: [],
   };
 }
 
@@ -160,5 +175,150 @@ describe('removing a sector', () => {
     dropSector(draft, n);
     dropSector(draft, -1);
     expect(draft.ring).toHaveLength(n);
+  });
+});
+
+describe('properties in the builder', () => {
+  it('carry a sector word down to every piece of the track it builds', () => {
+    const draft = kestrel();
+    draft.ring[0]!.properties = { environment: 'nebula' };
+
+    const track = trackOf(draft);
+    const main = track?.sectors[0]?.routes[0];
+    // One band, not one per piece: the sector is one nebula.
+    expect(main?.bands).toHaveLength(1);
+    expect(main?.bands[0]?.properties.environment).toBe('nebula');
+    expect(main?.bands[0]?.end).toBeCloseTo(main?.length ?? 0, 4);
+  });
+
+  it('let a piece answer back without cancelling the sector', () => {
+    const draft = kestrel();
+    draft.ring[0]!.properties = { environment: 'nebula' };
+    const first = draft.ring[0]!.pieces[0]!;
+    draft.ring[0]!.pieces[0] = { ...first, properties: { pocket: 7 } };
+
+    const band = trackOf(draft)?.sectors[0]?.routes[0]?.bands[0];
+    expect(band?.properties).toEqual({ environment: 'nebula', pocket: 7 });
+  });
+
+  it('survive the export, so what is pasted is what was built', () => {
+    const draft = kestrel();
+    draft.ring[1]!.properties = { environment: 'debris', hazard: 3 };
+    const source = sourceOf(draft);
+    expect(source).toContain("{ environment: 'debris', hazard: 3 }");
+  });
+
+  it('are left out of the export entirely when nothing is said', () => {
+    // A track that uses none of this has to export exactly as short as it did
+    // before any of it existed.
+    expect(sourceOf(kestrel())).not.toContain('environment');
+  });
+
+  it('set and unset one field at a time', () => {
+    const held = setProperty(setProperty(undefined, 'pocket', 5), 'hazard', 2);
+    expect(held).toEqual({ pocket: 5, hazard: 2 });
+    // Back to zero takes the field away rather than writing a zero, so the
+    // piece exports as a bare shape again.
+    expect(setProperty(held, 'pocket', 0)).toEqual({ hazard: 2 });
+    expect(setProperty({ pocket: 5 }, 'pocket', 0)).toBeUndefined();
+    expect(setProperty({ environment: 'nebula' }, 'environment', 'open')).toBeUndefined();
+  });
+});
+
+describe('fixtures in the builder', () => {
+  const trap = (sector: number, id: string): DraftFixture => ({
+    id,
+    kind: 'mine',
+    sector,
+    route: 0,
+    at: 0.5,
+    offset: 0,
+    power: 30,
+  });
+
+  it('move with their sector when one is put in front of them', () => {
+    const draft = kestrel();
+    draft.fixtures = [trap(0, 'early'), trap(2, 'late')];
+
+    insertSector(draft, 2);
+
+    expect(draft.fixtures.map((f) => [f.id, f.sector])).toEqual([
+      ['early', 0],
+      ['late', 3],
+    ]);
+  });
+
+  it('go with the sector they were on when it is removed', () => {
+    const draft = kestrel();
+    draft.fixtures = [trap(1, 'on-it'), trap(3, 'after')];
+
+    dropSector(draft, 1);
+
+    expect(draft.fixtures.map((f) => [f.id, f.sector])).toEqual([['after', 2]]);
+  });
+
+  it('reach the built track, where the race can meet them', () => {
+    const draft = kestrel();
+    draft.fixtures = [trap(2, 'trap')];
+    expect(trackOf(draft)?.fixtures).toHaveLength(1);
+    expect(trackOf(draft)?.fixtures[0]?.sector).toBe(2);
+  });
+
+  it('count the roads of a sector the way the race indexes them', () => {
+    // A fixture is authored against a route index, so the builder's list of
+    // roads and the track's have to agree or a fixture sits on the wrong one.
+    const draft = kestrel();
+    draft.splits = [split(1, 'beside-it')];
+    const roads = roadsOf(draft, 1);
+    expect(roads).toHaveLength(2);
+    expect(roads[0]?.name).toBe('The golden path');
+    expect(trackOf(draft)?.sectors[1]?.routes).toHaveLength(2);
+  });
+});
+
+describe('what the export writes', () => {
+  it('only ever calls helpers that track.ts actually exports', () => {
+    // The export's whole job is to be pasted into `track.ts`. A paste that does
+    // not compile is not an export, and the way that breaks is the export
+    // learning a new helper — `P` for a piece with properties was exactly that
+    // — which nothing in `track.ts` defines.
+    const draft = kestrel();
+    draft.ring[0]!.properties = { environment: 'shadow' };
+    const first = draft.ring[0]!.pieces[0]!;
+    draft.ring[0]!.pieces[0] = { ...first, properties: { pocket: 8 } };
+    draft.splits = [split(1, 'beside')];
+    draft.fixtures = [
+      { id: 'trap', kind: 'mine', sector: 2, route: 0, at: 0.4, offset: 3, power: 35 },
+    ];
+
+    const source = sourceOf(draft);
+    const vocabulary: Record<string, unknown> = { P, S, B, sector, assemblePlan, splitThrough };
+    const called = new Set(source.match(/\b([A-Za-z_]\w*)\(/g)?.map((m) => m.slice(0, -1)));
+    for (const name of called) {
+      expect(vocabulary[name], `${name} is called but not exported`).toBeTypeOf('function');
+    }
+    // And it really did write the new things, or the check above is vacuous.
+    expect(called).toContain('P');
+    expect(source).toContain('fixtures: [');
+  });
+});
+
+describe('a new fixture', () => {
+  it('never takes an id another one already has', () => {
+    // A fixture's id is what the race keys "already bitten by this" on, so two
+    // sharing one means the second never bites anybody. Counting the list hands
+    // out a duplicate the moment one in the middle is deleted.
+    const draft = kestrel();
+    // One at a time, the way the panel adds them — each one has to see the ones
+    // already there.
+    for (let i = 0; i < 3; i += 1) draft.fixtures.push(newFixture(draft, 0));
+    draft.fixtures.splice(1, 1);
+    draft.fixtures.push(newFixture(draft, 0));
+
+    const ids = draft.fixtures.map((f) => f.id);
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(ids.length);
+    // The gap left by the delete is reused rather than skipped past.
+    expect(ids).toContain('fixture-2');
   });
 });

@@ -15,7 +15,9 @@ import {
 } from './ship';
 import {
   alongOf,
+  bandIn,
   bendOn,
+  effectOf,
   holdingSpeed,
   nextBendOn,
   rateOf,
@@ -42,8 +44,10 @@ import {
   GRAVITY_PER_ACCEL,
   GRAVITY_PER_CORNER,
   GRAVITY_RECOVERY,
+  HAZARD_BITE,
   HAZARD_DAMAGE,
   HAZARD_FULL_EXPOSURE,
+  POCKET_PER,
   EXCURSION_CLEAR,
   FORK_PULL,
   TRACK_HALF_WIDTH,
@@ -53,6 +57,7 @@ import {
   REPAIR_PER_TICK,
   RECOVER_PER_HANDLING,
   SHIELD_REGEN,
+  SIGHT_EXCESS,
   SPEED_PER_THRUST,
   STAT_MAX,
   STAT_MIN,
@@ -192,6 +197,12 @@ export interface RaceState {
    * is not mistaken for one. Undefined on a straight.
    */
   readonly bendKey: string | undefined;
+  /**
+   * The stretch of road the ship is on, named the same way, so that a hazardous
+   * one bites on the way in rather than every tick it is stood in. Undefined on
+   * a stretch that says nothing about itself.
+   */
+  readonly bandKey: string | undefined;
   /** Where the current swing is pulling the ship. */
   readonly swingTarget: number;
   /** Recent positions, oldest first. Bounded, so a long race stays cheap. */
@@ -290,6 +301,7 @@ export function startRace(
     outside: false,
     onWall: false,
     bendKey: undefined,
+    bandKey: undefined,
     swingTarget: 0,
     trail: [],
     charge: 0,
@@ -350,7 +362,22 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
 
   const here = sampleOn(route, along);
   const onBend = here.radius > 0;
-  const holding = onBend ? holdingSpeed(here.radius, handling) : Infinity;
+
+  // What this stretch of road is like. A nebula takes the bite out of a bend, a
+  // shadow hides it until you are nearly in it, debris scrapes, a pocket pays.
+  // Every one of those is spent in currency the game already has, which is why
+  // none of them needs a branch of its own further down: grip moves the holding
+  // speed, sight moves the braking point, and the rest is damage and salvage.
+  const band = bandIn(route.bands, along);
+  const effect = effectOf(band?.properties);
+  // Named like a bend, and for the same reason: a hazardous stretch bites on the
+  // way in rather than every tick the ship is stood in it, and the same stretch
+  // on two roads is not one stretch.
+  const bandKey =
+    band === undefined
+      ? undefined
+      : `${sector.index}:${state.route}:${Math.round(band.start)}`;
+  const holding = onBend ? holdingSpeed(here.radius, handling) * effect.grip : Infinity;
 
   // 0. What reached the ship since its last tick. Ships still never touch: a
   // weapon fired at this ship a tick ago arrives now, and anything lying on the
@@ -434,7 +461,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     const ahead = lookAhead(track, sector, route, along, config.routes);
     let braking = false;
     if (plan === 'lift' && ahead !== undefined) {
-      const target = holdingSpeed(ahead.bend.radius, handling) * LIFT_MARGIN;
+      const target = holdingSpeed(ahead.bend.radius, handling) * effect.grip * LIFT_MARGIN;
       braking = ahead.gap <= brakingDistance(speed, target);
       if (braking) speed = Math.max(target, speed - BRAKE_PER_TICK);
     }
@@ -479,7 +506,10 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const swings = [...state.swings];
   if (bend !== undefined && key !== bendKey) {
     bendKey = key;
-    const bendHolding = holdingSpeed(bend.radius, handling);
+    // The stretch the bend is *entered* on sets its grip. A bend that runs out
+    // of a nebula is still a nebula bend: what decides the swing is the moment
+    // of entry, which is the moment this whole block is about.
+    const bendHolding = holdingSpeed(bend.radius, handling) * effect.grip;
     // A bend inside the chain is taken perfectly — no swing at all — and one
     // reached soon after the last pays speed for the run being quick. That is
     // what makes the chain want a coil of bends rather than three stray ones.
@@ -492,10 +522,17 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
       lastPerfectTick = state.tick;
     }
     const rawExcess = Math.max(0, speed - bendHolding) / bendHolding;
+    // Sight is spent here, beside Charge's own bonus and for the same reason: a
+    // bend you could not see coming is one you are into before you are set, so
+    // the swing is drawn from a worse place rather than punished separately.
+    // Lift takes no swing at all, which makes it the plan shadow cannot touch —
+    // giving up the speed is giving up the surprise.
     const excess =
       perfect || plan === 'lift'
         ? 0
-        : rawExcess + (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0);
+        : rawExcess +
+          (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0) +
+          (1 - effect.sight) * SIGHT_EXCESS;
     const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT);
     const draw = drawFor(config.seed, key as string, state.lap).unitInterval();
     const swing = spread * draw;
@@ -559,13 +596,24 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const crossed = wide && !state.outside;
   const outside = wide || Math.abs(offset) > PATH_HALF_WIDTH * EXCURSION_CLEAR;
   const exposure = Math.min(1, Math.abs(state.swingTarget) / HAZARD_FULL_EXPOSURE);
-  const hit = crossed ? HAZARD_DAMAGE * exposure * (speed / SPEED_PER_THRUST) : 0;
+  // 3c. And the road itself. Debris is danger **on** the path rather than
+  // beside it, so it does not wait for an excursion — but it bites once, on the
+  // way into the stretch, for exactly the reason the excursion above does.
+  // Faster in costs more, which is the only scaling the game uses for damage.
+  const bite =
+    bandKey !== undefined && bandKey !== state.bandKey
+      ? effect.hazard * HAZARD_BITE * (speed / SPEED_PER_THRUST)
+      : 0;
+  const hit = (crossed ? HAZARD_DAMAGE * exposure * (speed / SPEED_PER_THRUST) : 0) + bite;
   const soaked = Math.min(Math.max(0, state.shields - arrived.spent), hit);
   // Shields answer a weapon and a hazard with the same pool, and only recharge
   // in a tick where nothing reached the ship at all.
-  const quiet = !crossed && arrived.spent === 0 && arrived.damage === 0;
+  const quiet = !crossed && bite === 0 && arrived.spent === 0 && arrived.damage === 0;
   const shields = quiet
-    ? Math.min(stats.shields, state.shields + (wide ? 0 : SHIELD_REGEN * stats.shieldRegen))
+    ? Math.min(
+        stats.shields,
+        state.shields + (wide ? 0 : SHIELD_REGEN * stats.shieldRegen),
+      )
     : Math.max(0, state.shields - arrived.spent - soaked);
 
   // What the shields did not stop breaks things. A bigger hit finds more to
@@ -637,7 +685,12 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     perfectLeft,
     lastPerfectTick,
     emitted: emissionsFor(fired, state, stats, world, track, me),
-    salvage: state.salvage + arrived.salvage,
+    bandKey,
+    // A pocket pays for the ground actually flown through it, which is why a
+    // long way round that holds one can be worth more than the short way even
+    // though it costs time. That trade is the whole reason properties exist.
+    salvage:
+      state.salvage + arrived.salvage + (effect.pocket * speed * keep) / POCKET_PER,
     darkMatter: state.darkMatter + arrived.darkMatter,
     met: arrived.met.length === 0 ? state.met : [...state.met, ...arrived.met],
     lastHit: arrived.hit ?? state.lastHit,
@@ -754,8 +807,7 @@ function arrivals(
     // this the part collected nothing at all until level 3 and full shields,
     // which made its first two levels strictly worse than plain shielding.
     if (stats.collects > 0 && !hazard) {
-      salvage +=
-        power * SALVAGE_PER_POWER * (COLLECT_SHARE[stats.collects - 1] ?? 0);
+      salvage += power * SALVAGE_PER_POWER * (COLLECT_SHARE[stats.collects - 1] ?? 0);
     }
     const soaked = Math.min(left, power);
     left -= soaked;
@@ -808,7 +860,13 @@ function arrivals(
     }
     // A gravity mine throws the ship further off whatever line it was on,
     // which is why it costs most to a ship that meets it already out of shape.
-    take(fixture.power, Math.sign(me.offset) || 1, 'a gravity mine', false, fixture.owner);
+    take(
+      fixture.power,
+      Math.sign(me.offset) || 1,
+      'a gravity mine',
+      false,
+      fixture.owner,
+    );
   }
 
   return { push, scrub, carry, spent, damage, salvage, darkMatter, met, hit, hitBy };

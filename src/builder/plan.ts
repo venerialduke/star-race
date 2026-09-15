@@ -259,3 +259,65 @@ export function trackOf(draft: Draft): Track | undefined {
     return undefined;
   }
 }
+
+const AUTO_NAME = /^Sector \d+$/;
+
+/**
+ * Ids and default names follow position.
+ *
+ * The panel numbers rows by where they are, so a sector still called
+ * "Sector 3" sitting at row 4 is a lie, and two sectors sharing an id would
+ * both be exported as `sector('sector-3', …)`. A name somebody chose — the
+ * closer's "The run home" — is left alone; only the default is rewritten.
+ */
+function renumber(draft: Draft): void {
+  draft.ring.forEach((sector, i) => {
+    sector.id = `sector-${i + 1}`;
+    if (AUTO_NAME.test(sector.name)) sector.name = `Sector ${i + 1}`;
+  });
+}
+
+/**
+ * A sector put in at a position, and everything past it moved up.
+ *
+ * Appending is not the same edit. A ring is a loop, so "the end" is the stretch
+ * of road immediately *before* the start line, which is almost never where a
+ * sector was meant to go. Inserting puts it where it was asked for.
+ *
+ * The part that is easy to miss: a split hangs off a checkpoint by **index**,
+ * so every split from the insert point on has to move up with the sectors or it
+ * silently ends up beside a different piece of road. The new sector is empty,
+ * which costs no distance — the geometry only moves once pieces go into it.
+ *
+ * Returns the index the new sector landed at.
+ */
+export function insertSector(draft: Draft, at: number): number {
+  const index = Math.max(0, Math.min(Math.trunc(at), draft.ring.length));
+  draft.ring.splice(index, 0, {
+    id: `sector-${index + 1}`,
+    name: `Sector ${index + 1}`,
+    pieces: [],
+  });
+  draft.splits = draft.splits.map((s) => (s.from >= index ? { ...s, from: s.from + 1 } : s));
+  renumber(draft);
+  return index;
+}
+
+/**
+ * A sector taken out, and everything past it moved down.
+ *
+ * A split across the removed sector has nothing left to be beside — the two
+ * checkpoints it ran between are now one checkpoint — so it goes with the
+ * sector. Every split after it shifts down. The old code kept whichever splits
+ * happened to still be in range and left them pointing at the wrong sector,
+ * which looked like nothing until the export was pasted in.
+ */
+export function dropSector(draft: Draft, at: number): void {
+  const index = Math.trunc(at);
+  if (draft.ring[index] === undefined) return;
+  draft.ring.splice(index, 1);
+  draft.splits = draft.splits
+    .filter((s) => s.from !== index)
+    .map((s) => (s.from > index ? { ...s, from: s.from - 1 } : s));
+  renumber(draft);
+}

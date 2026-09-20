@@ -97,6 +97,46 @@ subagent.
   merge on a red or pending check. Do not force-push. Do not `rm -rf`.
 - If a task needs a rule change not covered by `DESIGN.md`, stop and ask.
 
+## Branches, and the force-push trap
+
+**The owner should turn on Settings → General → "Automatically delete head
+branches".** It is one checkbox and it closes this whole section. Everything
+below is why, and what to do until then.
+
+A session is handed a branch **name**, and the same name comes back session
+after session. PRs here are squash-merged, so the merge puts a *different*
+commit on `main` carrying the same tree — the branch's own commit is never an
+ancestor of `main` again. The branch is left behind pointing at dead history,
+and the next session, starting correctly from the current `main`, finds its push
+rejected as a non-fast-forward. From there the only ways out are to force-push
+or to delete the branch, and a session under time pressure picks the first. That
+is how a repo with a "do not force-push" rule collected three force-pushes in
+two days.
+
+**An agent session cannot delete the remote branch itself.** Verified
+2026-09-15: this sandbox's git proxy refuses a delete refspec, reporting `fatal:
+the remote end hung up unexpectedly` followed by a cheerful `Everything
+up-to-date`, and the branch is still there afterwards. The GitHub MCP server has
+`create_branch` and no delete. So do not "clean up the branch" and assume it
+worked — if you try at all, check with `git ls-remote --heads origin` and
+believe that, not the push output.
+
+Which leaves, in order:
+
+1. **The repo setting**, so no branch is ever left behind. Owner, one click,
+   permanent.
+2. **The owner deleting merged branches** from the PR page ("Delete branch") or
+   from a real machine.
+3. Only when neither has happened and the branch genuinely cannot be deleted: a
+   `--force-with-lease`, and **only** after proving the remote tip is
+   already-merged history — `git diff --stat <remote-tip> <squash commit on
+   main>` must come back empty. Say it out loud in the reply. Never force past a
+   push rejection you have not diagnosed.
+
+A rejection whose cause is *not* case 3 — a branch carrying work nobody merged —
+means something else is pushing to it, and the answer is to merge or rebase onto
+it, never to overwrite it.
+
 ## Design rounds (`design/`)
 
 The slice is done; the next job is finding the game. `design/BRIEF.md` is the

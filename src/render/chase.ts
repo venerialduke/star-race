@@ -10,7 +10,9 @@
 // plane and that is the cheapest way to get the overlaps right.
 
 import {
+  bandAt,
   canonicalOf,
+  effectOf,
   navFor,
   normalOf,
   placeOn,
@@ -37,7 +39,16 @@ import {
 } from './camera';
 import { drawSky, type Sky } from './sky';
 import type { FixtureView, RouteView, ShipView } from './draw';
-import { HOLE, MINE, SHOT, withAlpha as alpha } from './view';
+import {
+  ENVIRONMENT_COLOURS,
+  HAZARD,
+  HOLE,
+  MINE,
+  POCKET,
+  SHOT,
+  labelOf,
+  withAlpha as alpha,
+} from './view';
 
 /** Where the camera sits relative to the ship it is following. */
 const BACK = 32;
@@ -213,7 +224,8 @@ export function drawChase(
   // known — under them, so neither end of it is hidden by what it connects.
   const points = new Map(drawn.map((row) => [ships.indexOf(row.ship), row.point]));
   for (const row of drawn) {
-    const target = row.ship.shotAt === undefined ? undefined : points.get(row.ship.shotAt);
+    const target =
+      row.ship.shotAt === undefined ? undefined : points.get(row.ship.shotAt);
     if (target !== undefined) tracer(ctx, lens, row.point, target);
   }
   for (const row of drawn) {
@@ -308,6 +320,40 @@ function drawFixture(
   ctx.strokeStyle = withAlpha(colour, fixture.mine ? 0.5 : 0.95);
   ctx.lineWidth = Math.max(1, scaleAt(lens, eye.depth) * 0.6);
   ctx.stroke();
+
+  // Something standing up out of the ring, and its name over it.
+  //
+  // The ring alone is the thing's *reach*, painted flat on the road, and flat
+  // on the road is exactly where a perspective view hides it — at any distance
+  // it is a few pixels of ellipse under the horizon. A post is visible from far
+  // enough away to steer around, which is the whole point of drawing it.
+  //
+  // Placeholder shapes: a narrow post for a mine, a wide one for a hole, each
+  // in its own colour. Both say what they are in text, because a coloured
+  // rectangle is not something a player should have to learn.
+  const post = fixture.kind === 'mine' ? 1.6 : 4;
+  const tall = fixture.kind === 'mine' ? 6 : 10;
+  const corners = [
+    toEye(lens, cx - n.x * post, cy - n.y * post, 0),
+    toEye(lens, cx + n.x * post, cy + n.y * post, 0),
+    toEye(lens, cx + n.x * post, cy + n.y * post, tall),
+    toEye(lens, cx - n.x * post, cy - n.y * post, tall),
+  ];
+  if (tracePolygon(ctx, lens, corners)) {
+    ctx.fillStyle = withAlpha(colour, 0.55);
+    ctx.fill();
+    ctx.strokeStyle = withAlpha(colour, 0.95);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  label(
+    ctx,
+    lens,
+    { x: cx, y: cy },
+    tall + 4,
+    fixture.kind === 'mine' ? 'MINE' : 'BLACK HOLE',
+    colour,
+  );
 }
 
 /** One colour per lane of the field. The player is always the first. */
@@ -346,7 +392,150 @@ function drawRoad(
 
   const mine = railAlong(track, lens, from, to, (d) => lineAt(track, routes, player, d));
   drawSurface(ctx, lens, mine, nearY, 1);
+  drawBands(ctx, lens, track, mine);
   drawCentreLine(ctx, lens, mine);
+}
+
+/**
+ * What the road ahead is made of: a nebula, a debris field, a stretch that pays.
+ *
+ * The map draws these too, and it has to — it is where a route is *chosen*. This
+ * is where one is *flown*, and a player who cannot see the nebula coming has no
+ * way to connect being thrown wide with the reason for it.
+ *
+ * Placeholder art on purpose: a tint on the road and the thing's name floating
+ * over it. What matters first is that the stretch is visibly a thing and says
+ * which thing it is; what it eventually looks like is a separate job.
+ */
+function drawBands(
+  ctx: CanvasRenderingContext2D,
+  lens: Lens,
+  track: Track,
+  rail: readonly Rung[],
+): void {
+  // Consecutive rungs standing in the same band are one run. Identity compares
+  // rather than value, because a band is a stable object on its route — so a
+  // lap coming round onto the same stretch is the same run, and two touching
+  // stretches that happen to read alike stay two.
+  let i = 0;
+  while (i < rail.length) {
+    const here = rail[i] as Rung;
+    const band = bandAt(track, here.distance, here.route);
+    if (band === undefined) {
+      i += 1;
+      continue;
+    }
+    let end = i;
+    while (
+      end + 1 < rail.length &&
+      bandAt(track, (rail[end + 1] as Rung).distance, (rail[end + 1] as Rung).route) ===
+        band
+    ) {
+      end += 1;
+    }
+    const run = rail.slice(i, end + 1);
+    i = end + 1;
+    if (run.length < 2) continue;
+
+    // The ground it is made of. `open` has nothing to say, so it is not drawn.
+    const environment = band.properties.environment ?? 'open';
+    const paint = (colour: string, left: readonly Eye[], right: readonly Eye[]): void => {
+      if (!tracePolygon(ctx, lens, [...left, ...[...right].reverse()])) return;
+      ctx.fillStyle = colour;
+      ctx.fill();
+    };
+    // The nearest rung of the run decides how solid it is drawn: a stretch at
+    // the horizon is a hint, one under the ship is the thing you are in.
+    const near = run.reduce((least, r) => Math.min(least, r.fade), 1);
+    const strength = 1 - near * 0.6;
+    if (environment !== 'open') {
+      paint(
+        alpha(
+          ENVIRONMENT_COLOURS[environment],
+          (environment === 'shadow' ? 0.62 : 0.34) * strength,
+        ),
+        run.map((r) => r.left),
+        run.map((r) => r.right),
+      );
+    }
+    // Pocket and hazard are numbers rather than places, so they edge the
+    // stretch: a strip down each side, inside the path. A stretch can be a
+    // nebula *and* pay, and one colour cannot say both.
+    const effect = effectOf(band.properties);
+    const strip = (colour: string, out: number, width: number): void => {
+      const edge = (r: Rung, at: number, side: number): Eye =>
+        toEye(
+          lens,
+          r.pos.x + r.across.x * at * side,
+          r.pos.y + r.across.y * at * side,
+          0.08,
+        );
+      for (const side of [1, -1] as const) {
+        paint(
+          colour,
+          run.map((r) => edge(r, out, side)),
+          run.map((r) => edge(r, out - width, side)),
+        );
+      }
+    };
+    if (effect.pocket > 0) strip(alpha(POCKET, 0.5 * strength), PATH_HALF_WIDTH, 2);
+    if (effect.hazard > 0)
+      strip(alpha(HAZARD, 0.55 * strength), PATH_HALF_WIDTH - 2.5, 1.6);
+
+    // And its name, once, over the near end of the run — so it is read on the
+    // way in rather than after it has already cost you something.
+    const text = labelOf(band.properties);
+    const front = run.reduce(
+      (best, r) => (r.fade < best.fade ? r : best),
+      run[0] as Rung,
+    );
+    if (text !== '') {
+      label(
+        ctx,
+        lens,
+        front.pos,
+        LABEL_HEIGHT,
+        text,
+        environment === 'open' ? POCKET : ENVIRONMENT_COLOURS[environment],
+      );
+    }
+  }
+}
+
+/** How high over the road a placeholder label floats. */
+const LABEL_HEIGHT = 9;
+
+/**
+ * A name hung in the world over a point on the road.
+ *
+ * Drawn in screen space at a size the distance decides, with a dark outline
+ * under it — the road behind it is anything from near-black to a bright nebula,
+ * and a label that is only readable over one of those is not a label.
+ */
+function label(
+  ctx: CanvasRenderingContext2D,
+  lens: Lens,
+  at: { readonly x: number; readonly y: number },
+  up: number,
+  text: string,
+  colour: string,
+): void {
+  const eye = toEye(lens, at.x, at.y, up);
+  if (eye.depth <= 0) return;
+  const point = toScreen(lens, eye);
+  const size = Math.max(8, Math.min(20, scaleAt(lens, eye.depth) * 1.5));
+  if (size <= 8.5) return;
+  ctx.font = `600 ${size.toFixed(1)}px ui-monospace, Consolas, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = alpha(VOID, 0.9);
+  ctx.lineWidth = Math.max(2, size * 0.3);
+  ctx.strokeText(text, point.x, point.y);
+  ctx.fillStyle = colour;
+  ctx.fillText(text, point.x, point.y);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 /** One step of a road: its path edges, its corridor walls, and how far off it is. */
@@ -359,6 +548,13 @@ interface Rung {
   readonly topR: Eye;
   readonly centre: Eye;
   readonly fade: number;
+  /** Where round the lap this rung is, and which road it is on. */
+  readonly distance: number;
+  readonly route: number;
+  /** The same point in the world, so a label can be hung above it. */
+  readonly pos: { readonly x: number; readonly y: number };
+  /** Left of travel here, so anything drawn across the road can be placed. */
+  readonly across: { readonly x: number; readonly y: number };
 }
 
 /** Walk a stretch of canonical distance and measure the road across it. */
@@ -373,11 +569,16 @@ function railAlong(
   const rail: Rung[] = [];
   for (let i = 0; i <= steps; i += 1) {
     const distance = from + ((to - from) * i) / steps;
-    const at = placeSmooth(track, distance, routeAt(distance));
+    const route = routeAt(distance);
+    const at = placeSmooth(track, distance, route);
     const n = normalOfHeading(at.heading);
     const point = (out: number, up = 0): Eye =>
       toEye(lens, at.pos.x + n.x * out, at.pos.y + n.y * out, up);
     rail.push({
+      distance,
+      route,
+      pos: at.pos,
+      across: n,
       left: point(PATH_HALF_WIDTH),
       right: point(-PATH_HALF_WIDTH),
       wallL: point(TRACK_HALF_WIDTH),

@@ -112,6 +112,63 @@ export const REPAIR_PER_TICK = 0.00035;
 /** The swing, in track units, that counts as being thrown all the way out. */
 export const HAZARD_FULL_EXPOSURE = 26;
 
+// The road itself. A stretch of track is not only a shape: the track model's
+// properties say what it is *like*, and these are what "like" costs.
+//
+// Everything here is expressed in currency the game already has. Grip lowers
+// the speed a bend can be held at, which is the bet the whole game rests on —
+// the same entry speed swings wider. Sight shortens how early a bend can be
+// read, so a ship brakes late and arrives hot, which is the same cost reached
+// by a different road. Hazard is damage, in the units an excursion already
+// uses. Nothing here invents a new thing for the player to learn.
+
+/**
+ * What each environment does to a ship in it.
+ *
+ * A named bundle rather than three sliders per piece, because an author picks
+ * "this bit is a nebula" and should not also have to decide what a nebula is —
+ * that is a property of the game, and it lives here with the other numbers.
+ */
+export const ENVIRONMENTS = {
+  /** Clear road. The default, and the one that changes nothing. */
+  open: { grip: 1, sight: 1, hazard: 0 },
+  /** Thick. It takes the bite out of a bend, so the same entry throws you wider. */
+  nebula: { grip: 0.82, sight: 1, hazard: 0 },
+  /** It scrapes. Cheap on the line, expensive at speed. */
+  debris: { grip: 1, sight: 1, hazard: 6 },
+  /** You cannot see the bend coming, so you are into it before you are set. */
+  shadow: { grip: 1, sight: 0.55, hazard: 0 },
+} as const;
+
+/**
+ * Damage a hazardous stretch does, per point of hazard, at top speed.
+ *
+ * It bites **once on the way in**, not every tick — the same rule the excursion
+ * hazard already follows, and for the same reason: per-tick damage is a ban on
+ * a build rather than a risk to it, which this codebase has now learned three
+ * separate times (S3.6's parts, V1.2's wall, S6's mines).
+ */
+export const HAZARD_BITE = 1;
+
+/**
+ * Excess added to a bend a ship could not see coming, at no sight at all.
+ *
+ * Sight is spent the same way Charge's own bonus is: the swing is drawn from a
+ * worse place, rather than from a new penalty of its own. Which is also why the
+ * plan that gives up all its speed for certainty is the plan shadow cannot
+ * touch — Lift takes no swing at anything, so there is nothing to surprise.
+ *
+ * The first version of this moved the *braking point* instead, and it was
+ * backwards: braking late meant carrying more speed down the straight, and Lift
+ * clamps to the holding speed on the bend anyway, so a track built out of
+ * shadow came out fractionally **quicker**. Measured, not guessed — 374.2
+ * against 372.3 over 600 ticks.
+ */
+export const SIGHT_EXCESS = 0.35;
+
+/** Track units a ship must fly through a pocket to be paid one point of it. */
+export const POCKET_PER = 100;
+
 /**
  * An excursion counts as over once the ship is back inside this share of the
  * path's half width — so drifting across the line does not bill it twice.
@@ -274,17 +331,6 @@ export const NAV_FOR_DARK = 2;
 
 /** Nav at which the route may be re-planned at a pit stop rather than only before the heat. */
 export const NAV_FOR_REPLAN = 3;
-
-/**
- * How much of a sector the fan-out either side of a fork takes up.
- *
- * Generous on purpose. A split now leaves the golden path by tens of units
- * rather than a few, and moving that far sideways in a short run is a tighter
- * corner than anything the track authors — at 0.22 the fork itself was the
- * hardest bend on the Kestrel. Spread over most of the sector it reads as two
- * roads parting and meeting again, which is what a fork is.
- */
-export const FORK_SHARE = 0.4;
 
 /** How far a bot leans toward the shorter line when its handling can take one. */
 export const BOT_ROUTE_NERVE = 0.55;

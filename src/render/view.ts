@@ -4,6 +4,7 @@
 // both read it without importing each other.
 
 import type { SwingEvent } from '../sim/race';
+import type { Environment, Properties } from '../sim/track';
 
 /**
  * One ship as the screen needs it. The renderer reads this and nothing else,
@@ -62,6 +63,38 @@ export const PATH = '#ffd166';
 /** A mine reads as a warning; a black hole reads as a hole. */
 export const MINE = '#ff5f7a';
 export const HOLE = '#9b6bff';
+
+/**
+ * What each environment looks like, in one place.
+ *
+ * The map, the chase camera and the track builder all draw the same road and
+ * had better draw it the same colour — three copies of this table was three
+ * chances for a nebula to be one thing from above and another from behind.
+ */
+export const ENVIRONMENT_COLOURS: Record<Environment, string> = {
+  open: '#7ee0ff',
+  nebula: '#a882ff',
+  debris: '#ff965a',
+  shadow: '#0a0e20',
+};
+
+/** A stretch that pays, and one that bites. Edging rather than ground. */
+export const POCKET = '#6ee7a8';
+export const HAZARD = '#ff783c';
+
+/**
+ * What a stretch calls itself on screen. Short, because it is drawn floating
+ * over the road at whatever size the distance allows.
+ */
+export function labelOf(properties: Properties | undefined): string {
+  if (properties === undefined) return '';
+  const parts: string[] = [];
+  const environment = properties.environment ?? 'open';
+  if (environment !== 'open') parts.push(environment.toUpperCase());
+  if ((properties.pocket ?? 0) > 0) parts.push(`pays ${properties.pocket}`);
+  if ((properties.hazard ?? 0) > 0) parts.push(`bites ${properties.hazard}`);
+  return parts.join(' · ');
+}
 
 /** A shot in flight, and the flash where it lands. */
 export const SHOT = '#ffe08a';

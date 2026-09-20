@@ -17,7 +17,7 @@
 //
 // Pure and deterministic like everything in `src/sim`.
 
-import type { Grade, Piece } from './track';
+import type { Piece, Properties } from './track';
 
 /** A place and a direction: where a section leaves you. */
 export interface Pose {
@@ -29,13 +29,6 @@ export interface Pose {
 
 export const ORIGIN: Pose = { x: 0, y: 0, heading: 0 };
 
-/** A way through a section besides its main line, as a lateral push on it. */
-export interface Split {
-  readonly bulge: number;
-  readonly name: string;
-  readonly grade: Grade;
-}
-
 /**
  * One stretch of track, with ends. This is the unit a track is built from, the
  * unit a checkpoint sits at either end of, and the unit that gets spliced in
@@ -45,8 +38,12 @@ export interface Section {
   readonly id: string;
   readonly name: string;
   readonly pieces: readonly Piece[];
-  /** The ways through it besides the golden path. */
-  readonly splits: readonly Split[];
+  /**
+   * What the whole stretch is like. Every piece in it inherits these, and any
+   * piece may override them field by field — which is what makes "this sector
+   * is a nebula, but the third bend of it pays" one sentence instead of four.
+   */
+  readonly properties?: Properties;
 }
 
 /** How long a piece is along its own arc. */
@@ -287,7 +284,7 @@ export function closingSection(
   name = 'The run home',
 ): Section | undefined {
   const pieces = connector(poseOfAll(sections), ORIGIN, radius);
-  return pieces === undefined ? undefined : { id, name, pieces, splits: [] };
+  return pieces === undefined ? undefined : { id, name, pieces };
 }
 
 // ---------------------------------------------------------------------------

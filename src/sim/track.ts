@@ -9,13 +9,13 @@ import {
   checkpointsOf,
   closureOf,
   connector,
-  piecesOf,
   poseAfter,
   wrapAngle,
   type Pose,
   type Section,
 } from './section';
-import { HOLD_GRIP, NAV_FOR_DARK, NAV_FOR_DIM } from './tuning';
+import { ENVIRONMENTS, HOLD_GRIP, NAV_FOR_DARK, NAV_FOR_DIM } from './tuning';
+import type { FixtureKind } from './world';
 
 export interface Vec {
   readonly x: number;
@@ -26,22 +26,155 @@ export interface Vec {
  * What a stretch of track is **like**, beyond its shape.
  *
  * Everything here is optional and additive, and a piece's own properties beat
- * the sector's. Nothing reads them yet — they are the vocabulary, laid down
- * before there is anything to say with it.
+ * the sector's.
  *
  * This is the thing the track model has never had. Until now a stretch of track
  * could say nothing about itself except how long it was and how hard it turned,
  * which is exactly why every split has had to be balanced on the clock: "worth
- * taking because it is safer, or because it holds something" has had no way to
- * be written down.
+ * taking because it is safer, or because it holds something" had no way to be
+ * written down. It does now — see `Effect` for what each of these costs.
  */
 export interface Properties {
-  /** What surrounds it. Drawn first, and eventually what lives there. */
-  readonly environment?: 'open' | 'nebula' | 'debris' | 'shadow';
+  /** What surrounds it. Drawn, and a named bundle of what it does — see `Effect`. */
+  readonly environment?: Environment;
   /** Pays a ship that flies it: dark matter, salvage. */
   readonly pocket?: number;
   /** Danger **on** the path, rather than only off it. */
   readonly hazard?: number;
+}
+
+export type Environment = keyof typeof ENVIRONMENTS;
+
+/** Every environment there is, in the order a builder should offer them. */
+export const ENVIRONMENT_NAMES = Object.keys(ENVIRONMENTS) as readonly Environment[];
+
+/**
+ * What a stretch **does** to a ship flying it.
+ *
+ * Properties are what an author writes; this is what the simulation reads, and
+ * the two are deliberately not the same shape. An author says "nebula" once; the
+ * sim wants four numbers, every tick, with no lookups and no special cases.
+ *
+ * All four are paid in currency the game already has. There is nothing new here
+ * for a player to learn — a nebula is simply a place where the bend lets go
+ * sooner, and shadow is a place where you find out about it later.
+ */
+export interface Effect {
+  /** Multiplies the speed a bend here can be held at. Under 1 swings you wider. */
+  readonly grip: number;
+  /** Multiplies how far ahead a bend can be read. Under 1 brakes you late. */
+  readonly sight: number;
+  /** Damage on entering the stretch, per point, at top speed. */
+  readonly hazard: number;
+  /** Salvage for flying it, per point, per `POCKET_PER` units. */
+  readonly pocket: number;
+}
+
+/** Clear road: the effect of a stretch that says nothing about itself. */
+export const OPEN_ROAD: Effect = { grip: 1, sight: 1, hazard: 0, pocket: 0 };
+
+/**
+ * What a set of properties comes to.
+ *
+ * The environment is a preset and the explicit numbers are additive on top of
+ * it, so `{ environment: 'debris', hazard: 4 }` is a debris field that is worse
+ * than most — which is the thing an author actually wants to say.
+ */
+export function effectOf(properties: Properties | undefined): Effect {
+  if (properties === undefined) return OPEN_ROAD;
+  const env = ENVIRONMENTS[properties.environment ?? 'open'];
+  return {
+    grip: env.grip,
+    sight: env.sight,
+    hazard: env.hazard + (properties.hazard ?? 0),
+    pocket: properties.pocket ?? 0,
+  };
+}
+
+/** True when a set of properties is indistinguishable from saying nothing. */
+export const saysNothing = (properties: Properties | undefined): boolean =>
+  properties === undefined ||
+  ((properties.environment === undefined || properties.environment === 'open') &&
+    (properties.pocket ?? 0) === 0 &&
+    (properties.hazard ?? 0) === 0);
+
+/** Whether two sets of properties would read the same. */
+export const sameProperties = (
+  a: Properties | undefined,
+  b: Properties | undefined,
+): boolean =>
+  (a?.environment ?? 'open') === (b?.environment ?? 'open') &&
+  (a?.pocket ?? 0) === (b?.pocket ?? 0) &&
+  (a?.hazard ?? 0) === (b?.hazard ?? 0);
+
+/**
+ * A sector's properties with a piece's laid over them, field by field.
+ *
+ * Field by field rather than whole-object, because a sector saying "this whole
+ * stretch is a nebula" and a piece saying "and this bit of it pays" should give
+ * a piece that is both. Replacing the object wholesale would have let the piece
+ * silently cancel the sector, which is not what "override" means to an author
+ * looking at two panels in a builder.
+ */
+export function mergeProperties(
+  base: Properties | undefined,
+  over: Properties | undefined,
+): Properties | undefined {
+  if (base === undefined) return over;
+  if (over === undefined) return base;
+  const environment = over.environment ?? base.environment;
+  const pocket = over.pocket ?? base.pocket;
+  const hazard = over.hazard ?? base.hazard;
+  return {
+    ...(environment === undefined ? {} : { environment }),
+    ...(pocket === undefined ? {} : { pocket }),
+    ...(hazard === undefined ? {} : { hazard }),
+  };
+}
+
+/**
+ * A run of one line over which the same properties hold.
+ *
+ * Bands are to properties what `bends` are to curvature: a small table in the
+ * line's own distances, rather than a field on every one of the hundreds of
+ * samples. Which matters for the same reason it matters there — a property is a
+ * fact about a stretch, and smearing it across sample boundaries would make a
+ * short debris field read as a long faint one.
+ *
+ * A piece that says nothing contributes no band, so a track that uses none of
+ * this carries an empty table and pays nothing for the feature existing.
+ */
+export interface Band {
+  readonly start: number;
+  readonly end: number;
+  readonly properties: Properties;
+}
+
+/** The stretch a distance along a line falls in, if that stretch says anything. */
+export function bandIn(bands: readonly Band[], along: number): Band | undefined {
+  for (const band of bands) {
+    if (along >= band.start && along < band.end) return band;
+  }
+  return undefined;
+}
+
+/** What the road does to a ship at a distance along a route. */
+export const effectOn = (route: Route, along: number): Effect =>
+  effectOf(bandIn(route.bands, along)?.properties);
+
+/**
+ * The stretch a ship is standing in, given where it is round the lap and which
+ * way it went. The same question the race tick asks, for anything that has a
+ * canonical distance and wants to know what the road there is like.
+ */
+export function bandAt(
+  track: Track,
+  distance: number,
+  routeIndex: number,
+): Band | undefined {
+  const sector = sectorOf(track, distance);
+  const route = routeOf(sector, routeIndex);
+  return bandIn(route.bands, alongOf(track, sector, route, distance));
 }
 
 /**
@@ -106,6 +239,8 @@ export interface Route {
   readonly length: number;
   /** The bends on it, measured in this route's own distances. */
   readonly bends: readonly Bend[];
+  /** What this road is like, stretch by stretch, in its own distances. */
+  readonly bands: readonly Band[];
   /**
    * How far off the main line this route commits to, positive left of travel.
    * A ship arriving at the fork carrying this much offset is already on it.
@@ -135,11 +270,42 @@ export interface Track {
   readonly par: number;
   readonly samples: readonly Sample[];
   readonly bends: readonly Bend[];
+  /** What the golden path is like, stretch by stretch, in canonical distances. */
+  readonly bands: readonly Band[];
   /** Distance of each checkpoint from the start line; the first is 0. */
   readonly checkpoints: readonly number[];
   readonly sectors: readonly Sector[];
+  /** What the author left lying on the road. Nothing a ship did is in here. */
+  readonly fixtures: readonly Placement[];
   readonly length: number;
   readonly bounds: { readonly min: Vec; readonly max: Vec };
+}
+
+/**
+ * Something the **author** put on the road, as opposed to something a ship left
+ * there mid-race.
+ *
+ * It is authored where a builder can point at it — a sector, a road through it,
+ * and a fraction of the way along — rather than as a canonical distance, so that
+ * moving a checkpoint or re-cutting a sector carries it along instead of leaving
+ * it stranded. That is the same reason checkpoint poses are derived and never
+ * authored: two numbers that can disagree eventually do, silently.
+ *
+ * It becomes an ordinary `Fixture` at the start of a heat, so everything that
+ * already knows how to meet a mine meets these too, and nothing in the race tick
+ * had to learn a second kind of thing on the road.
+ */
+export interface Placement {
+  readonly id: string;
+  readonly kind: FixtureKind;
+  readonly sector: number;
+  /** Which road it sits on: 0 is the golden path, 1 and up are the splits. */
+  readonly route: number;
+  /** How far through the sector it sits, as a fraction from 0 to 1. */
+  readonly at: number;
+  /** How far off that road's line, positive to the left of travel. */
+  readonly offset: number;
+  readonly power: number;
 }
 
 /** Arc length between centreline samples. Structural: the resolution of the polyline. */
@@ -163,21 +329,6 @@ export function normalOf(sample: Sample): Vec {
   return { x: -Math.sin(sample.heading), y: Math.cos(sample.heading) };
 }
 
-/** The next bend at or after a distance, and how far ahead it starts. */
-export function nextBend(
-  track: Track,
-  distance: number,
-): { bend: Bend; gap: number } | undefined {
-  const wrapped = ((distance % track.length) + track.length) % track.length;
-  let best: { bend: Bend; gap: number } | undefined;
-  for (const bend of track.bends) {
-    const raw = bend.start - wrapped;
-    const gap = raw < 0 ? raw + track.length : raw;
-    if (best === undefined || gap < best.gap) best = { bend, gap };
-  }
-  return best;
-}
-
 /** Which sector a distance falls in, counting from 0 at the start line. */
 export function sectorAt(track: Track, distance: number): number {
   const wrapped = ((distance % track.length) + track.length) % track.length;
@@ -197,6 +348,8 @@ export function sectorAt(track: Track, distance: number): number {
 export interface Walk {
   readonly samples: readonly Sample[];
   readonly bends: readonly Bend[];
+  /** Where each stretch of properties begins and ends. Empty when nothing says anything. */
+  readonly bands: readonly Band[];
   readonly length: number;
 }
 
@@ -212,6 +365,7 @@ export interface Walk {
 export function walkPieces(pieces: readonly Piece[], from: Pose = ORIGIN): Walk {
   const samples: Sample[] = [];
   const bends: Bend[] = [];
+  const bands: Band[] = [];
   let pos: Vec = { x: from.x, y: from.y };
   let heading = from.heading;
   /** Arc length already emitted, so samples stay evenly spaced across pieces. */
@@ -227,6 +381,22 @@ export function walkPieces(pieces: readonly Piece[], from: Pose = ORIGIN): Walk 
       samples.push(at(emitted - pieceStart));
       emitted += SAMPLE_STEP;
     }
+  };
+
+  // One band per stretch, not one per piece: three straights of the same nebula
+  // are one nebula, and a drawer that got three would seam it twice.
+  const band = (start: number, end: number, properties: Properties | undefined): void => {
+    if (properties === undefined || saysNothing(properties) || end <= start) return;
+    const last = bands[bands.length - 1];
+    if (
+      last !== undefined &&
+      last.end >= start - 1e-9 &&
+      sameProperties(last.properties, properties)
+    ) {
+      bands[bands.length - 1] = { ...last, end };
+      return;
+    }
+    bands.push({ start, end, properties });
   };
 
   for (const piece of pieces) {
@@ -247,6 +417,7 @@ export function walkPieces(pieces: readonly Piece[], from: Pose = ORIGIN): Walk 
       );
       pos = { x: start.x + dir.x * piece.length, y: start.y + dir.y * piece.length };
       travelled += piece.length;
+      band(pieceStart, travelled, piece.properties);
       continue;
     }
     const turn = Math.sign(piece.sweep);
@@ -285,8 +456,9 @@ export function walkPieces(pieces: readonly Piece[], from: Pose = ORIGIN): Walk 
     };
     heading = held + Math.abs(sweepRad) * turn;
     travelled += arc;
+    band(pieceStart, travelled, piece.properties);
   }
-  return { samples, bends, length: travelled };
+  return { samples, bends, bands, length: travelled };
 }
 
 export function buildTrack(
@@ -300,7 +472,7 @@ export function buildTrack(
    */
   sectors: number | readonly number[],
 ): Track {
-  const { samples, bends, length: travelled } = walkPieces(pieces);
+  const { samples, bends, bands, length: travelled } = walkPieces(pieces);
 
   let min = { x: Infinity, y: Infinity };
   let max = { x: -Infinity, y: -Infinity };
@@ -328,8 +500,10 @@ export function buildTrack(
     par: 0,
     samples,
     bends,
+    bands,
     checkpoints,
     sectors: [],
+    fixtures: [],
     length: travelled,
     bounds: { min, max },
   };
@@ -358,13 +532,29 @@ export function buildTrack(
  * The rings are still a half walked twice, which is why the sections repeat.
  * That is a property of these three tracks rather than a rule anybody obeys.
  */
-const S = (length: number): Piece => ({ kind: 'straight', length });
-const B = (radius: number, sweep: number): Piece => ({ kind: 'bend', radius, sweep });
-const sector = (id: string, name: string, pieces: readonly Piece[]): Section => ({
+// The words a track is authored in. Exported because the builder's export
+// writes tracks in them, and a paste that does not compile is not an export.
+export const S = (length: number): Piece => ({ kind: 'straight', length });
+export const B = (radius: number, sweep: number): Piece => ({
+  kind: 'bend',
+  radius,
+  sweep,
+});
+/** One piece, with something to say about the stretch it covers. */
+export const P = (piece: Piece, properties: Properties): Piece => ({
+  ...piece,
+  properties,
+});
+export const sector = (
+  id: string,
+  name: string,
+  pieces: readonly Piece[],
+  properties?: Properties,
+): Section => ({
   id,
   name,
   pieces,
-  splits: [],
+  ...(properties === undefined ? {} : { properties }),
 });
 
 const KESTREL_RING: readonly Section[] = [
@@ -545,8 +735,71 @@ export const CINDER_COIL = assemblePlan({
   ],
 });
 
+/**
+ * A ring that says something about itself on every stretch.
+ *
+ * This track exists so that properties and fixtures can be *seen* — from the
+ * chase camera, on the map, and from inside the game rather than only in a
+ * test. Its shape is deliberately plain, four near-identical stretches, because
+ * the shape is not what is being shown: what differs between one sector and the
+ * next is only what the road is made of.
+ *
+ * It is a fourth track rather than a nebula bolted onto the Kestrel because the
+ * three that ship carry every balance measurement taken so far, and a property
+ * cannot be cosmetic — grip, sight, hazard and pocket all move a lap. Adding
+ * one track disturbs none of it; editing one would have quietly re-tuned the
+ * lot. Delete this and its entry in `TRACKS` when real content replaces it.
+ */
+const PROVING_RING: readonly Section[] = [
+  sector('proving-clear', 'The clear run', [S(220), B(70, 90)]),
+  // Thick: the same entry throws you wider here than it did on the stretch
+  // before, which is the one comparison the whole track exists to make.
+  sector('proving-nebula', 'The nebula', [S(140), B(45, 90)], {
+    environment: 'nebula',
+  }),
+  // It scrapes, and the straight through it is worth flying.
+  sector('proving-debris', 'The scrapyard', [P(S(220), { pocket: 9 }), B(70, 90)], {
+    environment: 'debris',
+  }),
+  sector('proving-shadow', 'The dark', [S(140), B(45, 90)], { environment: 'shadow' }),
+];
+
+/** Four stretches of plain road, each made of something different. */
+export const PROVING_GROUND = assemblePlan({
+  name: 'The Proving Ground',
+  shape: 'plain · every property there is',
+  par: 1500,
+  ring: PROVING_RING,
+  splits: [
+    {
+      from: 0,
+      grade: 'dim',
+      // Searched, not guessed: 15 units clear of the main line at its closest
+      // and 57 from the rest of the circuit, at 21% longer. Wide enough to be a
+      // different road, short enough to be a choice.
+      sector: splitThrough(
+        PROVING_RING,
+        0,
+        'proving-wide',
+        'The long way round',
+        [B(90, -50)],
+        120,
+      ),
+    },
+  ],
+  fixtures: [
+    { id: 'mine', kind: 'mine', sector: 1, route: 0, at: 0.45, offset: 0, power: 26 },
+    { id: 'hole', kind: 'black-hole', sector: 3, route: 0, at: 0.5, offset: 4, power: 22 },
+  ],
+});
+
 /** Every track, in the order the player sees them. */
-export const TRACKS: readonly Track[] = [KESTREL_LOOP, MERIDIAN_RUN, CINDER_COIL];
+export const TRACKS: readonly Track[] = [
+  KESTREL_LOOP,
+  MERIDIAN_RUN,
+  CINDER_COIL,
+  PROVING_GROUND,
+];
 
 // ---------------------------------------------------------------------------
 // Routes: the ways through a sector.
@@ -755,15 +1008,6 @@ export function legalRoutes(track: Track, nav: number): readonly (readonly numbe
   );
 }
 
-/** Splits on this track a given navigation still cannot read. */
-export function unreadable(track: Track, nav: number): number {
-  return track.sectors.reduce(
-    (count, sector) =>
-      count + sector.routes.filter((route) => navFor(route.grade) > nav).length,
-    0,
-  );
-}
-
 /** Give a built track its sectors: the main line, plus whatever splits it has. */
 /**
  * A way through a sector that is **its own road**: a sector in its own right,
@@ -791,6 +1035,8 @@ export interface TrackPlan {
   /** The golden path in order. A checkpoint falls between consecutive sectors. */
   readonly ring: readonly Section[];
   readonly splits?: readonly SplitEdge[];
+  /** What the author left lying on the road, before anybody has raced on it. */
+  readonly fixtures?: readonly Placement[];
 }
 
 /** Where each checkpoint is and which way it faces. Walked, never authored. */
@@ -851,12 +1097,21 @@ function routeOfPieces(
     const fraction = length === 0 ? 0 : (cum[i] as number) / length;
     const online = sampleAt(track, start + fraction * span);
     const n = normalOf(online);
-    const off =
-      (sample.pos.x - online.pos.x) * n.x + (sample.pos.y - online.pos.y) * n.y;
+    const off = (sample.pos.x - online.pos.x) * n.x + (sample.pos.y - online.pos.y) * n.y;
     if (Math.abs(off) > Math.abs(entryOffset)) entryOffset = off;
   });
 
-  return { id, name, grade, samples, cum, length, bends, entryOffset };
+  return {
+    id,
+    name,
+    grade,
+    samples,
+    cum,
+    length,
+    bends,
+    bands: walked.bands,
+    entryOffset,
+  };
 }
 
 /**
@@ -867,6 +1122,24 @@ function routeOfPieces(
  * and arrive at the next one at the poses the ring has, and this says so rather
  * than assuming it.
  */
+/**
+ * A sector's pieces with its own properties pushed down into each of them.
+ *
+ * Properties are resolved **once, here**, rather than looked up at every read.
+ * Two reasons. A walk only ever sees pieces, so pushing down is what lets one
+ * walk serve the golden path and every split alike; and the alternative — the
+ * race tick asking "what sector am I in, and what did it say?" every tick —
+ * would put the sector back inside the hot loop that `alongOf` exists to keep
+ * it out of.
+ */
+export function resolvePieces(sector: Section): readonly Piece[] {
+  if (sector.properties === undefined) return sector.pieces;
+  return sector.pieces.map((piece) => {
+    const properties = mergeProperties(sector.properties, piece.properties);
+    return properties === undefined ? piece : { ...piece, properties };
+  });
+}
+
 export function assemblePlan(plan: TrackPlan): Track {
   const closure = closureOf(plan.ring);
   if (!closure.closed) {
@@ -875,9 +1148,21 @@ export function assemblePlan(plan: TrackPlan): Track {
         `${((closure.turn * 180) / Math.PI).toFixed(1)}° out.`,
     );
   }
+  // Every road has to arrive. A split that misses its checkpoint is not a
+  // slightly-wrong road, it is a road that teleports the ship at one end — and
+  // it draws and exports perfectly happily, which is exactly why this refuses
+  // rather than warns. `splitFaults` was written for this in stage 3 and then
+  // nothing called it, so a bad plan was only ever caught by eye.
+  const faults = splitFaults(plan);
+  if (faults.length > 0) {
+    const worst = faults
+      .map((f) => `${f.split.sector.id} misses checkpoint ${(f.split.from + 1) % plan.ring.length} by ${f.gap.toFixed(1)} units and ${((f.turn * 180) / Math.PI).toFixed(1)}°`)
+      .join('; ');
+    throw new Error(`${plan.name}: ${worst}.`);
+  }
   const marks = checkpointsOf(plan.ring);
   const poses = checkpointPoses(plan.ring);
-  const base = buildTrack(plan.name, piecesOf(plan.ring), marks);
+  const base = buildTrack(plan.name, plan.ring.flatMap(resolvePieces), marks);
 
   const sectors: Sector[] = plan.ring.map((sector, index) => {
     const start = marks[index] as number;
@@ -894,7 +1179,7 @@ export function assemblePlan(plan: TrackPlan): Track {
           base,
           start,
           span,
-          sector.pieces,
+          resolvePieces(sector),
           here,
           `s${index}-main`,
           'The golden path',
@@ -905,7 +1190,7 @@ export function assemblePlan(plan: TrackPlan): Track {
             base,
             start,
             span,
-            split.sector.pieces,
+            resolvePieces(split.sector),
             here,
             `s${index}-${i}`,
             split.sector.name,
@@ -931,6 +1216,7 @@ export function assemblePlan(plan: TrackPlan): Track {
     shape: plan.shape,
     par: plan.par,
     sectors,
+    fixtures: plan.fixtures ?? [],
     bounds: { min, max },
   };
 }
@@ -965,7 +1251,7 @@ export function splitThrough(
       `${id}: no way back to checkpoint ${(from + 1) % poses.length} at radius ${radius}`,
     );
   }
-  return { id, name, pieces: [...lead, ...tail], splits: [] };
+  return { id, name, pieces: [...lead, ...tail] };
 }
 
 /**
@@ -988,4 +1274,3 @@ export function splitFaults(
   }
   return faults;
 }
-

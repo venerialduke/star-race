@@ -20,17 +20,13 @@ import {
   wrapAngle,
   type Section,
 } from '../../src/sim/section';
-import { TRACKS, type Piece } from '../../src/sim/track';
+import { B, S, TRACKS, assemblePlan, sector, type Piece } from '../../src/sim/track';
 import { TRACK_HALF_WIDTH } from '../../src/sim/tuning';
 
-const S = (length: number): Piece => ({ kind: 'straight', length });
-const B = (radius: number, sweep: number): Piece => ({ kind: 'bend', radius, sweep });
-const sec = (id: string, pieces: readonly Piece[]): Section => ({
-  id,
-  name: id,
-  pieces,
-  splits: [],
-});
+// `S`, `B` and `sector` come from `track.ts` rather than being redefined here:
+// they are the vocabulary a track is authored in, and a test that writes its
+// own copy is testing its copy.
+const sec = (id: string, pieces: readonly Piece[]): Section => sector(id, id, pieces);
 
 describe('a section has ends', () => {
   it('leaves you along its own length when it is straight', () => {
@@ -204,5 +200,50 @@ describe('the tracks that ship', () => {
       ),
     );
     expect(moved).toBe(true);
+  });
+});
+
+describe('a road that does not arrive', () => {
+  it('is refused, not drawn', () => {
+    // A split that misses its checkpoint teleports the ship at one end. It
+    // draws and exports perfectly happily, which is why assembly refuses it
+    // rather than warning: `splitFaults` was written for this and then nothing
+    // called it, so until now a bad plan was only ever caught by eye.
+    const ring = [
+      sector('a', 'A', [S(200), B(60, 90), S(120), B(60, 90)]),
+      sector('b', 'B', [S(200), B(60, 90), S(120), B(60, 90)]),
+    ];
+    expect(() => assemblePlan({ name: 'Fine', shape: 't', par: 1, ring })).not.toThrow();
+
+    expect(() =>
+      assemblePlan({
+        name: 'Broken',
+        shape: 't',
+        par: 1,
+        ring,
+        // A road that just runs straight past where the checkpoint is.
+        splits: [
+          { from: 0, grade: 'clear', sector: sector('nowhere', 'Nowhere', [S(90)]) },
+        ],
+      }),
+    ).toThrow(/misses checkpoint/);
+  });
+
+  it('says which road, and by how much', () => {
+    const ring = [
+      sector('a', 'A', [S(200), B(60, 90), S(120), B(60, 90)]),
+      sector('b', 'B', [S(200), B(60, 90), S(120), B(60, 90)]),
+    ];
+    expect(() =>
+      assemblePlan({
+        name: 'Broken',
+        shape: 't',
+        par: 1,
+        ring,
+        splits: [
+          { from: 0, grade: 'clear', sector: sector('strays', 'Strays', [S(90)]) },
+        ],
+      }),
+    ).toThrow(/strays/);
   });
 });

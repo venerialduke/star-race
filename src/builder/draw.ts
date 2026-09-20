@@ -6,14 +6,39 @@
 // filled yet.
 
 import { poseOfAll, type Pose } from '../sim/section';
-import { walkPieces, type Sample } from '../sim/track';
+import {
+  effectOf,
+  resolvePieces,
+  walkPieces,
+  type Band,
+  type Environment,
+  type Sample,
+} from '../sim/track';
 import { PATH_HALF_WIDTH } from '../sim/tuning';
-import { closure, piecesOfSector, ringOf, splitPieces, type Draft } from './plan';
+import { ENVIRONMENT_COLOURS, HAZARD, POCKET, withAlpha } from '../render/view';
+import {
+  closure,
+  fixturePose,
+  ringOf,
+  splitPieces,
+  type Draft,
+} from './plan';
+
+/**
+ * The road, and what each environment makes of it. The colours come from the
+ * renderer's own table so that a nebula is the same purple in the builder, on
+ * the map and from behind the ship.
+ */
+const groundOf = (environment: Environment): string =>
+  environment === 'open'
+    ? 'rgba(126, 224, 255, 0.10)'
+    : withAlpha(ENVIRONMENT_COLOURS[environment], environment === 'shadow' ? 0.75 : 0.3);
 
 const PATH = '#ffd166';
 const SPLIT = '#6ee7a8';
 const GAP = '#ff5f7a';
 const MARK = '#7ee0ff';
+
 const DIM = 'rgba(232, 238, 255, 0.25)';
 
 interface View {
@@ -108,10 +133,12 @@ export function drawDraft(
   ctx.clearRect(0, 0, width, height);
 
   const ring = ringOf(draft);
-  const walks = draft.ring.map((sector, i) => {
-    const before = ring.slice(0, i);
-    return walkPieces(piecesOfSector(sector), poseOfAll(before));
-  });
+  // Resolved, so a sector that says "all of this is a nebula" is drawn as one:
+  // the picture has to agree with what the sim will read, and the sim reads the
+  // resolved pieces.
+  const walks = ring.map((sector, i) =>
+    walkPieces(resolvePieces(sector), poseOfAll(ring.slice(0, i))),
+  );
   const splitWalks = draft.splits.map((split) => {
     const pieces = splitPieces(draft, split);
     const poses = ring.map((_, i) => poseOfAll(ring.slice(0, i)));
@@ -126,8 +153,12 @@ export function drawDraft(
   ];
   const view = viewOf(all, width, height);
 
-  // The ground the road sits on, so the loop reads as a track and not a wire.
-  for (const walk of walks) line(ctx, view, walk.samples, 'rgba(126,224,255,0.10)', PATH_HALF_WIDTH * 2);
+  // The ground the road sits on, so the loop reads as a track and not a wire —
+  // and coloured by what it is, which is the whole of "environment is drawn".
+  for (const walk of walks) {
+    line(ctx, view, walk.samples, groundOf('open'), PATH_HALF_WIDTH * 2);
+    paint(ctx, view, walk.samples, walk.length, walk.bands);
+  }
   for (const walk of splitWalks) {
     if (walk !== undefined) line(ctx, view, walk.samples, SPLIT, 1.6, true);
   }
@@ -158,4 +189,62 @@ export function drawDraft(
   draft.ring.forEach((_, i) => {
     gate(ctx, view, poseOfAll(ring.slice(0, i)), String(i + 1), i === selected);
   });
+
+  // Last, so nothing is drawn over the things a ship has to miss.
+  for (const fixture of draft.fixtures) {
+    const pose = fixturePose(draft, fixture);
+    if (pose === undefined) continue;
+    mark(ctx, view, pose, fixture.kind === 'mine');
+  }
+}
+
+/**
+ * The stretches that say something about themselves, painted over the ground.
+ *
+ * Bands are in the line's own distances and samples are evenly spaced along it,
+ * so a band becomes a slice of the sample array — which is why the walk's own
+ * length is passed in rather than measured again here.
+ */
+function paint(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  samples: readonly Sample[],
+  length: number,
+  bands: readonly Band[],
+): void {
+  if (length <= 0 || samples.length < 2) return;
+  for (const band of bands) {
+    const from = Math.floor((band.start / length) * (samples.length - 1));
+    const to = Math.ceil((band.end / length) * (samples.length - 1));
+    const slice = samples.slice(Math.max(0, from), Math.min(samples.length, to + 1));
+    const environment = band.properties.environment ?? 'open';
+    line(ctx, view, slice, groundOf(environment), PATH_HALF_WIDTH * 2);
+    // Pocket and hazard are numbers rather than places, so they read as an
+    // edging on the stretch rather than as ground of their own — a stretch can
+    // be a nebula *and* pay, and one colour cannot say both.
+    const effect = effectOf(band.properties);
+    if (effect.pocket > 0)
+      line(ctx, view, slice, withAlpha(POCKET, 0.55), PATH_HALF_WIDTH * 0.7, true);
+    if (effect.hazard > 0)
+      line(ctx, view, slice, HAZARD, PATH_HALF_WIDTH * 0.35, true);
+  }
+}
+
+/** A fixture: a ring on the road, filled for a mine and hollow for a hole. */
+function mark(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  pose: Pose,
+  filled: boolean,
+): void {
+  const p = at(view, pose);
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+  ctx.strokeStyle = HAZARD;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  if (filled) {
+    ctx.fillStyle = HAZARD;
+    ctx.fill();
+  }
 }

@@ -68,6 +68,27 @@ npm run mechanics-page   # design/catalogue/ → public/design/mechanics.html
 npm run balance          # whole seasons, policy against policy
 ```
 
+**Previews.** Every open pull request is built to
+`/star-race/preview/<number>/`, listed at `/star-race/preview/`, and rebuilt on
+every push. Pages gives a repository one deployment, so a preview cannot be its
+own site — it is a folder inside this one, which is why each deploy rebuilds
+main *and* every open PR. Stateless on purpose: a preview cannot outlive its
+pull request. `BASE_PATH` is what makes it work, because Vite bakes the base
+into every asset URL at build time, so a preview has to be built for where it
+will be served from.
+
+It deploys when **CI finishes**, not on the push. The obvious trigger is
+`pull_request` and it builds perfectly well, but the deployment is then
+attributed to the PR's branch and the `github-pages` environment only accepts
+the default branch — the job fails with no log at all. A `workflow_run` always
+runs as the default branch. One consequence: a change to this workflow only
+takes effect once it is **on main**, so the pull request that introduces one
+cannot preview itself.
+
+Previews skip pull requests from forks. Building a branch runs that branch's
+`npm ci`, and this job holds a token that can publish — so only branches in this
+repository, which only the owner can push.
+
 The **track builder** is a second page of the same site: `/star-race/builder.html`,
 or `builder.html` under `npm run dev`. Pieces from a catalogue into sectors, the
 loop closed for you when it is open, and TypeScript out at the bottom to paste

@@ -1,29 +1,40 @@
-// Where the eye sits, and why it is not obvious.
+// Where the eye goes, and the one promise a chase camera makes.
 //
-// Verticality landed and the chase camera went wrong in three ways at once, all
-// of which read as the projection being broken and none of which were: the ship
-// carried straight on through a bridge, the camera drifted up and down as if it
-// had lost the ship, and on the way out of a dip the whole view mirrored — a
-// bend that goes right appeared to go left.
+// It owes its subject exactly one thing: keep it on screen. That is a claim
+// about where the ship *projects*, which needs no canvas — so it is asserted
+// here over every track rather than noticed in play, which is how all three of
+// the faults below were actually found.
 //
-// All three were the same mistake in different clothes. Things that sit *on*
-// the road were being drawn on the flat plane, and the camera's height was
-// worked out from the road behind it rather than the road under the ship —
-// which on a ramp is a different height, and could put the eye underneath a
-// surface drawn with no thickness. You see the underside of a road, and the
-// underside of a right-hand bend is a left-hand bend.
-//
-// The camera itself cannot be tested headlessly. The two rules it stands on can.
+// Verticality broke this three ways at once, and every one of them read as the
+// projection being wrong when it was the camera. Things sitting on the road
+// were drawn on the flat plane, so a ship carried straight on through a hill.
+// The height came from the road *behind* the camera, a different point on a
+// ramp, so the ship slid up and down the frame. And a later attempt to keep the
+// eye above the road took the highest road within sight, which lifted it the
+// moment a bridge came into view — hundreds of units early, with the ship lost
+// off the bottom.
 
 import { describe, expect, it } from 'vitest';
-import { TRACKS, type Track } from '../../src/sim/track';
-import { CAMERA_SEES, HEIGHT, eyeHeight } from '../../src/render/chase';
+import { closingSection } from '../../src/sim/section';
+import {
+  B,
+  S,
+  TRACKS,
+  assemblePlan,
+  placeSmooth,
+  sector,
+  type Piece,
+  type Track,
+} from '../../src/sim/track';
+import { HEIGHT, eyeFor } from '../../src/render/chase';
 import { heightAt, reliefOf } from '../../src/render/height';
+import { lensFor, toEye, toScreen } from '../../src/render/camera';
 import type { RouteView, ShipView } from '../../src/render/view';
 
+const WIDE = 1200;
+const TALL = 700;
 const ON_THE_MAIN_LINE: RouteView = { planned: [], nav: 0 };
 
-/** A ship far enough along to be somewhere, and on the golden path. */
 const shipAt = (distance: number): ShipView => ({
   distance,
   route: 0,
@@ -36,92 +47,116 @@ const shipAt = (distance: number): ShipView => ({
   struck: 0,
 });
 
-/** Walk a lap and hand back the eye height and the road under the ship. */
-function overALap(track: Track): { eye: number; road: number; at: number }[] {
-  const relief = reliefOf(track);
-  const lift = (d: number, r: number): number => heightAt(track, relief, d, r);
-  const rows = [];
-  for (let at = 0; at < track.length; at += 3) {
-    const road = lift(at, 0);
-    rows.push({
-      at,
-      road,
-      eye: eyeHeight(track, ON_THE_MAIN_LINE, shipAt(at), road, lift),
-    });
-  }
-  return rows;
+/**
+ * A loop whose **golden path** climbs a bridge.
+ *
+ * The four tracks that ship are bridged only on their splits, so a player on
+ * the main line never goes over a hill on any of them — which makes them
+ * useless for testing what a hill does. This one crosses itself, so the line
+ * being flown is the one that climbs.
+ */
+function hilly(): Track {
+  const ring = [
+    sector('a', 'A', [S(240), B(50, 160)] as Piece[]),
+    sector('b', 'B', [S(240), B(50, -120)] as Piece[]),
+  ];
+  const home = closingSection(ring, 60);
+  if (home === undefined) throw new Error('no way home');
+  return assemblePlan({ name: 'Hilly', shape: 'x', par: 1000, ring: [...ring, home] });
 }
 
-describe('the eye', () => {
-  it('never sits closer to the ship road than it does on flat ground', () => {
-    // The drift. The first version took its height from the road a camera's
-    // length *behind* the ship, which on a ramp is a different point on the
-    // slope: the gap swung between 15 and 25 units over one bridge, and the
-    // ship slid up and down the screen.
+/** Where the ship lands on screen, all the way round a lap. */
+function shipOnScreen(track: Track): { at: number; x: number; y: number }[] {
+  const relief = reliefOf(track);
+  const lift = (d: number, r: number): number => heightAt(track, relief, d, r);
+  const seen = [];
+  for (let at = 0; at < track.length; at += 2) {
+    const player = shipAt(at);
+    const lens = lensFor(eyeFor(track, ON_THE_MAIN_LINE, player, lift), WIDE, TALL);
+    const place = placeSmooth(track, at, 0);
+    const eye = toEye(lens, place.pos.x, place.pos.y, lift(at, 0) + 1.8);
+    // Behind the eye would mean the camera had turned its back on the ship.
+    expect(eye.depth, `${track.name} at ${at.toFixed(0)}: the ship is behind the camera`)
+      .toBeGreaterThan(0);
+    seen.push({ at, ...toScreen(lens, eye) });
+  }
+  return seen;
+}
+
+describe('the ship is always in view', () => {
+  it('sits well inside the frame on every track that ships', () => {
     for (const track of TRACKS) {
-      for (const row of overALap(track)) {
-        expect(
-          row.eye - row.road,
-          `${track.name} at ${row.at.toFixed(0)}`,
-        ).toBeGreaterThanOrEqual(HEIGHT - 1e-9);
+      for (const row of shipOnScreen(track)) {
+        expect(row.x, `${track.name} at ${row.at.toFixed(0)}`).toBeGreaterThan(WIDE * 0.1);
+        expect(row.x, `${track.name} at ${row.at.toFixed(0)}`).toBeLessThan(WIDE * 0.9);
+        expect(row.y, `${track.name} at ${row.at.toFixed(0)}`).toBeGreaterThan(TALL * 0.1);
+        expect(row.y, `${track.name} at ${row.at.toFixed(0)}`).toBeLessThan(TALL * 0.9);
       }
     }
   });
 
-  it('is never underneath the road it is looking along', () => {
-    // The mirroring. A road is a filled surface with no thickness, so an eye
-    // below one sees its underside, and a bend seen from beneath turns the
-    // other way. On the Kestrel the old rule put the eye 4 units under.
-    for (const track of TRACKS) {
-      const relief = reliefOf(track);
-      const lift = (d: number, r: number): number => heightAt(track, relief, d, r);
-      for (const row of overALap(track)) {
-        for (let on = 0; on <= CAMERA_SEES; on += 10) {
-          expect(
-            lift(row.at + on, 0),
-            `${track.name}: road at ${(row.at + on).toFixed(0)} is above the eye`,
-          ).toBeLessThan(row.eye);
-        }
-      }
-    }
+  it('stays inside it over a hill, which is where it used to be lost', () => {
+    // Measured: unclamped, the tilt put the ship at 98% of the frame height —
+    // on screen by the arithmetic and off it in practice, since a ship has a
+    // size. The pitch limits exist for this and are set from this.
+    const rows = shipOnScreen(hilly());
+    const low = Math.min(...rows.map((r) => r.y));
+    const high = Math.max(...rows.map((r) => r.y));
+    expect(low).toBeGreaterThan(TALL * 0.2);
+    expect(high).toBeLessThan(TALL * 0.85);
   });
 
-  it('sits exactly where it always did on a track with no bridges', () => {
-    // Nothing about a flat track may have changed, or verticality altered the
-    // game rather than adding to it.
-    for (const row of overALap(TRACKS[3] as Track)) {
-      expect(row.road).toBe(0);
-      expect(row.eye).toBe(HEIGHT);
+  it('holds still horizontally, because the camera looks where the ship goes', () => {
+    // The eye is directly behind the ship, so the ship is dead centre and any
+    // drift would mean the yaw had come adrift from the heading.
+    for (const row of shipOnScreen(hilly())) {
+      expect(row.x).toBeCloseTo(WIDE / 2, 6);
     }
   });
 });
 
-describe('a bridge', () => {
-  it('only ever goes up', () => {
-    // Which is what keeps the eye out of trouble. Raising one strand and
-    // dipping the other by half each was symmetric and wrong: the road a ship
-    // is actually on would sink into a hole, and a fixed height above a hole is
-    // below the flat road beyond it. Driving *under* somebody else's bridge is
-    // the common case and now moves nothing at all.
-    for (const track of TRACKS) {
+describe('the eye', () => {
+  it('rides exactly its usual height above the ship road, hill or no hill', () => {
+    // The drift. The first version took its height from the road a camera's
+    // length behind the ship, which on a ramp is a different point on the
+    // slope: the gap swung between 15 and 25 units over one bridge.
+    for (const track of [...TRACKS, hilly()]) {
       const relief = reliefOf(track);
-      for (const [road, heights] of relief.heights) {
-        for (const height of heights) {
-          expect(height, `${track.name} road ${road} digs`).toBeGreaterThanOrEqual(0);
-        }
+      const lift = (d: number, r: number): number => heightAt(track, relief, d, r);
+      for (let at = 0; at < track.length; at += 3) {
+        const eye = eyeFor(track, ON_THE_MAIN_LINE, shipAt(at), lift);
+        expect(eye.height - lift(at, 0), `${track.name} at ${at.toFixed(0)}`).toBeCloseTo(
+          HEIGHT,
+          6,
+        );
       }
     }
   });
 
-  it('leaves the golden path alone where it is the road being crossed', () => {
-    // All three bridged tracks are bridged by a split crossing the main line,
-    // so the line the player actually flies should be untouched.
+  it('tilts with the road rather than floating up over it', () => {
+    // What a hill should do to the picture: change the angle, not the height.
+    // A camera that climbs early loses the thing it is following.
+    const track = hilly();
+    const relief = reliefOf(track);
+    const lift = (d: number, r: number): number => heightAt(track, relief, d, r);
+    const pitches = [];
+    for (let at = 0; at < track.length; at += 2) {
+      pitches.push(eyeFor(track, ON_THE_MAIN_LINE, shipAt(at), lift).pitch);
+    }
+    // It really does move — otherwise the hill reads as flat ground.
+    expect(Math.max(...pitches) - Math.min(...pitches)).toBeGreaterThan(0.1);
+  });
+
+  it('is left exactly as it was on a track with no hills', () => {
+    // All four shipped tracks are bridged on their splits, so the line a player
+    // flies is level the whole way round. Nothing about it may have changed.
     for (const track of TRACKS) {
       const relief = reliefOf(track);
-      for (const crossing of relief.crossings) {
-        expect(crossing.under.route, `${track.name}`).toBe(0);
-        const under = relief.heights.get(`${crossing.under.sector}:0`) ?? [];
-        expect(Math.max(...under, 0)).toBe(0);
+      const lift = (d: number, r: number): number => heightAt(track, relief, d, r);
+      for (let at = 0; at < track.length; at += 3) {
+        const eye = eyeFor(track, ON_THE_MAIN_LINE, shipAt(at), lift);
+        expect(eye.height).toBe(HEIGHT);
+        expect(eye.pitch).toBeCloseTo(0.3, 6);
       }
     }
   });

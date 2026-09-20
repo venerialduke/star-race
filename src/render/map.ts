@@ -92,7 +92,20 @@ export function fitView(track: Track, width: number, height: number): View {
   };
 }
 
-function project(view: View, p: Vec): Vec {
+/**
+ * A world point on the panel.
+ *
+ * **The vertical axis is flipped**, because canvas y grows downward and the
+ * world's grows up. Without that the whole map is mirrored — the shape still
+ * looks like a plausible track, which is why it went unnoticed from V1 until
+ * somebody compared a bend against the chase camera and found the Meridian
+ * turning left in one view and right in the other. The chase camera was right.
+ *
+ * The quarter turn that fits a long track onto a tall panel was always right;
+ * it is only the flip that was missing. Flipping both cancels out and changes
+ * nothing, which is a mistake worth making once with a measurement in hand.
+ */
+export function project(view: View, p: Vec): Vec {
   let dx = p.x - view.centre.x;
   let dy = p.y - view.centre.y;
   if (view.rotate) {
@@ -100,7 +113,7 @@ function project(view: View, p: Vec): Vec {
     dx = dy;
     dy = -held;
   }
-  return { x: view.width / 2 + dx * view.scale, y: view.height / 2 + dy * view.scale };
+  return { x: view.width / 2 + dx * view.scale, y: view.height / 2 - dy * view.scale };
 }
 
 /** Draw the whole loop into a rectangle of the canvas. */

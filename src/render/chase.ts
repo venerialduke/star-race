@@ -134,47 +134,91 @@ export const newChase = (): Chase => ({
 });
 
 /**
- * How far off the ground the eye sits.
+ * Where the eye goes for a ship: behind it, above its own road, tilted along
+ * whatever the road ahead is doing.
  *
- * Two rules, and the second one exists because breaking it looked like a bug in
- * the projection rather than a bug in the camera.
- *
- * **It rides at `HEIGHT` above the ship's own road.** Taking the height from
- * the road *behind* the camera was the first version, and on a ramp that is a
- * different point on the slope: the gap to the ship swung between 15 and 25
- * units over a bridge, so the ship drifted up and down the screen as if the
- * camera had lost it.
- *
- * **And never below the road it is looking at.** The road is a filled surface
- * with no thickness, so a camera underneath one sees its underside — and a bend
- * seen from below curves the other way, which reads as the whole view
- * inverting. It is reachable without doing anything strange: at the bottom of a
- * dip the ship's road is 19 units down, `HEIGHT` above that is still 4 units
- * *under* the flat road ahead. Measured, on the Kestrel.
- *
- * On a track with no crossings both rules give exactly `HEIGHT`, which is what
- * the camera has always done.
+ * Pulled out whole so that it can be checked. The one thing a chase camera owes
+ * its subject is to keep it on screen, and that is a claim about where the ship
+ * *projects* — which is testable without a canvas, and is what
+ * `tests/render/chase.test.ts` asserts over every track.
  */
-export function eyeHeight(
+export function eyeFor(
+  track: Track,
+  routes: RouteView,
+  player: ShipView,
+  lift: Lift,
+): Camera {
+  const me = shipPoint(track, player);
+  const yaw = me.at.heading;
+  const underfoot = lift(player.distance, player.route);
+  return {
+    x: me.x - Math.cos(yaw) * BACK,
+    y: me.y - Math.sin(yaw) * BACK,
+    height: eyeHeight(underfoot),
+    yaw,
+    pitch: eyePitch(track, routes, player, underfoot, lift),
+  };
+}
+
+/**
+ * How far off the ground the eye sits: `HEIGHT` above **the ship's own road**,
+ * and nothing else.
+ *
+ * Two earlier versions were wrong in opposite directions. Taking the height
+ * from the road a camera's length *behind* the ship is a different point on a
+ * ramp, so the ship slid up and down the screen. Then taking the highest road
+ * within sight lifted the eye the moment a bridge came into view — hundreds of
+ * units early, and far enough that the ship was lost off the bottom of the
+ * frame. A camera that is following something follows it.
+ *
+ * What a hill does to the picture is a matter of where the eye *looks*, which
+ * is `eyePitch` below, not of how high it floats.
+ */
+function eyeHeight(underfoot: number): number {
+  return HEIGHT + underfoot;
+}
+
+/**
+ * How far the eye tilts: the flat-ground angle, less whatever the road ahead is
+ * climbing.
+ *
+ * This is what gives a hill a sense of direction. The road rises, the camera
+ * tilts up to keep looking along it; over a crest it tilts back down. On level
+ * ground the slope is zero and the angle is exactly the one the camera has
+ * always had, so nothing about a flat track moves.
+ *
+ * Clamped, because the ship has to stay on screen and a camera that pitches far
+ * enough loses it off an edge. The limits are measured against where the ship
+ * actually projects rather than picked — see `tests/render/chase.test.ts`.
+ */
+function eyePitch(
   track: Track,
   routes: RouteView,
   player: ShipView,
   underfoot: number,
   lift: Lift,
 ): number {
-  let ridge = underfoot;
-  for (let on = 0; on <= CAMERA_SEES; on += 15) {
-    const at = player.distance + on;
-    ridge = Math.max(ridge, lift(at, lineAt(track, routes, player, at)));
-  }
-  return Math.max(HEIGHT + underfoot, ridge + OVER_THE_ROAD);
+  const aim = player.distance + LOOKS_ALONG;
+  const rise = lift(aim, lineAt(track, routes, player, aim)) - underfoot;
+  const tilt = Math.atan(rise / LOOKS_ALONG);
+  return Math.max(LEAST_PITCH, Math.min(MOST_PITCH, PITCH - tilt));
 }
 
-/** How far up the road the camera checks before deciding how high to sit. */
-export const CAMERA_SEES = 220;
+/** How far up the road the eye aims when working out its angle. */
+const LOOKS_ALONG = 70;
 
-/** The least it will clear the road ahead by, when a dip would put it under. */
-const OVER_THE_ROAD = 9;
+/**
+ * How far the tilt may go either way: half the level angle, up or down.
+ *
+ * Down is positive, so the floor is the camera looking up a climb and the
+ * ceiling is it looking down the far side. The numbers come from measuring
+ * where the ship lands rather than from taste. Unclamped, a hill put it at 98%
+ * of the frame height — on screen by the arithmetic and off it in practice,
+ * since a ship has a size. These hold it inside 43% to 80% while still leaving
+ * about nine degrees of swing to feel the hill with.
+ */
+const LEAST_PITCH = 0.15;
+const MOST_PITCH = 0.45;
 
 /** How much of the remaining gap to close in this much time. */
 function easeShare(seconds: number, over: number): number {
@@ -253,13 +297,7 @@ export function drawChase(
   const me = shipPoint(track, player);
   const yaw = me.at.heading;
   const underfoot = lift(player.distance, player.route);
-  const target = {
-    x: me.x - Math.cos(yaw) * BACK,
-    y: me.y - Math.sin(yaw) * BACK,
-    height: eyeHeight(track, routes, player, underfoot, lift),
-    yaw,
-    pitch: PITCH,
-  };
+  const target = eyeFor(track, routes, player, lift);
   const follow = easeShare(seconds, FOLLOW_TIME);
   const turn = easeShare(seconds, TURN_TIME);
   chase.camera = chase.settled
@@ -268,7 +306,8 @@ export function drawChase(
         y: chase.camera.y + (target.y - chase.camera.y) * follow,
         height: chase.camera.height + (target.height - chase.camera.height) * follow,
         yaw: chase.camera.yaw + shortestTurn(chase.camera.yaw, yaw) * turn,
-        pitch: PITCH,
+        // Eased like everything else, or cresting a hill is a flinch.
+        pitch: chase.camera.pitch + (target.pitch - chase.camera.pitch) * turn,
       }
     : target;
   chase.settled = true;

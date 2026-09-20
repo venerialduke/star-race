@@ -310,15 +310,32 @@ binding case. Measured on a figure-eight: 30 units at the crossing left 20.4
 where the roads pass a corridor apart, against the 19.4 a corridor needs —
 passing by a unit, which is not margin. It is 38 now, which leaves 25.8.
 
-The camera rides at a fixed height above **the ship's own road**, and never
-below the road it is looking along. Both rules were learned by breaking them.
-Taking the height from the road behind the camera is a different point on a
-ramp, so the ship slid up and down the screen as if the camera had lost it; and
-a road is a filled surface with no thickness, so an eye underneath one sees its
-underside — where a bend that goes right appears to go left, and the whole view
-reads as inverted. Anything that sits *on* the road — the ship, its shadow, its
-wake, a shot between two ships, the scuffs a swing leaves — is measured from the
-road rather than from the plane, or it carries straight on through a hill.
+**A camera that is following something follows it.** The eye rides at a fixed
+height above the ship's own road and nowhere else, and what a hill does to the
+picture is a matter of where it *looks*: the pitch tilts up a climb and down the
+far side, which is what gives a hill a sense of direction. The tilt is clamped,
+and the clamp is set by measuring where the ship lands on screen rather than by
+taste — unclamped it reached 98% of the frame height, which is on screen by the
+arithmetic and off it in practice.
+
+Three earlier versions got this wrong, each in a way that read as the projection
+being broken. Taking the height from the road *behind* the camera is a different
+point on a ramp, so the ship slid up and down the frame. Taking the highest road
+in sight lifted the eye the moment a bridge appeared — hundreds of units early,
+with the ship lost off the bottom. And a road is a filled surface with no
+thickness, so an eye that dips below one sees its underside, where a bend going
+right appears to go left; that one is gone because a bridge only ever goes up.
+
+Anything that sits *on* the road — the ship, its shadow, its wake, a shot
+between two ships, the scuffs a swing leaves — is measured from the road rather
+than from the plane, or it carries straight on through a hill.
+
+**Both views agree about which way a bend goes**, which they did not until now:
+the map projected the world's y straight onto the canvas's, and canvas y grows
+downward while the world's grows up, so the whole map was mirrored. True since
+V1 and unnoticed, because a mirrored track still looks like a plausible track.
+It only shows when you compare it against something — which is now a test, on
+every bend of every track, against the simulation's own `turn`.
 
 **None of this was needed to keep the race honest**, which is worth saying
 because it is easy to assume otherwise. A ship's position is a canonical

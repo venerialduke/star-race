@@ -1,14 +1,35 @@
 name: Deploy to GitHub Pages
 
+# The site is deployed whole, every time, from whatever is on main — plus a
+# built copy of every open pull request under /preview/<number>/.
+#
+# Previews exist because the game is a thing you look at, and until now the only
+# way to see a branch was to merge it. GitHub Pages gives a repository exactly
+# one deployment, so a preview cannot be its own site; it has to be a folder
+# inside this one, which means every deploy rebuilds the whole set. That is
+# cheap here (a build is about a second) and it is stateless, which matters more:
+# there is no way for a stale preview to survive a PR being closed.
+#
+# **It runs off CI finishing rather than off the push itself.** The obvious
+# trigger is `pull_request`, and it builds perfectly well — but the deployment is
+# then attributed to the pull request's branch, and the `github-pages`
+# environment only accepts deployments from the default branch. The job fails
+# with no log at all, which is a memorable half-hour. A `workflow_run` always
+# runs as the default branch, so the gate is satisfied; and since CI already
+# runs on both pull requests and pushes to main, waiting on CI covers everything
+# and has the bonus that nothing red is ever published.
+
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: read
 
 concurrency:
   group: pages
@@ -17,21 +38,90 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    # Nothing red is published, and a manual run is always allowed.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+
+      - name: Build main
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+          mv dist _site
+
+      - name: Build a preview of every open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin '+refs/heads/*:refs/remotes/origin/*'
+          mkdir -p _site/preview
+          links=""
+          # Forks are left out deliberately. Building a branch runs that
+          # branch's `npm ci`, and this job holds a token that can publish — so
+          # only branches in this repository, which only the owner can push.
+          rows=$(gh pr list --state open \
+            --json number,headRefName,title,isCrossRepository \
+            --jq '.[] | select(.isCrossRepository | not)
+                      | [.number, .headRefName, .title] | @tsv')
+          while IFS=$'\t' read -r number branch title; do
+            if [ -z "${number:-}" ]; then continue; fi
+            echo "::group::PR #$number ($branch)"
+            # A whole checkout, not a pathspec one: switching only the paths
+            # that exist on the branch would leave main's files sitting beside
+            # them, and the preview would be neither branch.
+            if ! git checkout --force --detach "origin/$branch"; then
+              echo "cannot read $branch, skipping"
+              echo "::endgroup::"
+              continue
+            fi
+            npm ci
+            if BASE_PATH="/star-race/preview/$number/" npm run build; then
+              rm -rf "_site/preview/$number"
+              mv dist "_site/preview/$number"
+              safe=$(printf '%s' "$title" | tr -d '<>&"')
+              links="$links<li><a href=\"$number/\">#$number — $safe</a> <code>$branch</code></li>"
+            else
+              echo "PR #$number did not build; leaving it out."
+            fi
+            echo "::endgroup::"
+          done <<< "$rows"
+          # Back on main, so nothing a branch left behind reaches the upload.
+          git checkout --force --detach origin/main
+          cat > _site/preview/index.html <<HTML
+          <!doctype html>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Star Race — previews</title>
+          <style>
+          body { background:#0b1020; color:#e8eeff; font:15px/1.6 system-ui, sans-serif; margin:40px auto; max-width:40rem; padding:0 1rem; }
+          a { color:#ffd166; }
+          code { color:#9fb0d0; font-size:12px; }
+          li { margin:.4rem 0; }
+          </style>
+          <h1>Previews</h1>
+          <p>One build per open pull request, rebuilt on every push. A preview
+          disappears when its pull request closes.</p>
+          <ul>$links</ul>
+          <p><a href="/star-race/">← the live game</a></p>
+          HTML
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: _site
 
   deploy:
     needs: build

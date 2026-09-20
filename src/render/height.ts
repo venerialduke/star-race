@@ -54,6 +54,9 @@ export interface Crossing {
  * crossing itself. On a figure-eight loop, 30 at the crossing left only 20.4
  * where the roads pass a corridor apart, against the 19.4 a corridor needs —
  * passing, with a unit of margin, which is not margin. 38 leaves 25.8.
+ *
+ * This is the whole gap, not half of it: only the road going over moves, and it
+ * moves by all of this. See `heightOfRoad`.
  */
 const CLEARANCE = 38;
 
@@ -185,7 +188,19 @@ function taper(along: number, length: number): number {
   return Math.max(0, Math.min(1, along / TAPER, (length - along) / TAPER));
 }
 
-/** How high one road is at a distance along it. */
+/**
+ * How high one road is at a distance along it.
+ *
+ * **A bridge only ever goes up.** Raising one strand and dipping the other by
+ * half each was the first version and it was symmetric and wrong: the road a
+ * ship is actually on would sink into a hole, and a camera riding a fixed
+ * height above it ends up *below* the flat road ahead — looking at the
+ * underside of a surface with no thickness, which reads as the whole view
+ * mirroring. Keeping the under strand on the ground means the common case,
+ * driving under somebody else's bridge, never moves the road at all; what
+ * climbs is the road going over, and a camera on that one is above everything
+ * by definition.
+ */
 function heightOfRoad(
   crossings: readonly Crossing[],
   road: RoadId,
@@ -195,12 +210,7 @@ function heightOfRoad(
   let height = 0;
   const key = keyOf(road);
   for (const crossing of crossings) {
-    if (keyOf(crossing.over) === key) {
-      height += bump(along, crossing.overAt) * (CLEARANCE / 2);
-    }
-    if (keyOf(crossing.under) === key) {
-      height -= bump(along, crossing.underAt) * (CLEARANCE / 2);
-    }
+    if (keyOf(crossing.over) === key) height += bump(along, crossing.overAt) * CLEARANCE;
   }
   return height * taper(along, length);
 }

@@ -874,6 +874,74 @@ still the only things that touch it. It also means **the next tuning pass has to
 state which tracks it was measured on**, because the answer now depends on that
 more than it did.
 
+### The engine cap beat engine-spam, and replaced it with a monoculture
+
+One engine per ship, levels bought in copies, slots bought in progress.
+Seventy-two seasons a policy, harness fixed twice along the way (see below).
+
+| policy | before | after | | policy | before | after |
+| --- | --- | --- | --- | --- | --- | --- |
+| engines | 18 | **37** | | mines | 7 | 5 |
+| collector | 16 | **37** | | dark | 24 | **2** |
+| shields | 18 | 33 | | armed | 2 | 1 |
+| nav | 9 | 18 | | **speed** | 6 | **0** |
+| tractor | 5 | 9 | | **handling** | 37 | **0** |
+| **engine-spam** | 22 | **7** | | bot | 7 | 0 |
+
+**The degenerate build is finished.** Engine-spam fell from 22 to 7 of 72,
+survives 18 seasons in 72 against 63 for the leaders, and ends a season as a
+bare `balanced3` holding 281 credits it cannot spend. Four tuning passes failed
+at this and one rule did it, because the problem was never the price: a balanced
+engine trades nothing, and no price bites on a part whose only cost is credits.
+A limit is not a price.
+
+**And it created a new one.** `balanced3` now leads nine of the twelve builds,
+and every policy built on a specialist engine is at the bottom — `handling` and
+`speed` won 0 of 72 each. Measured directly, one maxed engine plus a maxed crew
+and shield, mean lap over four tracks and three corner plans:
+
+| the one engine | thrust | handling | mean lap |
+| --- | --- | --- | --- |
+| **balanced** | 1.30 | 1.22 | **1624** |
+| dark matter | 1.48 | 0.78 | 1803 (+11%) |
+| speed | 1.58 | 0.58 | 1967 (+21%) |
+| handling | 0.76 | 1.52 | 2343 (+44%) |
+
+The specialists were never balanced to be flown alone. They were balanced as
+*one half of a pair*: `handling3 + balanced3` reached thrust 1.28 and handling
+1.60, which is what made a grip build viable, and that ship is illegal now. A
+handling engine on its own leaves a ship at thrust 0.76 — **below the 0.78 it
+would have with no engine at all**.
+
+So this is the same root cause BACKLOG already named, wearing a new symptom. "A
+balanced engine costs only credits" used to mean *stack them*; now it means
+*fit the only one that does not cost you something*.
+
+**What would fix it is a tuning pass, not another rule**, and it is the owner's
+call because it changes what a specialist is for:
+
+- A specialist should not push the other stat **below base**. Trading less
+  growth is a trade; trading away the floor is a trap.
+- A specialist should **beat the balanced engine on its own stat by more than it
+  does**, so that a track whose demands are lopsided has an answer that a
+  generalist cannot match. Today balanced is within 0.10 of handling's own stat
+  while being 0.54 better on the other.
+
+**The harness lied twice more before this table was trustworthy**, which makes
+four times in total and is worth the space:
+
+- No policy called `buyProgress`, so when slots stopped arriving free, every
+  policy simply hoarded. Engine-spam ended a season on 473 credits.
+- Four policies name two engines in their want list. The buy succeeded, the fit
+  silently failed, the part sat on the shelf and the credits were gone — every
+  heat, forever, because the want was never met. `handling` finished on two
+  parts and 0 of 72, which looked exactly like a policy that had been beaten.
+
+Both are fixed. The pattern never varies: **a policy that has stopped spending,
+or is spending on nothing, reads exactly like a policy that is simply worse.**
+Any rule change that touches what a garage can do needs the harness read
+alongside it, not after it.
+
 **And the S7 bar is not met.** "Two builds that spend the same credits
 differently both win seasons, and neither is buy engines": the top five are
 engine-spam, handling, dark, nav and engines. Every one of them is led by an

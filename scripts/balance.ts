@@ -18,7 +18,17 @@
 //   npm run balance -- --seasons 60  more of them
 //   npm run balance -- --only armed,engines
 
-import { buy, buyProgress, fit, slotsFree, upgrade, type Garage } from '../src/sim/garage';
+import {
+  buy,
+  buyProgress,
+  buyResearch,
+  fit,
+  researchNeeded,
+  researched,
+  slotsFree,
+  upgrade,
+  type Garage,
+} from '../src/sim/garage';
 import { PROGRESS_PRICE } from '../src/sim/tuning';
 import {
   applyCut,
@@ -36,7 +46,6 @@ import {
   type Season,
   type Shopper,
 } from '../src/sim/season';
-import { upgradeCost } from '../src/sim/ship';
 import type { Track } from '../src/sim/track';
 import { PHASES } from '../src/sim/tuning';
 
@@ -81,14 +90,29 @@ function shopToward(garage: Garage, policy: Policy): Garage {
       if (next !== before) next = fit(next, next.shelf.length - 1);
       continue;
     }
+    // Deepening is copies now, not credits: a level is bought by breaking
+    // spares of the same component down, two for the second and four for the
+    // third. A policy that kept paying at the counter would simply never reach
+    // level 2, so this is not a harness embellishment — it is the only route.
     for (let step = 0; step < 3; step += 1) {
       const item = next.fitted[at];
       if (item === undefined || item.level >= want.level) break;
-      const cost = upgradeCost(item);
-      if (cost === undefined || cost > next.credits) break;
-      const before = next;
-      next = upgrade(next, at);
-      if (next === before) break;
+      const need = researchNeeded(item.level);
+      if (need === undefined) break;
+      let bought = next;
+      for (let n = 0; n < need; n += 1) {
+        if (researched(bought, want.id, item.level)) break;
+        const before = bought;
+        bought = buyResearch(bought, want.id);
+        if (bought === before) break;
+      }
+      const up = upgrade(bought, at);
+      // Could not afford the copies: keep the research banked and stop here.
+      if (up === bought) {
+        next = bought;
+        break;
+      }
+      next = up;
     }
   }
 
@@ -97,7 +121,15 @@ function shopToward(garage: Garage, policy: Policy): Garage {
       const before = next;
       next = buy(next, policy.filler);
       if (next === before) break;
-      next = fit(next, next.shelf.length - 1);
+      const fitted = fit(next, next.shelf.length - 1);
+      // The ship carries one engine, so a filler engine now simply will not go
+      // on. Buying more of them would be burning credits into a shelf nobody
+      // can use, which is a measurement of nothing.
+      if (fitted === next) {
+        next = before;
+        break;
+      }
+      next = fitted;
     }
   }
 

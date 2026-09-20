@@ -10,7 +10,9 @@ import {
   remove,
   reroll,
   rerollCost,
+  researchNeeded,
   researched,
+  roomFor,
   sell,
   sellValue,
   slotCost,
@@ -169,12 +171,12 @@ export function mountBoard(
                 const cost = upgradeCost(item);
                 const next = { ...item, level: item.level + 1 };
                 const grows = cost === undefined ? 0 : slotsOf(next) - slotsOf(item);
-                // A level banked by breaking copies down is already paid for.
-                const paidFor = researched(garage, item.componentId);
-                const canUpgrade =
-                  cost !== undefined &&
-                  (paidFor || cost <= garage.credits) &&
-                  grows <= free;
+                // Credits cannot buy a level. Copies can: two for the second,
+                // four for the third, broken down.
+                const need = researchNeeded(item.level);
+                const held = garage.research[item.componentId] ?? 0;
+                const paidFor = researched(garage, item.componentId, item.level);
+                const canUpgrade = cost !== undefined && paidFor && grows <= free;
                 // What this part is worth *here*: the build without it, against
                 // the build with it. A duplicate crew reads as nothing, which is
                 // the whole point.
@@ -188,7 +190,7 @@ export function mountBoard(
                     <button type="button" data-do="upgrade" data-index="${i}" ${canUpgrade ? '' : 'disabled'}>${
                       cost === undefined
                         ? 'Max'
-                        : `L${item.level + 1} · ${paidFor ? 'researched' : `${cost}c`}${grows > 0 ? ' +slot' : ''}`
+                        : `L${item.level + 1} · ${held}/${need ?? 0} researched${grows > 0 ? ' +slot' : ''}`
                     }</button>
                     <button type="button" data-do="remove" data-index="${i}">Off</button>
                   </span>
@@ -206,7 +208,15 @@ export function mountBoard(
                     differenceOf(garage.fitted, [item]).text || 'would add nothing'
                   }</em></span>
                   <span class="actions">
-                    <button type="button" data-do="fit" data-index="${i}" ${slotsOf(item) > free ? 'disabled' : ''}>Fit</button>
+                    <button type="button" data-do="fit" data-index="${i}" ${
+                      slotsOf(item) > free || roomFor(garage, item.componentId) <= 0
+                        ? 'disabled'
+                        : ''
+                    } title="${
+                      roomFor(garage, item.componentId) <= 0
+                        ? 'One of these is all a ship carries'
+                        : 'Put it on the ship'
+                    }">Fit</button>
                     <button type="button" data-do="research" data-index="${i}" title="Break it down: a level of this component, instead of credits back">Research</button>
                     <button type="button" data-do="sell" data-index="${i}">Sell ${sellValue(item)}c</button>
                   </span>
@@ -229,13 +239,16 @@ export function mountBoard(
                   { uid: 'preview', componentId: id, level: 1 },
                 ]);
                 const owned = garage.fitted.some((f) => f.componentId === id);
+                const noRoom = roomFor(garage, id) <= 0;
                 return `<div class="part${would.nothing ? ' idle' : ''}">
               <span class="t"><span>${component.name}</span><em>${
                 would.nothing
                   ? owned
-                    ? 'adds nothing as it stands — buy it to break down for research'
+                    ? 'already aboard — buy it to break down toward its next level'
                     : 'adds nothing to your build as it stands'
-                  : `<b class="gain">${would.text}</b> · ${first.note}`
+                  : noRoom
+                    ? `no room for another — break it down toward a level instead`
+                    : `<b class="gain">${would.text}</b> · ${first.note}`
               }</em></span>
               <span class="actions">
                 <button type="button" data-do="buy" data-index="${i}" ${first.cost > garage.credits ? 'disabled' : ''}>Buy ${first.cost}c</button>

@@ -14,7 +14,8 @@ import {
   REROLL_COST,
   REROLL_STEP,
   RESEARCH_PER_COPY,
-  RESEARCH_PER_LEVEL,
+  RESEARCH_FOR_LEVEL,
+  FIT_LIMIT,
   SELL_RETURN,
   SHOP_OFFERS,
   SLOTS_AT_START,
@@ -82,10 +83,33 @@ export function buy(garage: Garage, componentId: string): Garage {
   };
 }
 
-/** Fit something off the shelf, if the slots are there for it. */
+/**
+ * How many of this component's category are already on the ship, and how many
+ * are allowed. A category nobody limited returns Infinity.
+ */
+export function roomFor(garage: Garage, componentId: string): number {
+  const category = componentById(componentId)?.category;
+  if (category === undefined) return 0;
+  const limit = FIT_LIMIT[category] ?? Infinity;
+  const already = garage.fitted.filter(
+    (item) => componentById(item.componentId)?.category === category,
+  ).length;
+  return limit - already;
+}
+
+/**
+ * Fit something off the shelf, if the slots are there for it and the ship is
+ * allowed another of its kind.
+ *
+ * **A ship carries one engine.** That is the rule the slot budget was being
+ * asked to enforce and never could: four tuning passes tried to price a second
+ * engine out of existence, and the answer was that no price works on a part
+ * whose only cost is credits. A limit is not a price.
+ */
 export function fit(garage: Garage, shelfIndex: number): Garage {
   const item = garage.shelf[shelfIndex];
   if (item === undefined || slotsOf(item) > slotsFree(garage)) return garage;
+  if (roomFor(garage, item.componentId) <= 0) return garage;
   return {
     ...garage,
     fitted: [...garage.fitted, item],
@@ -126,31 +150,43 @@ export function sell(garage: Garage, shelfIndex: number): Garage {
 }
 
 /**
+ * What it costs to take this component to its next level, in copies broken
+ * down. Undefined when there is no next level.
+ */
+export function researchNeeded(level: number): number | undefined {
+  return RESEARCH_FOR_LEVEL[level - 1];
+}
+
+/** Whether this component's next level is paid for in research already. */
+export function researched(garage: Garage, componentId: string, level: number): boolean {
+  const need = researchNeeded(level);
+  return need !== undefined && (garage.research[componentId] ?? 0) >= need;
+}
+
+/**
  * Upgrade a fitted component. A level that grows has to have the slot free
  * for it, which is the trade the catalogue asks for: deeper, or wider.
  *
- * **Research is spent before credits.** A level banked by breaking copies down
- * is already paid for, so it costs nothing at the counter. Nothing has to opt
- * in to that: a rival, which never breaks anything down, has no research and
- * therefore pays credits exactly as it always has.
+ * **Credits cannot buy a level.** The only way up is more of the same
+ * component, broken down — two copies for the second level, four for the
+ * third. Paying for depth in money made deep parts a matter of income; paying
+ * for it in copies makes them a matter of what the shop has been offering, and
+ * of being willing to spend a window on something you already own.
  */
 export function upgrade(garage: Garage, fittedIndex: number): Garage {
   const item = garage.fitted[fittedIndex];
   if (item === undefined) return garage;
-  const cost = upgradeCost(item);
-  if (cost === undefined) return garage;
-  const free = researched(garage, item.componentId);
-  if (!free && cost > garage.credits) return garage;
+  // No next level to reach.
+  if (upgradeCost(item) === undefined) return garage;
+  const need = researchNeeded(item.level);
+  const had = garage.research[item.componentId] ?? 0;
+  if (need === undefined || had < need) return garage;
   const next: Fitted = { ...item, level: item.level + 1 };
   const growth = slotsOf(next) - slotsOf(item);
   if (growth > slotsFree(garage)) return garage;
-  const had = garage.research[item.componentId] ?? 0;
   return {
     ...garage,
-    credits: free ? garage.credits : garage.credits - cost,
-    research: free
-      ? { ...garage.research, [item.componentId]: had - RESEARCH_PER_LEVEL }
-      : garage.research,
+    research: { ...garage.research, [item.componentId]: had - need },
     fitted: garage.fitted.map((f, i) => (i === fittedIndex ? next : f)),
   };
 }
@@ -266,7 +302,15 @@ export function breakDown(garage: Garage, shelfIndex: number): Garage {
   };
 }
 
-/** Whether this component's next level is already paid for in research. */
-export function researched(garage: Garage, componentId: string): boolean {
-  return (garage.research[componentId] ?? 0) >= RESEARCH_PER_LEVEL;
+/**
+ * Buy a copy and break it straight down: research, in one move.
+ *
+ * What the rivals and the balance policies use, because a bot has no hands and
+ * the two-step version is a thing a player does with two clicks. It is the same
+ * two operations in the same order.
+ */
+export function buyResearch(garage: Garage, componentId: string): Garage {
+  const bought = buy(garage, componentId);
+  if (bought === garage) return garage;
+  return breakDown(bought, bought.shelf.length - 1);
 }

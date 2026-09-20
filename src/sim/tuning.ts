@@ -245,9 +245,28 @@ export const SHOP_OFFERS = 4;
 export const REROLL_COST = 12;
 export const REROLL_STEP = 8;
 
-/** Research from breaking one component down, and what one level costs. */
+/** Research from breaking one component down. */
 export const RESEARCH_PER_COPY = 1;
-export const RESEARCH_PER_LEVEL = 1;
+
+/**
+ * Copies to break down for each level: two for the second, four for the third.
+ *
+ * Six copies for a maxed part, plus the one being flown. Credits cannot buy a
+ * level at all any more — the only route up is more of the same component — so
+ * this ladder is the whole cost of depth, and it is meant to be felt.
+ */
+export const RESEARCH_FOR_LEVEL: readonly number[] = [2, 4];
+
+/**
+ * How many of a category may be fitted at once. Anything unlisted is unlimited.
+ *
+ * **One engine.** A ship with two engines was the whole of the degenerate
+ * build, and four tuning passes failed to price it out of existence — because
+ * the problem was never the price. Shields stay unlimited on purpose: the
+ * framework is explicit that two shields is a build rather than a mistake, and
+ * a collector's storage scales with the ship's total shielding.
+ */
+export const FIT_LIMIT: Readonly<Record<string, number>> = { engine: 1 };
 
 /** What selling a component returns, as a share of everything paid for it. */
 export const SELL_RETURN = 0.6;

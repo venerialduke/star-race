@@ -7,6 +7,7 @@ import {
   breakDown,
   buy,
   buyOffer,
+  buyResearch,
   buyProgress,
   drawOffer,
   fit,
@@ -15,7 +16,9 @@ import {
   remove,
   reroll,
   rerollCost,
+  researchNeeded,
   researched,
+  roomFor,
   sell,
   sellValue,
   slotCost,
@@ -24,7 +27,7 @@ import {
   upgrade,
   type Garage,
 } from '../../src/sim/garage';
-import { resolveBuild, upgradeCost } from '../../src/sim/ship';
+import { resolveBuild } from '../../src/sim/ship';
 import {
   BASE_HANDLING,
   BASE_THRUST,
@@ -88,31 +91,43 @@ describe('the garage', () => {
   });
 
   it('never lets a build outgrow its slots', () => {
+    // Shields rather than engines, because a ship carries one engine now and
+    // this is meant to be testing the slot budget, not that limit.
     let garage: Garage = { ...newGarage(), credits: 1000 };
-    garage = stocked(garage, 'balanced-engine', 6);
+    garage = stocked(garage, 'general-shields', 6);
     for (let i = 0; i < 6; i += 1) garage = fit(garage, 0);
     expect(slotsUsed(garage)).toBeLessThanOrEqual(garage.slots);
     expect(slotsFree(garage)).toBe(0);
   });
 
   it('upgrades a fitted component, and a growing level needs the slot free', () => {
-    let garage: Garage = { ...newGarage(), credits: 1000 };
+    // Levels are paid for in copies now, so the ladder is bought before it is
+    // climbed: two for the second, four for the third.
+    const copies = (garage: Garage, id: string, n: number): Garage => {
+      let next = garage;
+      for (let i = 0; i < n; i += 1) next = buyResearch(next, id);
+      return next;
+    };
+
+    let garage: Garage = { ...newGarage(), credits: 2000 };
     garage = fitted(garage, 'handling-engine');
-    garage = upgrade(garage, 0);
+    garage = upgrade(copies(garage, 'handling-engine', 2), 0);
     expect(garage.fitted[0]?.level).toBe(2);
     expect(slotsUsed(garage)).toBe(1);
 
     // Level 3 of this engine takes a second slot: it fits here, with 3 free.
-    garage = upgrade(garage, 0);
+    garage = upgrade(copies(garage, 'handling-engine', 4), 0);
     expect(garage.fitted[0]?.level).toBe(3);
     expect(slotsUsed(garage)).toBe(2);
 
-    // With every other slot filled, the same upgrade is refused.
-    let tight: Garage = { ...newGarage(), credits: 1000, slots: 2 };
+    // With every other slot filled, the same upgrade is refused — the research
+    // is banked and spent on nothing, which is the point of the check.
+    let tight: Garage = { ...newGarage(), credits: 2000, slots: 2 };
     tight = fitted(tight, 'handling-engine');
-    tight = fitted(tight, 'speed-engine');
-    tight = upgrade(tight, 0);
-    tight = upgrade(tight, 0);
+    tight = fitted(tight, 'general-shields');
+    tight = upgrade(copies(tight, 'handling-engine', 2), 0);
+    expect(tight.fitted[0]?.level).toBe(2);
+    tight = upgrade(copies(tight, 'handling-engine', 4), 0);
     expect(tight.fitted[0]?.level).toBe(2);
   });
 
@@ -226,55 +241,56 @@ describe('the shop is a window, not a catalogue', () => {
 });
 
 describe('breaking a component down for research', () => {
-  it('turns a spare into a level of the thing you already fly', () => {
-    let garage = { ...newGarage(), credits: 500 };
-    garage = fitted(garage, 'speed-engine');
-    garage = buy(garage, 'speed-engine');
-    expect(researched(garage, 'speed-engine')).toBe(false);
+  const spares = (garage: Garage, id: string, n: number): Garage => {
+    let next = garage;
+    for (let i = 0; i < n; i += 1) next = buyResearch(next, id);
+    return next;
+  };
 
-    garage = breakDown(garage, garage.shelf.length - 1);
-    expect(garage.shelf).toHaveLength(0);
-    expect(researched(garage, 'speed-engine')).toBe(true);
-
-    const before = garage.credits;
-    const up = upgrade(garage, 0);
-    expect(up.fitted[0]?.level).toBe(2);
-    // Paid for already, so the counter takes nothing.
-    expect(up.credits).toBe(before);
-    expect(researched(up, 'speed-engine')).toBe(false);
+  it('takes two copies for the second level and four for the third', () => {
+    expect(researchNeeded(1)).toBe(2);
+    expect(researchNeeded(2)).toBe(4);
+    // There is no fourth level to reach.
+    expect(researchNeeded(3)).toBeUndefined();
   });
 
-  it('is worth more than selling the same spare, which is the point', () => {
-    let garage = { ...newGarage(), credits: 500 };
-    garage = fitted(garage, 'speed-engine');
-    garage = buy(garage, 'speed-engine');
-    const spare = garage.shelf[garage.shelf.length - 1]!;
-    const backIfSold = sellValue(spare);
-    const savedIfBroken = upgradeCost(garage.fitted[0]!) ?? 0;
-    expect(savedIfBroken).toBeGreaterThan(backIfSold);
+  it('will not upgrade on one copy, and will on two', () => {
+    let garage = fitted({ ...newGarage(), credits: 2000 }, 'speed-engine');
+    garage = spares(garage, 'speed-engine', 1);
+    expect(upgrade(garage, 0)).toBe(garage);
+
+    garage = spares(garage, 'speed-engine', 1);
+    const up = upgrade(garage, 0);
+    expect(up.fitted[0]?.level).toBe(2);
+    // Spent, not kept.
+    expect(up.research['speed-engine']).toBe(0);
+  });
+
+  it('costs six copies in all to reach the top', () => {
+    let garage = fitted({ ...newGarage(), credits: 2000 }, 'speed-engine');
+    garage = upgrade(spares(garage, 'speed-engine', 2), 0);
+    expect(garage.fitted[0]?.level).toBe(2);
+    garage = upgrade(spares(garage, 'speed-engine', 3), 0);
+    // Three is not four.
+    expect(garage.fitted[0]?.level).toBe(2);
+    garage = upgrade(spares(garage, 'speed-engine', 1), 0);
+    expect(garage.fitted[0]?.level).toBe(3);
+  });
+
+  it('never lets credits buy a level, however many there are', () => {
+    // The rule this replaced. A rich ship with no copies goes nowhere.
+    const rich = fitted({ ...newGarage(), credits: 100000 }, 'speed-engine');
+    const after = upgrade(rich, 0);
+    expect(after).toBe(rich);
+    expect(after.credits).toBe(rich.credits);
   });
 
   it('researches the component it was, not whatever is being upgraded', () => {
-    let garage = { ...newGarage(), credits: 500 };
-    garage = fitted(garage, 'speed-engine');
-    garage = buy(garage, 'handling-engine');
-    garage = breakDown(garage, garage.shelf.length - 1);
-    expect(researched(garage, 'handling-engine')).toBe(true);
-    expect(researched(garage, 'speed-engine')).toBe(false);
-    // So the speed engine still costs credits.
-    const before = garage.credits;
-    expect(upgrade(garage, 0).credits).toBeLessThan(before);
-  });
-
-  it('leaves a rival paying credits, because it never breaks anything down', () => {
-    // The rivals still shop the whole catalogue and never research. Nothing
-    // about this change may reach them, or the balance harness stops comparing
-    // like with like — which it already only just does.
-    let bot = { ...newGarage(), credits: 500 };
-    bot = fitted(bot, 'speed-engine');
-    const cost = upgradeCost(bot.fitted[0]!) ?? 0;
-    expect(upgrade(bot, 0).credits).toBe(bot.credits - cost);
-    expect(bot.research).toEqual({});
+    let garage = fitted({ ...newGarage(), credits: 2000 }, 'speed-engine');
+    garage = spares(garage, 'handling-engine', 2);
+    expect(researched(garage, 'handling-engine', 1)).toBe(true);
+    expect(researched(garage, 'speed-engine', 1)).toBe(false);
+    expect(upgrade(garage, 0)).toBe(garage);
   });
 
   it('ignores a shelf index that is not there', () => {
@@ -282,31 +298,62 @@ describe('breaking a component down for research', () => {
     expect(breakDown(garage, 0)).toBe(garage);
     expect(breakDown(garage, -1)).toBe(garage);
   });
+
+  it('buys and breaks down in one move, which is what a rival does', () => {
+    const before = { ...newGarage(), credits: 500 };
+    const after = buyResearch(before, 'speed-engine');
+    expect(after.shelf).toHaveLength(0);
+    expect(after.research['speed-engine']).toBe(1);
+    expect(after.credits).toBeLessThan(before.credits);
+    // And nothing happens on an empty purse.
+    const broke = { ...newGarage(), credits: 0 };
+    expect(buyResearch(broke, 'speed-engine')).toBe(broke);
+  });
 });
 
-describe('a build', () => {
-  it('is the sum of what is fitted, and stacks', () => {
-    const one = fitted(newGarage(), 'speed-engine');
-    const two = fitted(one, 'speed-engine');
-    expect(resolveBuild(one.fitted).thrust).toBeGreaterThan(BASE_THRUST);
-    expect(resolveBuild(two.fitted).thrust).toBeGreaterThan(
-      resolveBuild(one.fitted).thrust,
-    );
+describe('a ship carries one engine', () => {
+  it('refuses the second, whatever the slots say', () => {
+    // The rule the slot budget was being asked to enforce and never could.
+    let garage = fitted({ ...newGarage(), credits: 2000, slots: 20 }, 'speed-engine');
+    garage = buy(garage, 'balanced-engine');
+    expect(slotsFree(garage)).toBeGreaterThan(0);
+    const after = fit(garage, garage.shelf.length - 1);
+    expect(after).toBe(garage);
+    expect(after.fitted).toHaveLength(1);
   });
 
-  it('trades: the speed engine costs handling, the handling engine costs speed', () => {
-    const fast = resolveBuild(fitted(newGarage(), 'speed-engine').fitted);
-    const nimble = resolveBuild(fitted(newGarage(), 'handling-engine').fitted);
-    expect(fast.thrust).toBeGreaterThan(nimble.thrust);
-    expect(nimble.handling).toBeGreaterThan(fast.handling);
-    expect(fast.handling).toBeLessThan(BASE_HANDLING);
+  it('refuses another of the very same engine too', () => {
+    let garage = fitted({ ...newGarage(), credits: 2000, slots: 20 }, 'speed-engine');
+    garage = buy(garage, 'speed-engine');
+    expect(fit(garage, garage.shelf.length - 1)).toBe(garage);
   });
 
-  it('gets better as it is upgraded', () => {
-    let garage = { ...newGarage(), credits: 1000 };
-    garage = fitted(garage, 'speed-engine');
-    const level1 = resolveBuild(garage.fitted).thrust;
-    garage = upgrade(garage, 0);
-    expect(resolveBuild(garage.fitted).thrust).toBeGreaterThan(level1);
+  it('lets the engine come off and a different one go on', () => {
+    // A limit, not a lock. Swapping the engine is exactly the decision it
+    // exists to make interesting.
+    let garage = fitted({ ...newGarage(), credits: 2000, slots: 20 }, 'speed-engine');
+    garage = buy(garage, 'handling-engine');
+    garage = remove(garage, 0);
+    const swapped = fit(garage, garage.shelf.findIndex((f) => f.componentId === 'handling-engine'));
+    expect(swapped.fitted).toHaveLength(1);
+    expect(swapped.fitted[0]?.componentId).toBe('handling-engine');
+  });
+
+  it('leaves shields unlimited, because two shields is a build', () => {
+    // The framework is explicit about this, and a collector's storage scales
+    // with the ship's total shielding. Only engines are capped.
+    let garage = { ...newGarage(), credits: 2000, slots: 20 };
+    garage = fitted(garage, 'general-shields');
+    garage = fitted(garage, 'collector-shield');
+    expect(garage.fitted).toHaveLength(2);
+    expect(roomFor(garage, 'general-shields')).toBe(Infinity);
+    expect(roomFor(garage, 'speed-engine')).toBe(1);
+  });
+
+  it('says there is no room before a fit is attempted, so the shop can say so', () => {
+    const garage = fitted({ ...newGarage(), credits: 2000, slots: 20 }, 'speed-engine');
+    expect(roomFor(garage, 'balanced-engine')).toBe(0);
+    expect(roomFor(garage, 'crew-androids')).toBe(Infinity);
+    expect(roomFor(garage, 'no-such-part')).toBe(0);
   });
 });

@@ -1055,7 +1055,8 @@ cheap engines put both thrust and handling on their caps. The whole shop
 collapsed into one move, and every question about *which* part was drowned out
 by *how many*.
 
-Two things fix it:
+Three things fix it, and the third is the one that worked — see "A ship carries
+one engine" below. The two that came first:
 
 - **Every level now adds more than the level below it**, at a cost that rises
   more slowly than the effect. A maxed engine beats the copies the same credits
@@ -1087,20 +1088,48 @@ is the old catalogue with extra clicking.
 The draw is **with replacement**, so the same part can appear twice in one
 window. That is not a wasted offer, because of the next rule.
 
-### An upgrade can be researched instead of bought
+### A level is bought in copies, and only in copies
 
-A component on the shelf can be **broken down for research** toward its own next
-level. `RESEARCH_PER_COPY` per copy, `RESEARCH_PER_LEVEL` for a level, and an
-upgrade spends research before it spends credits.
+**Credits cannot buy an upgrade.** The only route to a deeper part is more of
+the same component, bought and **broken down for research**: `RESEARCH_FOR_LEVEL`
+is two copies for the second level and four for the third, so a maxed part is
+six copies plus the one being flown.
 
-This is what a duplicate is *for*. Selling a spare back returns `SELL_RETURN` of
-what it cost; breaking it down returns nothing spendable and buys a whole level
-of the thing you already fly, which is the better deal whenever you have
-somewhere to put it. It also means a window that offers you the same engine
-twice is a good window rather than a wasted one.
+Paying for depth in money made deep parts a question of income, and income is
+the thing every build has. Paying for it in copies makes them a question of what
+the shop has been offering and of whether you are willing to spend a window on
+something you already own — which is a decision, and the other was a threshold.
 
-Nothing had to opt in to this. A rival never breaks anything down, so it holds
-no research and pays credits exactly as it always has.
+It is also what a duplicate is *for*. Selling a spare back returns `SELL_RETURN`
+of its cost; breaking it down is the only way anything gets better. A window
+that offers you the same engine twice is a good window.
+
+**Rivals climb the same ladder.** They have to: with the credit route gone, a
+bot that kept paying at the counter would never see level 2 again. So a rival
+that wants a deeper part buys copies of it and breaks them down, exactly as a
+player does — `buyResearch` is the two clicks in one call, and nothing about it
+is a special case for bots.
+
+### A ship carries one engine
+
+`FIT_LIMIT` caps the engine category at one. A second engine cannot be fitted at
+any price, in any slot, at any level.
+
+This is the rule four tuning passes were trying to write as a number. The
+degenerate build was one maxed engine and eleven cheap ones, and every attempt
+to price it out failed for the same reason: a balanced engine trades nothing —
+not thrust, not handling, not a slot it could have spent better — so its only
+cost is credits, and credits are what a season pays you. `STACK_FALLOFF` made
+the twelfth engine nearly worthless and the build still won, because the first
+few were all it needed to put both stats near their caps. **A limit is not a
+price, and this wanted a limit.**
+
+Shields stay uncapped on purpose. The framework is explicit that two shields is
+a build rather than a mistake, and a collector's storage scales with the ship's
+*total* shielding — so the falloff, not a limit, is what governs them.
+
+The engine is still a real choice, and more of one now: swapping it is the
+decision the cap exists to make interesting.
 
 ### A slot has a price
 

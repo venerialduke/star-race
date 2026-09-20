@@ -87,7 +87,16 @@ function shopToward(garage: Garage, policy: Policy): Garage {
     if (at < 0) {
       const before = next;
       next = buy(next, want.id);
-      if (next !== before) next = fit(next, next.shelf.length - 1);
+      if (next === before) continue;
+      const fitted = fit(next, next.shelf.length - 1);
+      // Bought but would not go on — a second engine, now that a ship carries
+      // one. Put the credits back and move down the list. Leaving it on the
+      // shelf meant buying the same unfittable part again every heat, which
+      // emptied a policy's purse into nothing and read as the policy being
+      // bad: `handling` finished a season on two parts and won 0 of 72.
+      // Fourth time this file has turned a change it did not know about into a
+      // table that looked like a result.
+      next = fitted === next ? before : fitted;
       continue;
     }
     // Deepening is copies now, not credits: a level is bought by breaking

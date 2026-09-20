@@ -222,3 +222,26 @@ When it gets one, that assumption is the work, not the geometry.
    the builder's list of roads through a sector has to be counted the way the
    race indexes them or a fixture lands on the wrong road.
 6. **S4.4** — the ring grows between phases.
+
+   Groundwork done ahead of it, because the builder needed the same thing. A
+   sector can be put in before or after any other, and dragged to a new place in
+   the ring; **all three edits go through one `carry`**, which is the only code
+   that knows how a shuffle renumbers the indices a split and a fixture hang off.
+   Three separate hand-written versions of that produced the same bug three
+   times, so there is now one, and `tests/builder/unbreakable.test.ts` fuzzes it
+   with seeded sequences of two thousand edits rather than trusting it.
+
+   That fuzzer immediately found two ways to make an unraceable track, both of
+   which an unattended mid-season edit could have made: a ring of empty sectors
+   reports itself closed and yields a lap of length zero, and a single empty
+   sector puts two checkpoints in the same place so no ship is ever inside it.
+   Both are refused at assembly now, and the builder says which sector is at
+   fault rather than claiming a closed circuit the assembler will reject.
+
+7. **Verticality** — **done**. Crossings are found by walking the line and given
+   a bridge; see `DESIGN.md`. It lives in `src/render/height.ts` so that the
+   ESLint boundary makes "this cannot affect the race" structural rather than a
+   promise. What it does *not* do is fix a class of bug, because that class does
+   not exist: the simulation holds a ship as a canonical distance and a lateral
+   offset and never as a point on a plane, so two roads overlapping in the plan
+   view were never able to interfere.

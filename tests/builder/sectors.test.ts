@@ -158,15 +158,26 @@ describe('removing a sector', () => {
     // dropping sector 1 slid every later split one sector up the track without
     // saying so. This is that bug.
     const draft = kestrel();
-    draft.splits = [split(4, 'last')];
-    const wasBeside = draft.ring[4];
+    const last = draft.ring.length - 1;
+    draft.splits = [split(last, 'last')];
+    const wasBeside = draft.ring[last];
 
     dropSector(draft, 1);
 
-    expect(draft.splits[0]?.from).toBe(3);
-    // The split still runs beside the same stretch of road, which is now at 3.
-    expect(draft.ring[3]?.pieces).toEqual(wasBeside?.pieces);
+    expect(draft.splits[0]?.from).toBe(last - 1);
+    // The split still runs beside the same stretch of road, one index lower.
+    expect(draft.ring[last - 1]?.pieces).toEqual(wasBeside?.pieces);
     expect(draft.ring).toHaveLength(KESTREL_LOOP.sectors.length - 1);
+  });
+
+  it('drops a split that pointed at no sector at all', () => {
+    // Out-of-range input is invalid data, not something to quietly repair. The
+    // first version shifted it into range, which turned a broken split into a
+    // plausible one attached to the wrong road.
+    const draft = kestrel();
+    draft.splits = [split(draft.ring.length + 2, 'nowhere')];
+    dropSector(draft, 0);
+    expect(draft.splits).toEqual([]);
   });
 
   it('ignores an index that is not a sector', () => {

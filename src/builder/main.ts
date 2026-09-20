@@ -31,8 +31,10 @@ import {
   closeRing,
   closure,
   draftPiece,
+  faultOf,
   dropSector,
   insertSector,
+  moveSector,
   newDraft,
   newFixture,
   piecesFrom,
@@ -133,16 +135,22 @@ function properties(scope: string, held: Properties | undefined): string {
 function stateHtml(): string {
   const state = closure(draft);
   const track = trackOf(draft);
+  const fault = faultOf(draft);
   const total = draft.ring.reduce((n, s) => n + spanOf(piecesOfSector(s)), 0);
-  return `<div id="state" class="state ${state.closed ? 'good' : 'open'}">
+  // Three things to say, and only one of them at a time: something is wrong
+  // with the ring, or it does not come home, or it is a track. "Closed" used to
+  // be shown for a ring `assemblePlan` refuses, which is the panel disagreeing
+  // with the thing it is a panel for.
+  const good = state.closed && fault === undefined && track !== undefined;
+  return `<div id="state" class="state ${good ? 'good' : 'open'}">
     ${
-      state.closed
-        ? `Closed circuit · ${total.toFixed(0)} units · ${draft.ring.length} sectors${
-            track === undefined ? '' : ` · par ${seconds(draft.par)}`
-          }`
-        : `Open · ${state.gap.toFixed(0)} units and ${((state.turn * 180) / Math.PI).toFixed(0)}° from the line`
+      fault !== undefined
+        ? esc(fault)
+        : state.closed
+          ? `Closed circuit · ${total.toFixed(0)} units · ${draft.ring.length} sectors · par ${seconds(draft.par)}`
+          : `Open · ${state.gap.toFixed(0)} units and ${((state.turn * 180) / Math.PI).toFixed(0)}° from the line`
     }
-    ${state.closed ? '' : '<button type="button" id="close">Close the loop</button>'}
+    ${state.closed || fault !== undefined ? '' : '<button type="button" id="close">Close the loop</button>'}
   </div>`;
 }
 
@@ -155,12 +163,14 @@ function render(): void {
   const sectorRows = draft.ring
     .map((sector, i) => {
       const span = spanOf(piecesOfSector(sector));
-      return `<div class="row${i === selected ? ' on' : ''}" data-pick="${i}">
+      return `<div class="row${i === selected ? ' on' : ''}" data-pick="${i}"
+        draggable="true" data-row="${i}">
+        <span class="grip" title="Drag to move this sector">⠿</span>
         <span class="n">${i + 1}</span>
         <span class="t">${esc(sector.name)}<em>${sector.pieces.length} pieces · ${span.toFixed(0)} units · ${reads(sector.properties)}</em></span>
         <span class="acts">
-          <button type="button" data-insert="${i}"
-            title="Put a new sector here, pushing this one and everything after it down">+</button>
+          <button type="button" data-insert="${i}" title="New sector before this one">+↑</button>
+          <button type="button" data-insert="${i + 1}" title="New sector after this one">+↓</button>
           <button type="button" data-drop="${i}" title="Remove this sector">×</button>
         </span>
       </div>`;
@@ -260,8 +270,10 @@ function render(): void {
     <h3>Sectors</h3>
     <div class="rows">${sectorRows}</div>
     <button type="button" id="add-sector" class="wide">Add a sector at the end</button>
-    <p class="hint">+ puts a new sector <em>before</em> that row. The ring is a loop,
-      so the end of it is the road just before the start line.</p>
+    <p class="hint"><em>+↑</em> and <em>+↓</em> put a new sector before or after that
+      row; drag a row by its handle to move it. The ring is a loop, so the end of
+      it is the road just before the start line — and reordering a closed ring
+      usually opens it, which the line above will say.</p>
 
     <h3>Sector ${selected + 1}: the whole stretch</h3>
     ${here === undefined ? '<p class="empty">No sector selected.</p>' : properties('sector', here.properties)}
@@ -499,6 +511,53 @@ panel.addEventListener('click', (event) => {
   if (d['pick'] !== undefined) {
     selected = Number(d['pick']);
     render();
+  }
+});
+
+// Dragging a row to move it.
+//
+// The whole ring is one list and a sector is one item in it, so this is an
+// ordinary list reorder — what makes it worth care is that a split and a
+// fixture both point at a sector by index, and `moveSector` is the only thing
+// that knows how those indices shuffle.
+let dragging: number | undefined;
+
+panel.addEventListener('dragstart', (event) => {
+  const row = (event.target as HTMLElement).closest('[data-row]') as HTMLElement | null;
+  if (row === null) return;
+  dragging = Number(row.dataset['row']);
+  row.classList.add('lifted');
+  event.dataTransfer?.setData('text/plain', String(dragging));
+  if (event.dataTransfer !== null) event.dataTransfer.effectAllowed = 'move';
+});
+
+panel.addEventListener('dragover', (event) => {
+  if (dragging === undefined) return;
+  const row = (event.target as HTMLElement).closest('[data-row]') as HTMLElement | null;
+  if (row === null) return;
+  // Without this the browser refuses the drop, which looks like the drag simply
+  // not working.
+  event.preventDefault();
+  if (event.dataTransfer !== null) event.dataTransfer.dropEffect = 'move';
+  for (const other of panel.querySelectorAll('.over')) other.classList.remove('over');
+  row.classList.add('over');
+});
+
+panel.addEventListener('drop', (event) => {
+  if (dragging === undefined) return;
+  const row = (event.target as HTMLElement).closest('[data-row]') as HTMLElement | null;
+  event.preventDefault();
+  if (row !== null) selected = moveSector(draft, dragging, Number(row.dataset['row']));
+  dragging = undefined;
+  render();
+});
+
+panel.addEventListener('dragend', () => {
+  // A drag that ended anywhere but on a row changes nothing, but the row it
+  // started on is still marked as lifted.
+  dragging = undefined;
+  for (const other of panel.querySelectorAll('.lifted, .over')) {
+    other.classList.remove('lifted', 'over');
   }
 });
 

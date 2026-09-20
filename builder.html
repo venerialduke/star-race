@@ -141,6 +141,27 @@
         display: flex;
         gap: 4px;
       }
+      /* Only a sector row carries a drag handle; a split row does not move. */
+      .row[data-row] {
+        grid-template-columns: 14px 22px 1fr auto;
+      }
+      .row .grip {
+        color: var(--soft);
+        cursor: grab;
+        font-size: 13px;
+        line-height: 1;
+        user-select: none;
+      }
+      .row.lifted {
+        opacity: 0.4;
+      }
+      .row.over {
+        border-color: var(--gold);
+        box-shadow: inset 0 0 0 1px var(--gold);
+      }
+      .row .acts button {
+        padding: 4px 6px;
+      }
       .hint {
         color: var(--soft);
         font-size: 11px;

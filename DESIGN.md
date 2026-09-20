@@ -163,6 +163,18 @@ meet its checkpoint, or stray across another part of the circuit. Both are
 checked, because a road that crosses another road is a junction the game has no
 rules for.
 
+**A ring must go somewhere, and every sector in it must be a road.** A ring
+whose sectors are all empty finishes exactly where it started, so it reported
+itself closed and produced a track of length zero — and canonical distance is a
+fraction of the lap, so every `distance % length` in the race divides by it. A
+single empty sector is the same mistake smaller: it contributes no length, so
+its checkpoint compares equal to the next one, `sectorAt` never returns it, and
+no ship is ever *in* it — a fixture placed there could never bite. Both are
+refused at assembly. The builder makes empty sectors on purpose, because that is
+what inserting one does, so this is the line between editing a ring and racing
+on it. A fuzzer found both by deleting pieces until there were none left, which
+is exactly what an edit made mid-season could do.
+
 **A road that does not arrive is refused, not drawn.** Assembling a track runs
 the check and throws, naming the road and how far out it is. A split that misses
 its checkpoint teleports the ship at one end, and it draws and exports perfectly
@@ -243,6 +255,37 @@ wall, S6's mines): per-tick damage is a ban on a build rather than a risk to it.
 A stretch that says nothing costs nothing: it contributes no band at all, so a
 track that uses none of this carries an empty table and pays nothing for the
 feature existing.
+
+## Verticality
+
+A loop laid out in two dimensions can cross itself, and a road running through
+another road looks like a mistake. Where the lap passes over itself, one strand
+climbs and the other dips, so the two are never in the same place: a bridge.
+
+**It is a drawing and nothing else, and that is enforced rather than promised.**
+The height of the road is computed in `src/render/height.ts`, and `src/sim` is
+forbidden by ESLint from importing anything in `render/`. The simulation
+therefore *cannot* see elevation — not by discipline, by construction. No future
+change can quietly make a hill cost speed without first moving that file, which
+is a thing a reviewer would see.
+
+Heights are **derived, never authored**, like checkpoint poses and for the same
+reason: two sources of truth about where the road is can disagree, and the
+disagreement is silent. Crossings are found by walking the line; the strand at
+the later canonical distance is the one that goes over, because it has to be
+decided somehow and that is the one rule independent of how anything is drawn.
+Each strand gets a raised cosine, so the profile is flat away from crossings,
+continuous where two crossings sit near each other, and periodic around the lap
+— a loop with a step in it is not a loop. All four tracks that ship are plain
+loops and come out perfectly flat.
+
+**None of this was needed to keep the race honest**, which is worth saying
+because it is easy to assume otherwise. A ship's position is a canonical
+distance plus a lateral offset; it is never an (x, y). Nothing in the tick does
+a spatial query — a mine is found by `sector === sector && route === route`, not
+by being near something — so a mine in sector 1 could never bite a ship in
+sector 7 however much the two overlap on screen. Verticality buys a picture that
+makes sense. It buys no rules, and needs none.
 
 ## The track
 

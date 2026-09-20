@@ -10,6 +10,7 @@ import {
   closureOf,
   connector,
   poseAfter,
+  spanOf,
   wrapAngle,
   type Pose,
   type Section,
@@ -1142,10 +1143,29 @@ export function resolvePieces(sector: Section): readonly Piece[] {
 
 export function assemblePlan(plan: TrackPlan): Track {
   const closure = closureOf(plan.ring);
+  if (closure.length <= 0) {
+    // Separate from the message below because it is a different mistake: this
+    // ring closes perfectly, it just never goes anywhere. A lap of zero length
+    // divides by zero everywhere canonical distance is used.
+    throw new Error(`${plan.name}: the ring has no length — there is nothing to race on.`);
+  }
   if (!closure.closed) {
     throw new Error(
       `${plan.name}: the ring does not close — ${closure.gap.toFixed(1)} units and ` +
         `${((closure.turn * 180) / Math.PI).toFixed(1)}° out.`,
+    );
+  }
+  // A sector with no road in it is not a sector, it is a checkpoint sitting on
+  // top of the next checkpoint. Nothing crashes — but the two compare equal, so
+  // `sectorAt` never returns the empty one, and a ship is never *in* it: a
+  // fixture placed there can never bite and a split beside it is unreachable.
+  // The builder makes empty sectors on purpose (that is what inserting one
+  // does), so this is the line between editing a ring and racing on it.
+  const hollow = plan.ring.findIndex((sector) => spanOf(resolvePieces(sector)) <= 0);
+  if (hollow >= 0) {
+    throw new Error(
+      `${plan.name}: sector ${hollow + 1} is empty — a sector with no road in it ` +
+        `puts two checkpoints in the same place.`,
     );
   }
   // Every road has to arrive. A split that misses its checkpoint is not a

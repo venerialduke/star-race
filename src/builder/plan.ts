@@ -10,6 +10,7 @@
 // Nothing here draws anything. It is the state, the edits, and the export.
 
 import { CATALOGUE, entryOf, familyOf, holdTo, type Entry } from '../sim/catalogue';
+import { spanOf } from '../sim/section';
 import {
   closureOf,
   connector,
@@ -191,6 +192,28 @@ export const closure = (draft: Draft): ReturnType<typeof closureOf> =>
   closureOf(ringOf(draft));
 
 /**
+ * Why this draft is not a track yet, in one sentence, or undefined when it is.
+ *
+ * Closure is not the only thing that stops a ring being raceable, and since
+ * inserting a sector deliberately makes an empty one, "closed" on its own became
+ * a misleading thing to show: the panel would say *closed circuit* about a ring
+ * that `assemblePlan` refuses. Whatever refuses it should be what the panel
+ * says, so this asks the real thing rather than guessing alongside it.
+ */
+export function faultOf(draft: Draft): string | undefined {
+  const hollow = draft.ring.findIndex((s) => spanOf(piecesOfSector(s)) <= 0);
+  if (hollow >= 0) return `Sector ${hollow + 1} is empty — put a piece in it`;
+  const state = closure(draft);
+  if (!state.closed) return undefined;
+  try {
+    assemblePlan(planOf(draft) as TrackPlan);
+    return undefined;
+  } catch (thrown) {
+    return thrown instanceof Error ? thrown.message : 'cannot be assembled';
+  }
+}
+
+/**
  * Close the ring: a sector running from wherever it has got to back to the
  * start line. Gentle radii first, because a wide one makes a road you would
  * want to drive and a tight one makes a hook.
@@ -319,56 +342,116 @@ function renumber(draft: Draft): void {
 }
 
 /**
+ * Where every old sector index ended up: its new index, or `undefined` if the
+ * sector is gone.
+ *
+ * **Every edit to the ring goes through one of these.** Insert, remove and move
+ * are three different shuffles of the same list, and each one was written by
+ * hand the first time — which produced the same bug three times over, because a
+ * split and a fixture both hang off a sector by *index* and both have to be
+ * carried along. One description of the shuffle, one place that applies it, and
+ * the property tests hammer that one place instead of three.
+ */
+type Moved = readonly (number | undefined)[];
+
+/** Carry everything that points at a sector through a shuffle of the ring. */
+function carry(draft: Draft, moved: Moved): void {
+  // A split whose sector is gone has nothing left to be beside: the two
+  // checkpoints it ran between are now one checkpoint. Same for a fixture —
+  // there is no road left for it to sit on.
+  draft.splits = draft.splits.flatMap((split) => {
+    const to = moved[split.from];
+    return to === undefined ? [] : [{ ...split, from: to }];
+  });
+  draft.fixtures = draft.fixtures.flatMap((fixture) => {
+    const to = moved[fixture.sector];
+    return to === undefined ? [] : [{ ...fixture, sector: to }];
+  });
+  renumber(draft);
+}
+
+/**
  * A sector put in at a position, and everything past it moved up.
  *
  * Appending is not the same edit. A ring is a loop, so "the end" is the stretch
  * of road immediately *before* the start line, which is almost never where a
  * sector was meant to go. Inserting puts it where it was asked for.
  *
- * The part that is easy to miss: a split hangs off a checkpoint by **index**,
- * so every split from the insert point on has to move up with the sectors or it
- * silently ends up beside a different piece of road. The new sector is empty,
- * which costs no distance — the geometry only moves once pieces go into it.
+ * The new sector is empty, which costs no distance — the geometry only moves
+ * once pieces go into it.
  *
  * Returns the index the new sector landed at.
  */
 export function insertSector(draft: Draft, at: number): number {
   const index = Math.max(0, Math.min(Math.trunc(at), draft.ring.length));
+  const was = draft.ring.length;
   draft.ring.splice(index, 0, {
     id: `sector-${index + 1}`,
     name: `Sector ${index + 1}`,
     pieces: [],
   });
-  draft.splits = draft.splits.map((s) => (s.from >= index ? { ...s, from: s.from + 1 } : s));
-  // A fixture is authored against a sector index for the same reason a split is,
-  // and moves for the same reason.
-  draft.fixtures = draft.fixtures.map((f) =>
-    f.sector >= index ? { ...f, sector: f.sector + 1 } : f,
+  carry(
+    draft,
+    Array.from({ length: was }, (_, k) => (k < index ? k : k + 1)),
   );
-  renumber(draft);
   return index;
 }
 
 /**
  * A sector taken out, and everything past it moved down.
  *
- * A split across the removed sector has nothing left to be beside — the two
- * checkpoints it ran between are now one checkpoint — so it goes with the
- * sector. Every split after it shifts down. The old code kept whichever splits
- * happened to still be in range and left them pointing at the wrong sector,
- * which looked like nothing until the export was pasted in.
+ * Whatever pointed at the removed sector goes with it; everything after shifts.
+ * The first version kept whichever splits happened to still be in range and
+ * left their indices alone, which slid every later split one sector up the
+ * track without saying so.
  */
 export function dropSector(draft: Draft, at: number): void {
   const index = Math.trunc(at);
+  const was = draft.ring.length;
   if (draft.ring[index] === undefined) return;
   draft.ring.splice(index, 1);
-  draft.splits = draft.splits
-    .filter((s) => s.from !== index)
-    .map((s) => (s.from > index ? { ...s, from: s.from - 1 } : s));
-  draft.fixtures = draft.fixtures
-    .filter((f) => f.sector !== index)
-    .map((f) => (f.sector > index ? { ...f, sector: f.sector - 1 } : f));
-  renumber(draft);
+  carry(
+    draft,
+    Array.from({ length: was }, (_, k) =>
+      k === index ? undefined : k < index ? k : k - 1,
+    ),
+  );
+}
+
+/**
+ * A sector picked up and put down somewhere else in the ring.
+ *
+ * The shuffle is worked out by doing it to a list of indices rather than by
+ * reasoning about which way things shift — move one item in a list and the
+ * items between the two positions all slide by one, in a direction that depends
+ * on which way it went. Reasoning about that is how the off-by-one gets in;
+ * splicing a list of indices and reading off where each landed cannot be wrong.
+ *
+ * A split moves **with** its sector, because a split is the road beside that
+ * stretch and not the road beside that position. Note that the geometry does
+ * not come along quietly: reordering a closed ring almost always opens it, and
+ * a split whose checkpoints have moved may no longer reach the next one. Both
+ * show in the panel rather than passing silently.
+ *
+ * Returns where the sector ended up.
+ */
+export function moveSector(draft: Draft, from: number, to: number): number {
+  const n = draft.ring.length;
+  if (draft.ring[from] === undefined) return from;
+  const target = Math.max(0, Math.min(Math.trunc(to), n - 1));
+  if (target === from) return from;
+
+  const order = Array.from({ length: n }, (_, i) => i);
+  order.splice(target, 0, ...order.splice(from, 1));
+  const sector = draft.ring.splice(from, 1)[0] as DraftSector;
+  draft.ring.splice(target, 0, sector);
+
+  const moved: (number | undefined)[] = Array.from({ length: n }, () => undefined);
+  order.forEach((old, now) => {
+    moved[old] = now;
+  });
+  carry(draft, moved);
+  return target;
 }
 
 /**

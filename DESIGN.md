@@ -159,9 +159,34 @@ Two things follow that a bulge could never have. A split has **authored bends at
 authored radii**, so the curvature-reading that used to infer them — and that
 lied about exactly the corners that mattered, turning a 42-radius hairpin into a
 60 — is gone from the codebase. And a split can be **wrong**: it can fail to
-meet its checkpoint, or stray across another part of the circuit. Both are
-checked, because a road that crosses another road is a junction the game has no
-rules for.
+meet its checkpoint, or end up in the same place as another road.
+
+**Two roads may cross; they may not be in the same place.** The rule used to be
+that a split must not come within a corridor of any other part of the circuit,
+because a road running through another road is a junction with no rules. That
+was right while the world was flat, and it is too strict now: where two roads
+cross, one is carried over the other, so what matters is whether they are ever
+in the same place rather than whether they meet in plan. Figure-eights and
+crossovers become authorable.
+
+Two roads through the **same sector** are exempt, and always were: they are
+alternatives, and a ship is on exactly one of them, so they may share as much
+ground as they like. That is what a fork is. Three of the four tracks that ship
+have a wide line crossing its own sector's golden path — the old rule skipped a
+split's own sector rather than permitting it, so this was always happening and
+is now drawn as what it is.
+
+**A ring must go somewhere, and every sector in it must be a road.** A ring
+whose sectors are all empty finishes exactly where it started, so it reported
+itself closed and produced a track of length zero — and canonical distance is a
+fraction of the lap, so every `distance % length` in the race divides by it. A
+single empty sector is the same mistake smaller: it contributes no length, so
+its checkpoint compares equal to the next one, `sectorAt` never returns it, and
+no ship is ever *in* it — a fixture placed there could never bite. Both are
+refused at assembly. The builder makes empty sectors on purpose, because that is
+what inserting one does, so this is the line between editing a ring and racing
+on it. A fuzzer found both by deleting pieces until there were none left, which
+is exactly what an edit made mid-season could do.
 
 **A road that does not arrive is refused, not drawn.** Assembling a track runs
 the check and throws, naming the road and how far out it is. A split that misses
@@ -243,6 +268,49 @@ wall, S6's mines): per-tick damage is a ban on a build rather than a risk to it.
 A stretch that says nothing costs nothing: it contributes no band at all, so a
 track that uses none of this carries an empty table and pays nothing for the
 feature existing.
+
+## Verticality
+
+A loop laid out in two dimensions can cross itself, and a road running through
+another road looks like a mistake. Where the lap passes over itself, one strand
+climbs and the other dips, so the two are never in the same place: a bridge.
+
+**It is a drawing and nothing else, and that is enforced rather than promised.**
+The height of the road is computed in `src/render/height.ts`, and `src/sim` is
+forbidden by ESLint from importing anything in `render/`. The simulation
+therefore *cannot* see elevation — not by discipline, by construction. No future
+change can quietly make a hill cost speed without first moving that file, which
+is a thing a reviewer would see.
+
+Heights are **derived, never authored**, like checkpoint poses and for the same
+reason: two sources of truth about where the road is can disagree, and the
+disagreement is silent. Crossings are found by walking every road against every
+other — a split is a road in its own right and can cross the main line, another
+split, or a different sector entirely — so height is a function of *which road*
+as well as how far along it. One number per lap could never tell a split from
+the golden path beneath it, since they span the same canonical distances.
+
+Every road is **held to the ground at both of its own checkpoints**. That is
+what lets roads meeting there agree without anything being solved: a ship
+crossing a checkpoint may change roads, and a step in the road at that moment is
+the one place a bridge would be allowed to look broken. The cost is real and is
+not hidden — a crossing within a ramp of a checkpoint cannot be lifted clear, so
+it is measured and refused rather than drawn badly.
+
+The gap is set by what the approach needs, not by the crossing. The full height
+is only reached *at* the crossing; a little to either side the two roads are
+still within a corridor while the ramp is still climbing, and that is the
+binding case. Measured on a figure-eight: 30 units at the crossing left 20.4
+where the roads pass a corridor apart, against the 19.4 a corridor needs —
+passing by a unit, which is not margin. It is 38 now, which leaves 25.8.
+
+**None of this was needed to keep the race honest**, which is worth saying
+because it is easy to assume otherwise. A ship's position is a canonical
+distance plus a lateral offset; it is never an (x, y). Nothing in the tick does
+a spatial query — a mine is found by `sector === sector && route === route`, not
+by being near something — so a mine in sector 1 could never bite a ship in
+sector 7 however much the two overlap on screen. Verticality buys a picture that
+makes sense. It buys no rules, and needs none.
 
 ## The track
 

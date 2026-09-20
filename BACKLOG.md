@@ -896,4 +896,17 @@ Two smaller things left behind by the same stage:
   The three real tracks still say nothing about themselves.
 - **A fixture cannot be dragged on the canvas.** The builder places one with
   three sliders (sector, road, how far along), which is enough to author with
-  and is not enough to author *comfortably*.
+  and is not enough to author *comfortably*. Sectors themselves now drag.
+
+**~~Splits could be allowed to cross the circuit now.~~** _Done._ The rule is
+now "two roads may cross, they may not be in the same place", measured against
+the relief. Figure-eights and crossovers are authorable; nothing that ships uses
+one yet. Old note, for the reasoning: `tests/sim/section.test.ts`
+refuses any shipped track whose split runs within a corridor of another part of
+the loop, because "a road that crosses another road is a junction the game has
+no rules for". Verticality is what makes that rule narrower than it needs to
+be: two roads that cross in the plan view are separated in height, and the sim
+never compared positions anyway. Loosening it would open up a whole family of
+track shapes — figure-eights, crossovers — that cannot be authored today. Left
+alone for now because the four tracks that ship are all plain loops and nothing
+is waiting on it; the change is to the *invariant*, not to any code.

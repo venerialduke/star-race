@@ -107,13 +107,23 @@ export interface Closure {
   readonly gap: number;
   /** How far the heading is out at the join, in radians, brought into (-π, π]. */
   readonly turn: number;
+  /** How far the set actually runs. A loop with no length is not a loop. */
+  readonly length: number;
   readonly closed: boolean;
 }
 
 /**
  * A loop closes when the last section leaves you back where the first one
- * started, pointing the same way. Tolerances are generous on purpose: a
- * millimetre of drift over a two-thousand-unit circuit is not a hole.
+ * started, pointing the same way, **having gone somewhere in between**.
+ * Tolerances are generous on purpose: a millimetre of drift over a
+ * two-thousand-unit circuit is not a hole.
+ *
+ * The length condition is not pedantry. A ring whose sectors are all empty
+ * finishes exactly where it started and reported itself closed, which produced
+ * a track of length zero — and canonical distance is a *fraction of the lap*,
+ * so every `distance % length`, every `alongOf`, every `sampleAt` in the race
+ * divides by it. A fuzzer found it by deleting pieces until there were none
+ * left, which is precisely what an edit made mid-season could do.
  */
 export function closureOf(
   sections: readonly Section[],
@@ -122,7 +132,13 @@ export function closureOf(
   const end = poseOfAll(sections);
   const gap = Math.hypot(end.x, end.y);
   const turn = wrapAngle(end.heading);
-  return { gap, turn, closed: gap <= tolerance.gap && Math.abs(turn) <= tolerance.turn };
+  const length = spanOf(piecesOf(sections));
+  return {
+    gap,
+    turn,
+    length,
+    closed: length > tolerance.gap && gap <= tolerance.gap && Math.abs(turn) <= tolerance.turn,
+  };
 }
 
 // ---------------------------------------------------------------------------

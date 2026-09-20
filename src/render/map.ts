@@ -16,6 +16,7 @@ import {
   routeOf,
   sampleAt,
   type Band,
+  type Place,
   type Route,
   type Sample,
   type Track,
@@ -320,6 +321,38 @@ function drawFixture(
  * line it should be on, and the ship itself. A rival is drawn quieter than the
  * player, so a glance finds the player first.
  */
+/**
+ * Which way the ship's marker points, **on screen**.
+ *
+ * Found by projecting a step along the ship's own heading and taking the angle
+ * between the two screen points — never by handing a world heading to
+ * `ctx.rotate`. A world heading turns anticlockwise and a canvas angle turns
+ * clockwise, so the two are mirror images, and the map's projection flips the
+ * vertical axis on top of that and may turn the whole thing a quarter.
+ *
+ * It used to pass the heading straight in, with a `- π/2` bolted on for the
+ * rotated case. That was wrong twice and the two wrongs cancelled: the
+ * projection was mirrored too, so the marker happened to line up. Fixing the
+ * projection left the marker as the only thing still mirrored, and the ship
+ * flew round the lap pointing backwards. Asking the projection is the version
+ * that cannot come apart again — it is right for the flip, right for the
+ * quarter turn, and needs no special case for either.
+ */
+export function shipFacing(view: View, here: Place, out: number): number {
+  const n = { x: -Math.sin(here.heading), y: Math.cos(here.heading) };
+  const at = { x: here.pos.x + n.x * out, y: here.pos.y + n.y * out };
+  const ahead = {
+    x: at.x + Math.cos(here.heading) * STEP_AHEAD,
+    y: at.y + Math.sin(here.heading) * STEP_AHEAD,
+  };
+  const from = project(view, at);
+  const to = project(view, ahead);
+  return Math.atan2(to.y - from.y, to.x - from.x);
+}
+
+/** How far along its heading the step is taken. Any positive distance would do. */
+const STEP_AHEAD = 6;
+
 function drawShip(
   ctx: CanvasRenderingContext2D,
   view: View,
@@ -381,6 +414,7 @@ function drawShip(
     x: here.pos.x + n.x * (ship.offset + lane),
     y: here.pos.y + n.y * (ship.offset + lane),
   });
+  const facing = shipFacing(view, here, ship.offset + lane);
   const size = Math.max(isPlayer ? 7 : 6, (isPlayer ? 5 : 4.2) * view.scale);
 
   if (Math.abs(ship.offset) > 0.5) {
@@ -401,7 +435,7 @@ function drawShip(
 
   ctx.save();
   ctx.translate(p.x, p.y);
-  ctx.rotate(here.heading - (view.rotate ? Math.PI / 2 : 0));
+  ctx.rotate(facing);
   ctx.beginPath();
   ctx.moveTo(size, 0);
   ctx.lineTo(-size * 0.7, size * 0.62);

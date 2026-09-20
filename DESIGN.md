@@ -330,6 +330,13 @@ Anything that sits *on* the road — the ship, its shadow, its wake, a shot
 between two ships, the scuffs a swing leaves — is measured from the road rather
 than from the plane, or it carries straight on through a hill.
 
+**A world angle is never handed to the canvas.** They turn opposite ways — a
+heading anticlockwise, a canvas rotation clockwise — and the map's projection
+flips the vertical axis on top of that and may turn the whole panel a quarter.
+Anything that needs a direction on screen projects a step along the heading and
+takes the angle between the two screen points, which is right for all three and
+needs no special case for any of them.
+
 **Both views agree about which way a bend goes**, which they did not until now:
 the map projected the world's y straight onto the canvas's, and canvas y grows
 downward while the world's grows up, so the whole map was mirrored. True since

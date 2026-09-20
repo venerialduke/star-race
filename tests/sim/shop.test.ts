@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { startRace, stepRace } from '../../src/sim/race';
 import { COMPONENTS, componentById, resolveBuild, type Fitted } from '../../src/sim/ship';
 import { MERIDIAN_RUN } from '../../src/sim/track';
+import { buy, fit as fitOn, newGarage, type Garage } from '../../src/sim/garage';
 import { STACK_FALLOFF } from '../../src/sim/tuning';
 
 const fit = (componentId: string, level: number, n = 0): Fitted => ({
@@ -110,6 +111,13 @@ describe('each further copy of the same part is worth less', () => {
   it('makes a ship of twelve cheap engines worse than it was', () => {
     // The build that used to win every season: one maxed engine and eleven
     // level 1s bolted into the slots the season hands out for free.
+    //
+    // **A garage can no longer assemble this ship at all** — `fit` allows one
+    // engine — so this is now a statement about `resolveBuild` rather than
+    // about a build anybody can bring to a race. It is kept because the
+    // falloff is what makes two of a thing a build and twelve a mistake, and
+    // that arithmetic still governs shields, which are not capped. The limit
+    // is tested where it lives, in `garage.test.ts`.
     const spam = resolveBuild([
       fit('balanced-engine', 3, 0),
       ...Array.from({ length: 11 }, (_, i) => fit('balanced-engine', 1, i + 1)),
@@ -118,6 +126,19 @@ describe('each further copy of the same part is worth less', () => {
     // Eleven copies are worth well under half what eleven of them would be.
     const stacked = spam.handling - resolveBuild([fit('balanced-engine', 3)]).handling;
     expect(stacked).toBeLessThan(naive * 0.5);
+  });
+
+  it('is a ship the garage will not build, which is the real answer', () => {
+    // Pricing the degenerate build failed four times. Forbidding it took one
+    // rule, and this is where the two meet: the arithmetic above says a ship of
+    // twelve engines is bad, and the garage says it is not a ship.
+    let garage: Garage = { ...newGarage(), credits: 100000, slots: 50 };
+    for (let i = 0; i < 12; i += 1) {
+      garage = buy(garage, 'balanced-engine');
+      garage = fitOn(garage, garage.shelf.length - 1);
+    }
+    expect(garage.fitted).toHaveLength(1);
+    expect(garage.shelf).toHaveLength(11);
   });
 });
 

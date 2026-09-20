@@ -8,7 +8,17 @@
 import { mineLevel, type Entrant, type Orders } from './field';
 import type { CornerPlan } from './race';
 import { makeRng, seedFrom } from './rng';
-import { buy, fit, newGarage, slotsFree, upgrade, type Garage } from './garage';
+import {
+  buy,
+  buyResearch,
+  fit,
+  newGarage,
+  researchNeeded,
+  researched,
+  slotsFree,
+  upgrade,
+  type Garage,
+} from './garage';
 import { resolveBuild } from './ship';
 import { holdingSpeed, legalRoutes, routeOf, type Route, type Track } from './track';
 import {
@@ -134,11 +144,13 @@ export function botShop(
   const weapon = WEAPONS[Math.floor(rng.unitInterval() * WEAPONS.length)] as string;
 
   let next = garage;
-  // Engines first, then support, then whatever it fancies. Each buy is tried
-  // and simply does not happen if the credits or the slots are not there.
+  // Its engine, then support, then whatever it fancies. Each buy is tried and
+  // simply does not happen if the credits or the slots are not there — and the
+  // ship carries one engine, so a second is never on this list. It used to be,
+  // and the fit quietly failed.
   const wanted = [
     engine,
-    armed ? weapon : rng.unitInterval() < 0.5 ? engine : 'balanced-engine',
+    armed ? weapon : pick(),
     pick(),
     // A crew that is good with weapons is only worth a slot to a ship that
     // brought one, which is the kind of thing a rival ought to know.
@@ -155,12 +167,38 @@ export function botShop(
   // Whatever is left goes into deepening something it already has — and
   // sometimes into nothing at all, because credits held earn interest and a
   // rival that always spends to zero never learns that.
+  //
+  // Deepening is copies now, not credits: a level is bought by breaking spares
+  // of the same component down. A rival does what a player does, which is buy
+  // the thing again. Nothing here is a special case for bots — if this were
+  // left as a credit purchase they would simply never reach level 2 again.
   const thrifty = rng.unitInterval() < BOT_THRIFT;
   if (!thrifty && next.fitted.length > 0) {
     const target = Math.floor(rng.unitInterval() * next.fitted.length);
-    next = upgrade(next, target);
+    next = deepen(next, target);
   }
   return next;
+}
+
+/**
+ * Spend toward one more level of something already fitted, then take it.
+ *
+ * Bounded, because a rival should not empty its purse into one part: it buys
+ * what the next level needs and stops, whether or not it got there.
+ */
+function deepen(garage: Garage, fittedIndex: number): Garage {
+  const item = garage.fitted[fittedIndex];
+  if (item === undefined) return garage;
+  const need = researchNeeded(item.level);
+  if (need === undefined) return garage;
+  let next = garage;
+  for (let n = 0; n < need; n += 1) {
+    if (researched(next, item.componentId, item.level)) break;
+    const before = next;
+    next = buyResearch(next, item.componentId);
+    if (next === before) break;
+  }
+  return upgrade(next, fittedIndex);
 }
 
 /**

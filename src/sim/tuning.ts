@@ -207,8 +207,65 @@ export const STARTING_CREDITS = 100;
 /** Slots a ship starts with. */
 export const SLOTS_AT_START = 4;
 
-/** Slots gained for finishing a race. */
-export const SLOT_PER_FINISH = 1;
+/**
+ * Progress toward the next slot, for finishing a race.
+ *
+ * A finish used to hand over a whole slot, so nine heats bought nine slots and
+ * a ship could carry everything it was ever offered. Slots are the only budget
+ * that says no to a build, and one that grows by one a heat says no to nothing
+ * — which is most of why bolting on cheap engines has been the best build in
+ * the game. Now a finish buys progress and a slot has a price.
+ */
+export const SLOT_PROGRESS_PER_FINISH = 1;
+
+/**
+ * What the next slot costs in progress, and what each one after that adds.
+ *
+ * Rising, so the fifth slot is two heats and the eighth is five. Over a
+ * nine-heat season a racer that finishes everything earns 9 progress, which
+ * buys three slots (2 + 3 + 4) and starts on the fourth. Against nine before.
+ */
+export const SLOT_COST_BASE = 2;
+export const SLOT_COST_STEP = 1;
+
+/** Credits for one unit of progress toward a slot. */
+export const PROGRESS_PRICE = 45;
+
+/** How many components the shop offers at a time. */
+export const SHOP_OFFERS = 4;
+
+/**
+ * What a reroll costs. Flat, and cheap against a component's 26 to 40.
+ *
+ * Looking again is meant to be an ordinary thing to do rather than a decision
+ * with a budget attached: the interesting choice is which of the four to take,
+ * not whether you can afford to see four more. A rising price made the third
+ * look expensive enough to skip, which is a tax on playing with the shop.
+ */
+export const REROLL_COST = 5;
+
+/** Research from breaking one component down. */
+export const RESEARCH_PER_COPY = 1;
+
+/**
+ * Copies to break down for each level: two for the second, four for the third.
+ *
+ * Six copies for a maxed part, plus the one being flown. Credits cannot buy a
+ * level at all any more — the only route up is more of the same component — so
+ * this ladder is the whole cost of depth, and it is meant to be felt.
+ */
+export const RESEARCH_FOR_LEVEL: readonly number[] = [2, 4];
+
+/**
+ * How many of a category may be fitted at once. Anything unlisted is unlimited.
+ *
+ * **One engine.** A ship with two engines was the whole of the degenerate
+ * build, and four tuning passes failed to price it out of existence — because
+ * the problem was never the price. Shields stay unlimited on purpose: the
+ * framework is explicit that two shields is a build rather than a mistake, and
+ * a collector's storage scales with the ship's total shielding.
+ */
+export const FIT_LIMIT: Readonly<Record<string, number>> = { engine: 1 };
 
 /** What selling a component returns, as a share of everything paid for it. */
 export const SELL_RETURN = 0.6;

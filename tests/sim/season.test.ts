@@ -42,6 +42,8 @@ import {
   PURSE_BY_PLACE,
   ROSTER,
 } from '../../src/sim/tuning';
+import { PROVING_GROUND } from '../../src/sim/track';
+import { seedFrom } from '../../src/sim/rng';
 
 /**
  * A whole season with nobody watching: every group resolved, the player
@@ -105,6 +107,29 @@ describe('a season is a value the seed decides', () => {
     }
     // A season that raced one track nine times would be a worse season.
     expect(names.size).toBeGreaterThan(1);
+  });
+
+  it('always opens on the Proving Ground, whatever the seed', () => {
+    // The pacing lap is the first sight of the game, so it is spent on the one
+    // track that says what a road can be made of — and the only one with a hill
+    // on the line a player flies. Drawn at random it turned up three times in
+    // four on a plain loop.
+    for (const seed of [0, 1, 7, 42, 1234, seedFrom('kestrel'), seedFrom('anything')]) {
+      expect(trackAt(seed, 0, 0)).toBe(PROVING_GROUND);
+    }
+  });
+
+  it('opens the pacing lap and the first heat on the same track', () => {
+    // Not a coincidence worth losing: the rivals shop against the opening track
+    // before the season starts, so if the pacing lap and heat one disagreed the
+    // field would turn up built for a track it is not racing.
+    const season = newSeason(seedFrom('kestrel'));
+    const up = nextUp(season);
+    expect(up.kind).toBe('pacing');
+    expect(up.kind === 'pacing' ? up.track : undefined).toBe(
+      trackAt(season.seed, 0, 0),
+    );
+    expect(trackAt(season.seed, 0, 0)).toBe(PROVING_GROUND);
   });
 });
 

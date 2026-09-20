@@ -750,26 +750,52 @@ export const CINDER_COIL = assemblePlan({
  * cannot be cosmetic — grip, sight, hazard and pocket all move a lap. Adding
  * one track disturbs none of it; editing one would have quietly re-tuned the
  * lot. Delete this and its entry in `TRACKS` when real content replaces it.
+ *
+ * **Its golden path crosses itself**, which no other track's does, so this is
+ * also the only place a player on the main line goes over a hill. That is the
+ * same argument again: a bridge is worth seeing, the three race tracks are not
+ * free to reshape, and this one is here to be looked at. It is why the season
+ * always opens here — see `trackAt`.
+ *
+ * The shape was searched rather than drawn. Both straights are exactly what
+ * they were, because they are the property stretches and the whole comparison
+ * runs along them; only the bends changed, curling the loop back through itself
+ * instead of round a rectangle. The constraint that decided it is not obvious:
+ * a crossing within a taper of a checkpoint cannot be lifted clear, so it has
+ * to land in the middle of a sector. Of 180,320 shapes that close, 80,426 cross
+ * somewhere and only 127 cross with room to build the bridge.
  */
 const PROVING_RING: readonly Section[] = [
-  sector('proving-clear', 'The clear run', [S(220), B(70, -90)]),
+  // The hook that folds the lap back through itself. Its pair, the scrapyard,
+  // is the same shape, and the two of them are what cross. Written as two
+  // corners rather than one 230° bend because the builder's shelf has no family
+  // that wide — a hairpin stops at 180 — and a track that ships has to be one
+  // the builder can describe. Same curve either way: consecutive arcs of one
+  // radius turning one way share a centre.
+  sector('proving-clear', 'The clear run', [S(220), B(50, -115), B(50, -115)]),
   // Thick: the same entry throws you wider here than it did on the stretch
-  // before, which is the one comparison the whole track exists to make.
-  sector('proving-nebula', 'The nebula', [S(140), B(45, -90)], {
+  // before, which is the one comparison the whole track exists to make. Its
+  // pair is the dark, and those two are the same shape as each other.
+  sector('proving-nebula', 'The nebula', [S(140), B(75, 50)], {
     environment: 'nebula',
   }),
   // It scrapes, and the straight through it is worth flying.
-  sector('proving-debris', 'The scrapyard', [P(S(220), { pocket: 9 }), B(70, -90)], {
+  sector('proving-debris', 'The scrapyard', [P(S(220), { pocket: 9 }), B(50, -115), B(50, -115)], {
     environment: 'debris',
   }),
-  sector('proving-shadow', 'The dark', [S(140), B(45, -90)], { environment: 'shadow' }),
+  sector('proving-shadow', 'The dark', [S(140), B(75, 50)], { environment: 'shadow' }),
 ];
 
-/** Four stretches of plain road, each made of something different. */
+/** Four stretches of plain road, each made of something different, over a bridge. */
 export const PROVING_GROUND = assemblePlan({
   name: 'The Proving Ground',
-  shape: 'plain · every property there is',
-  par: 1500,
+  shape: 'crossed · every property there is',
+  // Measured, not scaled. A reference build flies this in 1476 ticks and par
+  // sits 1.27 times that, which is exactly where par sat on the old shape and
+  // within a hair of where the Cinder's sits. The lap is 16% longer than it
+  // was and two of its four bends are new, so scaling the old number would
+  // have been a guess dressed as arithmetic.
+  par: 1875,
   ring: PROVING_RING,
   splits: [
     {

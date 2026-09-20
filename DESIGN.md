@@ -399,14 +399,31 @@ everywhere. They do not:
 | **Meridian Run** | 2370 | open, tightest r62 | reckless build, Carry — 39.3s |
 | **Cinder Coil** | 688 | tight, tightest r26 | nimble build, Charge — 16.9s |
 
-A fourth, **The Proving Ground** (1081 units, tightest r45), is not one of them.
-Its shape is deliberately plain — four near-identical stretches — because shape
-is not what it is for: each of its sectors is made of something different, and
-it carries one of each kind of fixture. It exists so that properties can be seen
-from inside the game rather than only in a test, and it is a separate track
-rather than a nebula bolted onto the Kestrel because the three above carry every
-balance measurement taken so far and no property is cosmetic. It goes when real
-content replaces it.
+A fourth, **The Proving Ground** (1252 units, tightest r50), is not one of them,
+and **every season opens on it**. Its four stretches are matched in pairs — the
+clear run against the scrapyard, the nebula against the dark — so that each pair
+is the same shape and differs only in what the road is made of, which is the one
+comparison the track exists to make. It carries one of each kind of fixture too.
+It exists so that properties can be seen from inside the game rather than only
+in a test, and it is a separate track rather than a nebula bolted onto the
+Kestrel because the three above carry every balance measurement taken so far and
+no property is cosmetic. It goes when real content replaces it.
+
+**Its golden path crosses itself**, which no other track's does, so it is also
+the only place a player on the main line goes over a hill. The shape was
+searched, not drawn: both straights are exactly what they were, because they are
+the property stretches, and only the bends changed. The constraint that decided
+it is not the obvious one — a crossing within a taper of a checkpoint cannot be
+lifted clear, so it has to land in the middle of a sector. Of 180,320 shapes
+that close, 80,426 cross somewhere and 127 cross with room to build the bridge.
+
+Its long bend is written as two 115° corners rather than one 230° sweep. That is
+the same curve to thirteen decimal places, but it is **not** the same race: the
+corner plan fires at every bend, so two in a row is a different proposition from
+one long one. Lift does not notice, because both halves share a holding speed;
+Charge found 41 ticks. It is written that way because the builder's shelf has no
+family wider than a hairpin's 180°, and a track that ships has to be one the
+builder can describe.
 
 A loop is authored as a **half** that turns through 180°, walked twice: the
 second copy is the first rotated half a turn, so the circuit closes exactly and
@@ -860,6 +877,17 @@ it. That is the whole of the thing — a season is a garage growing, or not.
 against its `par`, and is paid `PACING_BASE` for turning up plus
 `PACING_PER_TICK` for every tick under par, to `PACING_CAP`. It is the first
 sight of a track and the first credits of a season, and nobody can lose it.
+
+**The first track is always The Proving Ground**, whatever the seed. Every other
+heat is drawn, but the opening one is spent on the track that says what a road
+can be made of — every property, one per sector, one of each kind of fixture,
+and the only hill a player meets on the line they fly. Drawn at random it turned
+up on a plain loop three times in four. It costs the variety one heat of nine.
+
+This is `trackAt` rather than a special case at the pacing lap, and that matters:
+the opening track is also heat one, and the rivals shop against it before the
+season starts. Three callers, one answer, or the field turns up built for a track
+it is not racing.
 
 **What a heat pays** is a purse by place (`PURSE_BY_PLACE`), points by place
 (`POINTS_BY_PLACE`), and a slot for finishing. On top of the points sits a

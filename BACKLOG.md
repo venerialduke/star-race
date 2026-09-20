@@ -825,6 +825,55 @@ to compete with a permanent stat is the one-hit-to-the-wall problem the corridor
 work exists to stop — so it belongs with the three rule changes above rather than
 with another tuning pass.
 
+### The opening track moved the table, and it was the shape that did it
+
+Measured after pinning every season's first heat to the Proving Ground and
+reshaping that track so its golden path crosses itself (PR #72). Seventy-two
+seasons a policy, **same seeds on both sides** — `scripts/balance.ts` seeds
+seasons 0..n, so `main` and the branch raced identical seasons and the only
+variable was the change. Standard error on a win count at 72 is about 2.3.
+
+| policy | before | after | | policy | before | after |
+| --- | --- | --- | --- | --- | --- | --- |
+| **handling** | 21 | **31** | | collector | 12 | 10 |
+| **dark** | 23 | **14** | | speed | 5 | 6 |
+| engine-spam | 23 | 23 | | tractor | 5 | 5 |
+| engines | 14 | 18 | | armed | 3 | 4 |
+| shields | 9 | 12 | | mines | 2 | 2 |
+| nav | 11 | 8 | | bot | 5 | 10 |
+
+Handling +10 and dark −9 are both about four standard errors. They are real, and
+they survived being found at 24 seasons first — where BACKLOG's own note says a
+24-season run is good for a direction and not a ranking, which was exactly right.
+
+**It is the shape, not the pinning.** The obvious reading is that dark lost
+because it sees fewer black holes, and that reading is backwards: the Proving
+Ground carries the game's only black-hole fixture and a pinned opener means the
+field races it **more**, not less. Nine heats drawn from four tracks is 2.25
+Proving Ground heats a season; one pinned plus eight drawn is 3.
+
+What moved is how much of that track is bend:
+
+| | old | new |
+| --- | --- | --- |
+| lap | 1081 | 1252 |
+| of it bend | 33% | **43%** |
+| a thrust build's pace advantage over a grip build | 22.0% | **17.7%** |
+
+So the one track every season is guaranteed to race got substantially kinder to
+grip. `handling` is the policy that buys grip and it gained; `dark` spends two of
+its four slots on dark-matter gear and buys no handling part at all, so it is on
+the wrong side of the same change — and the extra dark matter it harvests does
+not pay for the extra bend it is now slow through.
+
+**What this is worth knowing for.** A track is content, and this is a measurement
+of how much content moves balance: one heat in nine, reshaped, moved two policies
+by 4σ while leaving `engine-spam` on exactly 23. The standing problem is immune
+to level data, which is another way of saying the three rule changes above are
+still the only things that touch it. It also means **the next tuning pass has to
+state which tracks it was measured on**, because the answer now depends on that
+more than it did.
+
 **And the S7 bar is not met.** "Two builds that spend the same credits
 differently both win seasons, and neither is buy engines": the top five are
 engine-spam, handling, dark, nav and engines. Every one of them is led by an
@@ -893,15 +942,19 @@ Two smaller things left behind by the same stage:
   job whenever it is worth doing.
 - **Nothing that ships is balanced around any of it.** The Proving Ground exists
   to be looked at, not played: its numbers were picked to be visible, not fair.
-  The three real tracks still say nothing about themselves.
+  The three real tracks still say nothing about themselves. This is sharper now
+  that every season opens on the Proving Ground — an unbalanced track that used
+  to turn up a quarter of the time is now guaranteed, and it moved two policies
+  by 4σ when its shape changed. See the measurement under S7.
 - **A fixture cannot be dragged on the canvas.** The builder places one with
   three sliders (sector, road, how far along), which is enough to author with
   and is not enough to author *comfortably*. Sectors themselves now drag.
 
 **~~Splits could be allowed to cross the circuit now.~~** _Done._ The rule is
 now "two roads may cross, they may not be in the same place", measured against
-the relief. Figure-eights and crossovers are authorable; nothing that ships uses
-one yet. Old note, for the reasoning: `tests/sim/section.test.ts`
+the relief. Figure-eights and crossovers are authorable, and **the Proving Ground
+is one**: its golden path crosses itself, which is what put a hill on the line a
+player actually flies. Old note, for the reasoning: `tests/sim/section.test.ts`
 refuses any shipped track whose split runs within a corridor of another part of
 the loop, because "a road that crosses another road is a junction the game has
 no rules for". Verticality is what makes that rule narrower than it needs to

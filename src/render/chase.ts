@@ -53,7 +53,7 @@ import {
 
 /** Where the camera sits relative to the ship it is following. */
 const BACK = 32;
-const HEIGHT = 15;
+export const HEIGHT = 15;
 const PITCH = 0.3;
 
 /** How far down the track is drawn, and how finely. */
@@ -132,6 +132,49 @@ export const newChase = (): Chase => ({
   relief: undefined,
   reliefFor: undefined,
 });
+
+/**
+ * How far off the ground the eye sits.
+ *
+ * Two rules, and the second one exists because breaking it looked like a bug in
+ * the projection rather than a bug in the camera.
+ *
+ * **It rides at `HEIGHT` above the ship's own road.** Taking the height from
+ * the road *behind* the camera was the first version, and on a ramp that is a
+ * different point on the slope: the gap to the ship swung between 15 and 25
+ * units over a bridge, so the ship drifted up and down the screen as if the
+ * camera had lost it.
+ *
+ * **And never below the road it is looking at.** The road is a filled surface
+ * with no thickness, so a camera underneath one sees its underside — and a bend
+ * seen from below curves the other way, which reads as the whole view
+ * inverting. It is reachable without doing anything strange: at the bottom of a
+ * dip the ship's road is 19 units down, `HEIGHT` above that is still 4 units
+ * *under* the flat road ahead. Measured, on the Kestrel.
+ *
+ * On a track with no crossings both rules give exactly `HEIGHT`, which is what
+ * the camera has always done.
+ */
+export function eyeHeight(
+  track: Track,
+  routes: RouteView,
+  player: ShipView,
+  underfoot: number,
+  lift: Lift,
+): number {
+  let ridge = underfoot;
+  for (let on = 0; on <= CAMERA_SEES; on += 15) {
+    const at = player.distance + on;
+    ridge = Math.max(ridge, lift(at, lineAt(track, routes, player, at)));
+  }
+  return Math.max(HEIGHT + underfoot, ridge + OVER_THE_ROAD);
+}
+
+/** How far up the road the camera checks before deciding how high to sit. */
+export const CAMERA_SEES = 220;
+
+/** The least it will clear the road ahead by, when a dip would put it under. */
+const OVER_THE_ROAD = 9;
 
 /** How much of the remaining gap to close in this much time. */
 function easeShare(seconds: number, over: number): number {
@@ -213,9 +256,7 @@ export function drawChase(
   const target = {
     x: me.x - Math.cos(yaw) * BACK,
     y: me.y - Math.sin(yaw) * BACK,
-    // The camera climbs with the road, or a bridge would take the ship out of
-    // frame on the way up and bury it on the way down.
-    height: HEIGHT + lift(player.distance - BACK, player.route),
+    height: eyeHeight(track, routes, player, underfoot, lift),
     yaw,
     pitch: PITCH,
   };
@@ -240,7 +281,7 @@ export function drawChase(
   const underMe = toScreen(lens, toEye(lens, me.x, me.y, underfoot)).y;
   drawRoad(ctx, lens, track, routes, player, underMe, lift);
   drawGates(ctx, lens, track, player);
-  drawMarks(ctx, lens, track, player);
+  drawMarks(ctx, lens, track, player, lift);
   // On the road, before the ships, so a rival is never hidden behind a mine.
   for (const fixture of fixtures) drawFixture(ctx, lens, track, fixture, lift);
 
@@ -263,15 +304,24 @@ export function drawChase(
     .sort((a, b) => b.eye.depth - a.eye.depth);
   // A shot runs between two ships, so it is drawn once both their points are
   // known — under them, so neither end of it is hidden by what it connects.
-  const points = new Map(drawn.map((row) => [ships.indexOf(row.ship), row.point]));
+  const points = new Map(
+    drawn.map((row) => [
+      ships.indexOf(row.ship),
+      { ...row.point, up: lift(row.ship.distance, row.ship.route) + LIFT },
+    ]),
+  );
   for (const row of drawn) {
     const target =
       row.ship.shotAt === undefined ? undefined : points.get(row.ship.shotAt);
-    if (target !== undefined) tracer(ctx, lens, row.point, target);
+    const mine = points.get(ships.indexOf(row.ship));
+    if (target !== undefined && mine !== undefined) tracer(ctx, lens, mine, target);
   }
   for (const row of drawn) {
-    if (row.ship.struck > 0) flash(ctx, lens, row.point, row.ship.struck);
-    drawShip(ctx, lens, track, row.ship, row.point, row.colour, row.lane);
+    if (row.ship.struck > 0) {
+      const at = points.get(ships.indexOf(row.ship));
+      if (at !== undefined) flash(ctx, lens, at, row.ship.struck);
+    }
+    drawShip(ctx, lens, track, row.ship, row.point, row.colour, row.lane, lift);
   }
 }
 
@@ -279,11 +329,11 @@ export function drawChase(
 function tracer(
   ctx: CanvasRenderingContext2D,
   lens: Lens,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
+  from: { x: number; y: number; up: number },
+  to: { x: number; y: number; up: number },
 ): void {
-  const a = toEye(lens, from.x, from.y, LIFT);
-  const b = toEye(lens, to.x, to.y, LIFT);
+  const a = toEye(lens, from.x, from.y, from.up);
+  const b = toEye(lens, to.x, to.y, to.up);
   if (a.depth <= 0 || b.depth <= 0) return;
   const pa = toScreen(lens, a);
   const pb = toScreen(lens, b);
@@ -301,10 +351,10 @@ function tracer(
 function flash(
   ctx: CanvasRenderingContext2D,
   lens: Lens,
-  at: { x: number; y: number },
+  at: { x: number; y: number; up: number },
   strength: number,
 ): void {
-  const centre = toEye(lens, at.x, at.y, LIFT);
+  const centre = toEye(lens, at.x, at.y, at.up);
   if (centre.depth <= 0) return;
   const radius = 4 + (1 - strength) * 14;
   const ring: { x: number; y: number }[] = [];
@@ -805,6 +855,7 @@ function drawMarks(
   lens: Lens,
   track: Track,
   player: ShipView,
+  lift: Lift,
 ): void {
   const marks = player.swings.slice(-5);
   marks.forEach((swing, i) => {
@@ -812,10 +863,17 @@ function drawMarks(
     const sector = track.sectors[swing.sector];
     if (sector === undefined) return;
     const line = routeOf(sector, swing.route);
-    const at = placeOn(track, canonicalOf(sector, line, swing.bendStart), swing.route);
+    const where = canonicalOf(sector, line, swing.bendStart);
+    const at = placeOn(track, where, swing.route);
     const n = normalOf(at);
     const out = -at.turn * Math.min(swing.swing, PATH_HALF_WIDTH * 3);
-    const eye = toEye(lens, at.pos.x + n.x * out, at.pos.y + n.y * out, 0.1);
+    // A mark is a scuff on the road, so it goes wherever the road went.
+    const eye = toEye(
+      lens,
+      at.pos.x + n.x * out,
+      at.pos.y + n.y * out,
+      lift(where, swing.route) + 0.1,
+    );
     if (eye.depth <= 0) return;
     const p = toScreen(lens, eye);
     const r = Math.max(1.5, scaleAt(lens, eye.depth) * 2.4);
@@ -842,8 +900,15 @@ function drawShip(
   point: { at: Place; x: number; y: number },
   colour: string,
   lane: number,
+  lift: Lift,
 ): void {
-  const eye = toEye(lens, point.x, point.y, LIFT);
+  // A ship flies over the road, so everything about it — hull, shadow, wake and
+  // the step used to work out which way it is pointing — is measured from the
+  // road under it rather than from the plane. Drawing the hull at the road's
+  // height and its shadow on the flat plane was the first version, and it made
+  // a ship going over a bridge look like it was carrying straight on through.
+  const ground = lift(ship.distance, ship.route);
+  const eye = toEye(lens, point.x, point.y, ground + LIFT);
   if (eye.depth <= 0) return;
   const p = toScreen(lens, eye);
   const scale = scaleAt(lens, eye.depth);
@@ -855,7 +920,12 @@ function drawShip(
       const at = placeSmooth(track, step.distance, step.route);
       const n = normalOfHeading(at.heading);
       const out = step.offset + lane;
-      return toEye(lens, at.pos.x + n.x * out, at.pos.y + n.y * out, 0.1);
+      return toEye(
+        lens,
+        at.pos.x + n.x * out,
+        at.pos.y + n.y * out,
+        lift(step.distance, step.route) + 0.1,
+      );
     });
     if (traceLine(ctx, lens, trail)) {
       ctx.strokeStyle = withAlpha(tint, ship.isPlayer ? 0.45 : 0.3);
@@ -866,7 +936,7 @@ function drawShip(
   }
 
   // The shadow, and the tether up to the ship.
-  const under = toScreen(lens, toEye(lens, point.x, point.y, 0));
+  const under = toScreen(lens, toEye(lens, point.x, point.y, ground));
   ctx.globalAlpha = 0.35;
   ctx.fillStyle = '#050a18';
   ctx.beginPath();
@@ -883,7 +953,7 @@ function drawShip(
     lens,
     point.x + Math.cos(point.at.heading) * 6,
     point.y + Math.sin(point.at.heading) * 6,
-    LIFT,
+    ground + LIFT,
   );
   let facing = 0;
   if (nose.depth > 0) {

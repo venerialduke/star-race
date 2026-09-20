@@ -290,6 +290,12 @@ split, or a different sector entirely — so height is a function of *which road
 as well as how far along it. One number per lap could never tell a split from
 the golden path beneath it, since they span the same canonical distances.
 
+**A bridge only ever goes up.** The road being crossed stays exactly where it
+was; what climbs is the road going over it. Raising one strand and dipping the
+other by half each was symmetric and wrong, and it broke the camera three ways
+at once — see below. Driving under somebody else's bridge is the common case,
+and it now moves nothing at all.
+
 Every road is **held to the ground at both of its own checkpoints**. That is
 what lets roads meeting there agree without anything being solved: a ship
 crossing a checkpoint may change roads, and a step in the road at that moment is
@@ -303,6 +309,16 @@ still within a corridor while the ramp is still climbing, and that is the
 binding case. Measured on a figure-eight: 30 units at the crossing left 20.4
 where the roads pass a corridor apart, against the 19.4 a corridor needs —
 passing by a unit, which is not margin. It is 38 now, which leaves 25.8.
+
+The camera rides at a fixed height above **the ship's own road**, and never
+below the road it is looking along. Both rules were learned by breaking them.
+Taking the height from the road behind the camera is a different point on a
+ramp, so the ship slid up and down the screen as if the camera had lost it; and
+a road is a filled surface with no thickness, so an eye underneath one sees its
+underside — where a bend that goes right appears to go left, and the whole view
+reads as inverted. Anything that sits *on* the road — the ship, its shadow, its
+wake, a shot between two ships, the scuffs a swing leaves — is measured from the
+road rather than from the plane, or it carries straight on through a hill.
 
 **None of this was needed to keep the race honest**, which is worth saying
 because it is easy to assume otherwise. A ship's position is a canonical

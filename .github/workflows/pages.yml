@@ -9,12 +9,20 @@ name: Deploy to GitHub Pages
 # inside this one, which means every deploy rebuilds the whole set. That is
 # cheap here (a build is about a second) and it is stateless, which matters more:
 # there is no way for a stale preview to survive a PR being closed.
+#
+# **It runs off CI finishing rather than off the push itself.** The obvious
+# trigger is `pull_request`, and it builds perfectly well — but the deployment is
+# then attributed to the pull request's branch, and the `github-pages`
+# environment only accepts deployments from the default branch. The job fails
+# with no log at all, which is a memorable half-hour. A `workflow_run` always
+# runs as the default branch, so the gate is satisfied; and since CI already
+# runs on both pull requests and pushes to main, waiting on CI covers everything
+# and has the bonus that nothing red is ever published.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -31,11 +39,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # A pull request from a fork gets a read-only token and cannot deploy, so
-    # there is nothing useful to do for one.
+    # Nothing red is published, and a manual run is always allowed.
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,8 +69,13 @@ jobs:
           git fetch --quiet origin '+refs/heads/*:refs/remotes/origin/*'
           mkdir -p _site/preview
           links=""
-          rows=$(gh pr list --state open --json number,headRefName,title \
-            --jq '.[] | [.number, .headRefName, .title] | @tsv')
+          # Forks are left out deliberately. Building a branch runs that
+          # branch's `npm ci`, and this job holds a token that can publish — so
+          # only branches in this repository, which only the owner can push.
+          rows=$(gh pr list --state open \
+            --json number,headRefName,title,isCrossRepository \
+            --jq '.[] | select(.isCrossRepository | not)
+                      | [.number, .headRefName, .title] | @tsv')
           while IFS=$'\t' read -r number branch title; do
             if [ -z "${number:-}" ]; then continue; fi
             echo "::group::PR #$number ($branch)"

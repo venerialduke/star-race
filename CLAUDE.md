@@ -77,10 +77,17 @@ pull request. `BASE_PATH` is what makes it work, because Vite bakes the base
 into every asset URL at build time, so a preview has to be built for where it
 will be served from.
 
-Two things to know. Previews are skipped for pull requests from forks, which get
-a read-only token and cannot deploy. And building a branch runs that branch's
-`npm ci`, so a preview trusts the branch the way the owner's own machine would —
-fine while every branch comes from the owner, worth revisiting if that changes.
+It deploys when **CI finishes**, not on the push. The obvious trigger is
+`pull_request` and it builds perfectly well, but the deployment is then
+attributed to the PR's branch and the `github-pages` environment only accepts
+the default branch — the job fails with no log at all. A `workflow_run` always
+runs as the default branch. One consequence: a change to this workflow only
+takes effect once it is **on main**, so the pull request that introduces one
+cannot preview itself.
+
+Previews skip pull requests from forks. Building a branch runs that branch's
+`npm ci`, and this job holds a token that can publish — so only branches in this
+repository, which only the owner can push.
 
 The **track builder** is a second page of the same site: `/star-race/builder.html`,
 or `builder.html` under `npm run dev`. Pieces from a catalogue into sectors, the

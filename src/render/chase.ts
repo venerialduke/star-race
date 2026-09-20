@@ -68,7 +68,7 @@ const STEP = 6;
  * path span the same canonical distances — one number per lap could never tell
  * a bridge from the road under it.
  */
-type Lift = (distance: number, route: number) => number;
+export type Lift = (distance: number, route: number) => number;
 
 /** How high the corridor wall is drawn. A field, not a fence: it has no top edge. */
 const WALL_HEIGHT = 13;
@@ -990,24 +990,47 @@ function drawShip(
   // of you through a bend is side-on, and should look it.
   const nose = toEye(
     lens,
-    point.x + Math.cos(point.at.heading) * 6,
-    point.y + Math.sin(point.at.heading) * 6,
+    point.x + Math.cos(point.at.heading) * PROBE,
+    point.y + Math.sin(point.at.heading) * PROBE,
     ground + LIFT,
   );
   let facing = 0;
+  // How much of the screen a unit of height takes against a unit of road ahead,
+  // right here. Measured rather than assumed, because it is the whole size of
+  // the lean and it is nowhere near 1: the road ahead is foreshortened and the
+  // vertical is not.
+  let rise = 1;
   if (nose.depth > 0) {
     const tip = toScreen(lens, nose);
     facing = Math.atan2(tip.x - p.x, -(tip.y - p.y));
+    const along = Math.hypot(tip.x - p.x, tip.y - p.y);
+    const above = toScreen(
+      lens,
+      toEye(lens, point.x, point.y, ground + LIFT + PROBE),
+    );
+    // Capped, because a ship pointing straight at the camera has no road ahead
+    // of it on screen at all and the ratio runs away.
+    if (along > 0.01) {
+      rise = Math.min(MOST_RISE, Math.hypot(above.x - p.x, above.y - p.y) / along);
+    }
   }
+
+  // And how far its nose is lifted, which is the gradient of the road under it.
+  const corner = hullOf(
+    facing,
+    shipTilt(track, lift, ship.distance, ship.route),
+    size,
+    rise,
+  );
 
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.rotate(facing);
   ctx.beginPath();
-  ctx.moveTo(0, -size);
-  ctx.lineTo(size * 0.95, size * 0.75);
-  ctx.lineTo(0, size * 0.3);
-  ctx.lineTo(-size * 0.95, size * 0.75);
+  ctx.moveTo(...corner(1, 0));
+  ctx.lineTo(...corner(-0.75, 0.95));
+  ctx.lineTo(...corner(-0.3, 0));
+  ctx.lineTo(...corner(-0.75, -0.95));
   ctx.closePath();
   ctx.fillStyle = tint;
   ctx.globalAlpha = ship.isPlayer ? 1 : 0.85;
@@ -1022,11 +1045,94 @@ function drawShip(
   ctx.globalAlpha = 0.55;
   ctx.fillStyle = PATH;
   ctx.beginPath();
-  ctx.ellipse(0, size * 0.55, size * 0.42, size * 0.22, 0, 0, Math.PI * 2);
+  ctx.ellipse(...corner(-0.55, 0), size * 0.42, size * 0.22, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   ctx.globalAlpha = 1;
 }
+
+/**
+ * Where a point of the hull lands, given which way the ship faces and how far
+ * its nose is up.
+ *
+ * The hull is described the way a ship is shaped rather than the way it is
+ * drawn: how far forward and how far across, in units of its size. Tilting it
+ * is then one rotation about the across axis — the nose swings up toward the
+ * world's vertical and the body foreshortens, which is what makes a climb read
+ * as a climb rather than as a ship that has simply grown.
+ *
+ * Two things make it worth writing down rather than inlining. The canvas frame
+ * has **already been turned** by `facing`, and a turned frame's up is not the
+ * screen's: straight up the screen is `(0, -1)` outside it and
+ * `(-sin facing, -cos facing)` within, so that is where forward leans. And a
+ * unit of height is not a unit of road on screen — under a camera looking along
+ * the track the road ahead is foreshortened almost to nothing while the
+ * vertical is barely foreshortened at all — so `rise`, the ratio between the
+ * two where the ship is, carries the lean. Treating them as equal was the first
+ * version and it under-tilted the ship by a factor of several.
+ *
+ * At no tilt it comes back to exactly the flat dart, on every heading and at
+ * any `rise`.
+ */
+export function hullOf(
+  facing: number,
+  tilt: number,
+  size: number,
+  rise: number,
+): (forward: number, across: number) => [number, number] {
+  const lean = Math.sin(tilt) * rise;
+  const ahead = {
+    x: -Math.sin(facing) * lean,
+    y: -Math.cos(tilt) - Math.cos(facing) * lean,
+  };
+  return (forward, across) => [
+    (across + ahead.x * forward) * size,
+    ahead.y * forward * size,
+  ];
+}
+
+/**
+ * How far the ship's nose lifts: the gradient of the road under it.
+ *
+ * A ship over a bridge used to be drawn flat while the road it was on climbed
+ * away beneath it, which read as the ship ignoring the hill entirely. This is
+ * the road's own slope, measured either side of where the ship is, and nothing
+ * else. It changes no number in the race — height is a drawing, and so is this
+ * — only which way the hull points.
+ *
+ * Capped, because a ramp is steepest at its middle and a short sector can stack
+ * a bump on a taper: the Cinder gets to 46° of road, and a ship standing on its
+ * tail is not the thing this is for.
+ */
+export function shipTilt(
+  track: Track,
+  lift: Lift,
+  distance: number,
+  route: number,
+): number {
+  const wrap = (at: number): number =>
+    track.length <= 0 ? 0 : ((at % track.length) + track.length) % track.length;
+  const climb =
+    lift(wrap(distance + GRADIENT_STEP), route) -
+    lift(wrap(distance - GRADIENT_STEP), route);
+  const tilt = Math.atan(climb / (GRADIENT_STEP * 2));
+  return Math.max(-MOST_TILT, Math.min(MOST_TILT, tilt));
+}
+
+/** How far either side of the ship the road's gradient is read. */
+const GRADIENT_STEP = 6;
+
+/**
+ * The length of the two steps that `rise` is the ratio of: one along the road,
+ * one straight up. The same number for both or it is not a ratio.
+ */
+const PROBE = 6;
+
+/** The most the hull ever leans, in radians: a little over 20°. */
+const MOST_TILT = 0.36;
+
+/** The most the lean is ever multiplied by, however side-on the ship is. */
+const MOST_RISE = 4;
 
 /** A hex colour at an alpha. */
 function withAlpha(hex: string, alpha: number): string {

@@ -187,3 +187,51 @@ describe('the ship on the map', () => {
     }
   });
 });
+
+describe('the lap runs clockwise', () => {
+  /**
+   * The signed area of the projected lap. Canvas y grows downward, so a loop
+   * that reads clockwise on screen comes out positive here — the opposite of
+   * the sign the same formula gives in the world, which is the whole point.
+   */
+  const wind = (view: ReturnType<typeof fitView>, track: Track): number => {
+    let area = 0;
+    const step = Math.max(1, track.length / 360);
+    for (let at = 0; at < track.length; at += step) {
+      const a = project(view, placeSmooth(track, at, 0).pos);
+      const b = project(view, placeSmooth(track, Math.min(at + step, track.length), 0).pos);
+      area += a.x * b.y - b.x * a.y;
+    }
+    return area / 2;
+  };
+
+  it('on the map, on every track that ships', () => {
+    // Which way round a loop goes is level data — the sign of every bend — not
+    // a rendering choice, so this is watching the tracks rather than the view.
+    // It went the other way until the bends were mirrored, and a mirrored track
+    // is still a track: nothing but a test notices.
+    for (const track of TRACKS) {
+      expect(
+        wind(fitView(track, 300, 300), track),
+        `${track.name} runs anticlockwise on the map`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('and turns mostly right, which is the same statement in the sim', () => {
+    for (const track of TRACKS) {
+      let swept = 0;
+      for (let i = 1; i < track.samples.length; i += 1) {
+        const a = track.samples[i - 1]?.heading ?? 0;
+        const b = track.samples[i]?.heading ?? 0;
+        let step = b - a;
+        while (step > Math.PI) step -= Math.PI * 2;
+        while (step < -Math.PI) step += Math.PI * 2;
+        swept += step;
+      }
+      // A lap is one turn, and in the world's axes — y up — that is negative
+      // for a loop going clockwise.
+      expect((swept * 180) / Math.PI, `${track.name}`).toBeLessThan(-300);
+    }
+  });
+});

@@ -18,7 +18,8 @@
 //   npm run balance -- --seasons 60  more of them
 //   npm run balance -- --only armed,engines
 
-import { buy, fit, slotsFree, upgrade, type Garage } from '../src/sim/garage';
+import { buy, buyProgress, fit, slotsFree, upgrade, type Garage } from '../src/sim/garage';
+import { PROGRESS_PRICE } from '../src/sim/tuning';
 import {
   applyCut,
   botShopper,
@@ -98,6 +99,18 @@ function shopToward(garage: Garage, policy: Policy): Garage {
       if (next === before) break;
       next = fit(next, next.shelf.length - 1);
     }
+  }
+
+  // Credits with nowhere to go buy room instead. Not a policy's idea — every
+  // policy does it — because it is the move the shop now offers when a build is
+  // out of slots, and a harness where nobody takes it measures a world where
+  // credits pile up unspent. That is the third time this file has had to learn
+  // that a policy which has stopped spending is not a policy spending
+  // differently: engine-spam ended a season on 473 credits it could not use.
+  for (let n = 0; n < 6 && slotsFree(next) <= 0 && next.credits >= PROGRESS_PRICE; n += 1) {
+    const before = next;
+    next = buyProgress(next);
+    if (next === before) break;
   }
   return next;
 }

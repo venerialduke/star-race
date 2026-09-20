@@ -41,6 +41,7 @@ import {
   POINTS_BY_PLACE,
   PURSE_BY_PLACE,
   ROSTER,
+  SHOP_OFFERS,
 } from '../../src/sim/tuning';
 import { PROVING_GROUND } from '../../src/sim/track';
 import { seedFrom } from '../../src/sim/rng';
@@ -207,15 +208,42 @@ describe('what a heat pays', () => {
     expect(pacingPay(2900, 3000)).toBeGreaterThan(PACING_BASE);
   });
 
-  it('banks the purse and a slot into the garage that carries', () => {
+  it('banks the purse and progress toward a slot into the garage that carries', () => {
+    // A finish used to hand over the slot itself. It buys progress now, and one
+    // heat is not a whole slot — so the thing that carries after one race is a
+    // bigger number on the meter, not a wider ship.
     const before = { ...newSeason(3), paced: true };
     const me = racerById(before, 'player')!;
     const after = settleHeat(before, [[{ id: 'player', ticks: 1000, collected: 0 }]]);
     const then = racerById(after, 'player')!;
     expect(then.points).toBe((POINTS_BY_PLACE[0] ?? 0) + MARGIN_POINTS);
     expect(then.garage.credits).toBeGreaterThan(me.garage.credits);
-    expect(then.garage.slots).toBeGreaterThan(me.garage.slots);
+    expect(then.garage.progress).toBeGreaterThan(me.garage.progress);
+    expect(then.garage.slots).toBe(me.garage.slots);
     expect(then.heats).toBe(1);
+  });
+
+  it('refreshes the player\'s shop window every heat, and nobody else\'s', () => {
+    // A window that never changed would be the old catalogue with four things
+    // in it. A rival has no window at all: it still shops the whole shelf.
+    const before = { ...newSeason(3), paced: true };
+    const me = racerById(before, 'player')!;
+    expect(me.garage.offer).toHaveLength(SHOP_OFFERS);
+    const after = settleHeat(before, [[{ id: 'player', ticks: 1000, collected: 0 }]]);
+    const then = racerById(after, 'player')!;
+    expect(then.garage.offer).toHaveLength(SHOP_OFFERS);
+    expect(then.garage.offer).not.toEqual(me.garage.offer);
+    for (const racer of after.racers) {
+      if (!racer.isPlayer) expect(racer.garage.offer).toEqual([]);
+    }
+  });
+
+  it('shows the same season the same shop twice', () => {
+    // A replay that offered a different four would not be a replay.
+    const offers = (seed: number): readonly string[] =>
+      racerById(newSeason(seed), 'player')!.garage.offer;
+    expect(offers(11)).toEqual(offers(11));
+    expect(offers(11)).not.toEqual(offers(12));
   });
 });
 

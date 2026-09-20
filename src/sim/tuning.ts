@@ -207,8 +207,47 @@ export const STARTING_CREDITS = 100;
 /** Slots a ship starts with. */
 export const SLOTS_AT_START = 4;
 
-/** Slots gained for finishing a race. */
-export const SLOT_PER_FINISH = 1;
+/**
+ * Progress toward the next slot, for finishing a race.
+ *
+ * A finish used to hand over a whole slot, so nine heats bought nine slots and
+ * a ship could carry everything it was ever offered. Slots are the only budget
+ * that says no to a build, and one that grows by one a heat says no to nothing
+ * — which is most of why bolting on cheap engines has been the best build in
+ * the game. Now a finish buys progress and a slot has a price.
+ */
+export const SLOT_PROGRESS_PER_FINISH = 1;
+
+/**
+ * What the next slot costs in progress, and what each one after that adds.
+ *
+ * Rising, so the fifth slot is two heats and the eighth is five. Over a
+ * nine-heat season a racer that finishes everything earns 9 progress, which
+ * buys three slots (2 + 3 + 4) and starts on the fourth. Against nine before.
+ */
+export const SLOT_COST_BASE = 2;
+export const SLOT_COST_STEP = 1;
+
+/** Credits for one unit of progress toward a slot. */
+export const PROGRESS_PRICE = 45;
+
+/** How many components the shop offers at a time. */
+export const SHOP_OFFERS = 4;
+
+/**
+ * What a reroll costs: this much for the first of a trip, rising by the step
+ * for each one after it.
+ *
+ * Rising, because a flat reroll a player can afford ten of is not a choice —
+ * it is a wait until the shop hands over whatever was wanted, which is the
+ * same open menu with extra clicking.
+ */
+export const REROLL_COST = 12;
+export const REROLL_STEP = 8;
+
+/** Research from breaking one component down, and what one level costs. */
+export const RESEARCH_PER_COPY = 1;
+export const RESEARCH_PER_LEVEL = 1;
 
 /** What selling a component returns, as a share of everything paid for it. */
 export const SELL_RETURN = 0.6;

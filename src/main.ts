@@ -53,6 +53,7 @@ import {
   heatConfig,
   newSeason,
   nextUp,
+  offerSeed,
   playerIsOut,
   racerById,
   resolveHeat,
@@ -127,6 +128,9 @@ const board = mountBoard(
     controls.setMines(rackLevel(next.fitted));
     controls.setAbilities(grantsOf(next.fitted).map((g) => g.id));
   },
+  // Where the season is, plus how many rerolls have already been taken, so a
+  // replayed season sees the same windows in the same order.
+  () => offerSeed(season.seed, season.phase, season.heat) + garageOf().rerolls + 1,
 );
 
 /** The player's garage, which the season owns and everything else borrows. */

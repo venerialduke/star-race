@@ -21,7 +21,7 @@ import {
   type FieldConfig,
   type FieldState,
 } from './field';
-import { finishRace, newGarage, type Garage } from './garage';
+import { drawOffer, finishRace, newGarage, type Garage } from './garage';
 import type { RaceState, ShipStats } from './race';
 import { makeRng } from './rng';
 import { resolveBuild } from './ship';
@@ -100,7 +100,9 @@ export function newSeason(seed: number): Season {
       id: 'player',
       name: 'You',
       isPlayer: true,
-      garage: newGarage(),
+      // The shop is a window, not a catalogue, so a season has to open with
+      // something in it — there is nowhere else the first offer could come from.
+      garage: drawOffer(newGarage(), offerSeed(seed, 0, 0)),
       points: 0,
       heats: 0,
       out: false,
@@ -376,8 +378,10 @@ export function settleHeat(
       points: racer.points + row.points,
       heats: racer.heats + 1,
       // A rival spends its winnings; the player is handed theirs and chooses.
+      // The player's shop window refreshes with the heat, free — paying is for
+      // wanting a different four *now*, not for being shown any at all.
       garage: racer.isPlayer
-        ? earned
+        ? drawOffer(earned, offerSeed(season.seed, season.phase, season.heat + 1))
         : shop({ ...racer, garage: earned, heats: racer.heats + 1 }, track, season.seed),
     };
   });
@@ -392,6 +396,22 @@ export function settleHeat(
   };
 
   return { ...season, racers, heat: season.heat + 1, log: [...season.log, log] };
+}
+
+/**
+ * The seed a shop window is drawn from.
+ *
+ * Off the season seed and where in the season it is, so the same season shows
+ * the same shop twice — a replay that offered a different four would not be a
+ * replay. Forked rather than added so that neighbouring heats are not
+ * neighbouring draws.
+ */
+export function offerSeed(seed: number, phase: number, heat: number): number {
+  return Math.floor(
+    makeRng(seed)
+      .fork(phase * 7919 + heat * 613 + 1)
+      .unitInterval() * 0xffffffff,
+  );
 }
 
 /** Interest on credits held rather than spent, to a cap. */

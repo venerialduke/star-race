@@ -1071,11 +1071,62 @@ collector's storage scales with the ship's *total* shielding — so two differen
 shields each count in full. What is stopped is the same part twelve times over,
 not variety within a category.
 
+### The shop is a window, not a catalogue
+
+**Four components are offered at a time**, drawn from the catalogue on a seed,
+and what you are shown is the decision. A menu of everything is not a shop; it
+is a list, and a build made from a list is whatever the spreadsheet says is best
+that week. `SHOP_OFFERS` sets how many.
+
+The window **refreshes free with every heat** and a **reroll costs credits
+within a trip** — `REROLL_COST`, rising by `REROLL_STEP` each time and resetting
+when the heat does. Rising, because a flat price a player can pay ten times is
+not a choice: it is a wait until the shop hands over whatever was wanted, which
+is the old catalogue with extra clicking.
+
+The draw is **with replacement**, so the same part can appear twice in one
+window. That is not a wasted offer, because of the next rule.
+
+### An upgrade can be researched instead of bought
+
+A component on the shelf can be **broken down for research** toward its own next
+level. `RESEARCH_PER_COPY` per copy, `RESEARCH_PER_LEVEL` for a level, and an
+upgrade spends research before it spends credits.
+
+This is what a duplicate is *for*. Selling a spare back returns `SELL_RETURN` of
+what it cost; breaking it down returns nothing spendable and buys a whole level
+of the thing you already fly, which is the better deal whenever you have
+somewhere to put it. It also means a window that offers you the same engine
+twice is a good window rather than a wasted one.
+
+Nothing had to opt in to this. A rival never breaks anything down, so it holds
+no research and pays credits exactly as it always has.
+
+### A slot has a price
+
+**Finishing a heat buys progress toward the next slot, not the slot.** Slots are
+the only budget in the game that ever says no to a build, and one arriving every
+race said no to nothing — which is most of why bolting on cheap engines was the
+best build there was. `SLOT_PROGRESS_PER_FINISH` per finish; the next slot costs
+`SLOT_COST_BASE` and each one after adds `SLOT_COST_STEP`, so the fifth slot is
+two heats and the eighth is five. Credits buy progress too, at `PROGRESS_PRICE`
+a unit.
+
+Over a nine-heat season a racer that finishes everything now earns three slots
+and change, against nine before.
+
 **Rivals shop through a seam, not a special case.** `settleHeat` takes a
 `Shopper`: today every rival is a bot, but nothing in the season assumes that. A
 rival is whoever hands in a garage, which is the same shape a networked player's
 shopping would arrive in — and it is what lets the balance harness race two ways
 of spending against each other rather than against a bot.
+
+**The window is the player's alone, for now**, and that is a known gap rather
+than a design. Rivals still shop the whole catalogue through `botShop`, so the
+balance harness measures policies that can buy anything against a player who
+cannot. The slot economy *is* measured, because `finishRace` applies to
+everyone; the draw and the reroll are not measured at all. Moving rivals onto a
+window of their own is the obvious next step and is under "Later".
 
 **Balance is measured in seasons, not in ticks.** `npm run balance` runs whole
 seasons where every racer follows a **policy** — a build they are shopping
@@ -1115,3 +1166,16 @@ about what would have to change first:
 - **A swing extreme enough to leave the corridor**, carrying a ship onto another
   split — as something a player chooses to fit, not something that happens to
   them.
+- **The window should learn what the ship can afford.** Early on a shop of four
+  cheap parts is the right shop; by the last phase it is a shop of nothing worth
+  buying. The draw should lean toward pricier components as a ship's slots grow,
+  so the offers keep pace with the build. Deliberately not built with the window
+  itself: two new economies tuned against each other at once means that when the
+  balance moves, nothing says which one moved it — and this repo has the
+  measurements to prove that matters.
+- **Rivals should draw from a window too.** They still shop the whole catalogue,
+  so the balance harness compares policies that can buy anything against a
+  player who cannot. Until that closes, no shop measurement is a measurement of
+  the shop the player is actually using. It is also the first change with a real
+  chance of denting engine-spam, which has survived four tuning passes: a policy
+  that must be *offered* a cheap engine cannot buy one every heat.

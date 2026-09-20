@@ -3,26 +3,31 @@
 // heat that consumes it.
 
 import {
-  buy,
+  breakDown,
+  buyOffer,
+  buyProgress,
   fit,
   remove,
+  reroll,
+  rerollCost,
+  researched,
   sell,
   sellValue,
+  slotCost,
   slotsFree,
   slotsUsed,
   upgrade,
   type Garage,
 } from '../sim/garage';
+import { PROGRESS_PRICE } from '../sim/tuning';
 import { resolveBuild } from '../sim/ship';
 import {
-  COMPONENTS,
   NOT_STOCKED,
   componentById,
   discount,
   levelOf,
   slotsOf,
   upgradeCost,
-  type Category,
   type Fitted,
 } from '../sim/ship';
 
@@ -101,6 +106,12 @@ export function mountBoard(
   parent: HTMLElement,
   read: () => Garage,
   write: (garage: Garage) => void,
+  /**
+   * A seed for the next reroll. The shop is part of the simulation and has to
+   * be replayable, so the number cannot come from a clock or a counter here —
+   * `main.ts` derives it from where the season is.
+   */
+  rerollSeed: () => number,
 ): Board {
   const element = document.createElement('div');
   element.className = 'board';
@@ -116,7 +127,16 @@ export function mountBoard(
     const index = Number(button.dataset['index']);
     switch (button.dataset['do']) {
       case 'buy':
-        act((g) => buy(g, button.dataset['id'] as string));
+        act((g) => buyOffer(g, index));
+        break;
+      case 'reroll':
+        act((g) => reroll(g, rerollSeed()));
+        break;
+      case 'research':
+        act((g) => breakDown(g, index));
+        break;
+      case 'progress':
+        act(buyProgress);
         break;
       case 'fit':
         act((g) => fit(g, index));
@@ -149,8 +169,12 @@ export function mountBoard(
                 const cost = upgradeCost(item);
                 const next = { ...item, level: item.level + 1 };
                 const grows = cost === undefined ? 0 : slotsOf(next) - slotsOf(item);
+                // A level banked by breaking copies down is already paid for.
+                const paidFor = researched(garage, item.componentId);
                 const canUpgrade =
-                  cost !== undefined && cost <= garage.credits && grows <= free;
+                  cost !== undefined &&
+                  (paidFor || cost <= garage.credits) &&
+                  grows <= free;
                 // What this part is worth *here*: the build without it, against
                 // the build with it. A duplicate crew reads as nothing, which is
                 // the whole point.
@@ -164,7 +188,7 @@ export function mountBoard(
                     <button type="button" data-do="upgrade" data-index="${i}" ${canUpgrade ? '' : 'disabled'}>${
                       cost === undefined
                         ? 'Max'
-                        : `L${item.level + 1} · ${cost}c${grows > 0 ? ' +slot' : ''}`
+                        : `L${item.level + 1} · ${paidFor ? 'researched' : `${cost}c`}${grows > 0 ? ' +slot' : ''}`
                     }</button>
                     <button type="button" data-do="remove" data-index="${i}">Off</button>
                   </span>
@@ -183,54 +207,65 @@ export function mountBoard(
                   }</em></span>
                   <span class="actions">
                     <button type="button" data-do="fit" data-index="${i}" ${slotsOf(item) > free ? 'disabled' : ''}>Fit</button>
+                    <button type="button" data-do="research" data-index="${i}" title="Break it down: a level of this component, instead of credits back">Research</button>
                     <button type="button" data-do="sell" data-index="${i}">Sell ${sellValue(item)}c</button>
                   </span>
                 </div>`,
               )
               .join('')}`;
 
-      const CATEGORIES: readonly Category[] = [
-        'engine',
-        'shields',
-        'crew',
-        'navigation',
-        'weapons',
-      ];
-      const CATEGORY_NAMES: Record<Category, string> = {
-        engine: 'Engines',
-        shields: 'Shields',
-        crew: 'Crew',
-        navigation: 'Navigation',
-        weapons: 'Weapons',
-        collection: 'Collection',
-      };
-      const shopRows = CATEGORIES.map((category) => {
-        const rows = COMPONENTS.filter((c) => c.category === category)
-          .map((component) => {
-            const first = component.levels[0];
-            const would = differenceOf(garage.fitted, [
-              { uid: 'preview', componentId: component.id, level: 1 },
-            ]);
-            return `<div class="part${would.nothing ? ' idle' : ''}">
+      // The shop is four things drawn from the catalogue, not the catalogue.
+      // What it offers is the decision; what it costs to see four more is the
+      // other one.
+      const shopRows =
+        garage.offer.length === 0
+          ? '<div class="part idle"><span class="t"><em>Nothing on offer until the next heat.</em></span></div>'
+          : garage.offer
+              .map((id, i) => {
+                const component = componentById(id);
+                const first = component?.levels[0];
+                if (component === undefined || first === undefined) return '';
+                const would = differenceOf(garage.fitted, [
+                  { uid: 'preview', componentId: id, level: 1 },
+                ]);
+                const owned = garage.fitted.some((f) => f.componentId === id);
+                return `<div class="part${would.nothing ? ' idle' : ''}">
               <span class="t"><span>${component.name}</span><em>${
                 would.nothing
-                  ? 'adds nothing to your build as it stands'
+                  ? owned
+                    ? 'adds nothing as it stands — buy it to break down for research'
+                    : 'adds nothing to your build as it stands'
                   : `<b class="gain">${would.text}</b> · ${first.note}`
               }</em></span>
               <span class="actions">
-                <button type="button" data-do="buy" data-id="${component.id}" ${first.cost > garage.credits ? 'disabled' : ''}>Buy ${first.cost}c</button>
+                <button type="button" data-do="buy" data-index="${i}" ${first.cost > garage.credits ? 'disabled' : ''}>Buy ${first.cost}c</button>
               </span>
             </div>`;
-          })
-          .join('');
-        if (rows === '') return '';
-        return `<h4>${CATEGORY_NAMES[category]}</h4>${rows}`;
-      }).join('');
+              })
+              .join('');
+
+      const rerollRow = `<div class="part">
+          <span class="t"><span>Another four</span><em>a fresh window; the price rises each time, and resets next heat</em></span>
+          <span class="actions">
+            <button type="button" data-do="reroll" ${rerollCost(garage) > garage.credits ? 'disabled' : ''}>Reroll ${rerollCost(garage)}c</button>
+          </span>
+        </div>`;
+
+      const toNext = slotCost(garage.slots);
+      const slotRow = `<div class="part">
+          <span class="t"><span>Next slot</span><em>${garage.progress}/${toNext} — a finish pays ${
+            1
+          }, and each slot costs more than the last</em></span>
+          <span class="actions">
+            <button type="button" data-do="progress" ${PROGRESS_PRICE > garage.credits ? 'disabled' : ''}>Buy 1 for ${PROGRESS_PRICE}c</button>
+          </span>
+        </div>`;
 
       element.innerHTML = `
         <div class="totals">
           <span><b>${garage.credits}</b>c</span>
           <span><b>${slotsUsed(garage)}/${garage.slots}</b> slots</span>
+          <span><b>${garage.progress}/${slotCost(garage.slots)}</b> to next</span>
           <span>Thrust <b>${stats.thrust.toFixed(2)}</b></span>
           <span>Handling <b>${stats.handling.toFixed(2)}</b></span>
           <span>Shields <b>${stats.shields}</b></span>
@@ -241,8 +276,11 @@ export function mountBoard(
         <h3>Fitted</h3>
         ${fittedRows}
         ${shelfRows}
+        <h3>Next slot</h3>
+        ${slotRow}
         <h3>Shop</h3>
         ${shopRows}
+        ${rerollRow}
         <p class="waiting">Damage breaks whatever it hits and the part is worth less for the rest of the race; the crew patches it as you fly, and the garage puts everything right between races. Not stocked yet, and why: ${NOT_STOCKED.map((n) => `<b>${n.name}</b> — ${n.waiting}`).join(' · ')}.</p>`;
     },
   };

@@ -559,10 +559,10 @@ export const sector = (
 });
 
 const KESTREL_RING: readonly Section[] = [
-  sector('kestrel-main', 'The long straight', [S(260), B(70, 70), S(90)]),
-  sector('kestrel-esses', 'The esses', [B(42, -55), S(70), B(55, 165)]),
-  sector('kestrel-main-2', 'The long straight again', [S(260), B(70, 70), S(90)]),
-  sector('kestrel-esses-2', 'The esses again', [B(42, -55), S(70), B(55, 165)]),
+  sector('kestrel-main', 'The long straight', [S(260), B(70, -70), S(90)]),
+  sector('kestrel-esses', 'The esses', [B(42, 55), S(70), B(55, -165)]),
+  sector('kestrel-main-2', 'The long straight again', [S(260), B(70, -70), S(90)]),
+  sector('kestrel-esses-2', 'The esses again', [B(42, 55), S(70), B(55, -165)]),
 ];
 
 /** A medium loop of mixed bends: the one that asks for a bit of everything. */
@@ -580,7 +580,7 @@ export const KESTREL_LOOP = assemblePlan({
         0,
         'kestrel-wide',
         'The long way round',
-        [B(90, -60)],
+        [B(90, 60)],
         85,
       ),
     },
@@ -592,7 +592,7 @@ export const KESTREL_LOOP = assemblePlan({
         1,
         'kestrel-cut',
         'The cut',
-        [B(26, 22), S(60)],
+        [B(26, -22), S(60)],
         26,
       ),
     },
@@ -604,7 +604,7 @@ export const KESTREL_LOOP = assemblePlan({
         3,
         'kestrel-needle',
         'The needle',
-        [B(45, 46)],
+        [B(45, -46)],
         26,
       ),
     },
@@ -612,10 +612,10 @@ export const KESTREL_LOOP = assemblePlan({
 });
 
 const MERIDIAN_RING: readonly Section[] = [
-  sector('meridian-drag', 'The drag', [S(420), B(85, 60), S(300)]),
-  sector('meridian-sweep', 'The sweep', [B(110, 55), S(200), B(62, 65)]),
-  sector('meridian-drag-2', 'The drag again', [S(420), B(85, 60), S(300)]),
-  sector('meridian-sweep-2', 'The sweep again', [B(110, 55), S(200), B(62, 65)]),
+  sector('meridian-drag', 'The drag', [S(420), B(85, -60), S(300)]),
+  sector('meridian-sweep', 'The sweep', [B(110, -55), S(200), B(62, -65)]),
+  sector('meridian-drag-2', 'The drag again', [S(420), B(85, -60), S(300)]),
+  sector('meridian-sweep-2', 'The sweep again', [B(110, -55), S(200), B(62, -65)]),
 ];
 
 /** Long straights and open sweepers: a track that pays for top speed. */
@@ -633,7 +633,7 @@ export const MERIDIAN_RUN = assemblePlan({
         0,
         'meridian-outer',
         'The outer arc',
-        [B(90, -60), S(60)],
+        [B(90, 60), S(60)],
         85,
       ),
     },
@@ -645,7 +645,7 @@ export const MERIDIAN_RUN = assemblePlan({
         1,
         'meridian-wide',
         'The wide line',
-        [B(70, -14)],
+        [B(70, 14)],
         160,
       ),
     },
@@ -657,7 +657,7 @@ export const MERIDIAN_RUN = assemblePlan({
         2,
         'meridian-inside',
         'The inside line',
-        [B(120, 46), S(320)],
+        [B(120, -46), S(320)],
         34,
       ),
     },
@@ -669,7 +669,7 @@ export const MERIDIAN_RUN = assemblePlan({
         3,
         'meridian-far',
         'The far side',
-        [B(120, -14)],
+        [B(120, 14)],
         160,
       ),
     },
@@ -677,9 +677,9 @@ export const MERIDIAN_RUN = assemblePlan({
 });
 
 const CINDER_RING: readonly Section[] = [
-  sector('cinder-hook', 'The hook', [S(80), B(30, 90), S(50), B(26, -70)]),
-  sector('cinder-coil', 'The coil', [S(40), B(34, 160), S(80), B(30, 90)]),
-  sector('cinder-whip', 'The whip', [S(50), B(26, -70), S(40), B(34, 160)]),
+  sector('cinder-hook', 'The hook', [S(80), B(30, -90), S(50), B(26, 70)]),
+  sector('cinder-coil', 'The coil', [S(40), B(34, -160), S(80), B(30, -90)]),
+  sector('cinder-whip', 'The whip', [S(50), B(26, 70), S(40), B(34, -160)]),
 ];
 
 /** Short and tight, barely a straight on it: a track that punishes carrying speed. */
@@ -705,7 +705,7 @@ export const CINDER_COIL = assemblePlan({
         0,
         'cinder-tight',
         'The tight line',
-        [B(30, 55), S(40)],
+        [B(30, -55), S(40)],
         52,
       ),
     },
@@ -717,7 +717,7 @@ export const CINDER_COIL = assemblePlan({
         1,
         'cinder-outside',
         'The outside',
-        [B(45, 60), S(30)],
+        [B(45, -60), S(30)],
         60,
       ),
     },
@@ -729,7 +729,7 @@ export const CINDER_COIL = assemblePlan({
         2,
         'cinder-sling',
         'The slingshot',
-        [B(55, -46), S(100)],
+        [B(55, 46), S(100)],
         26,
       ),
     },
@@ -752,17 +752,17 @@ export const CINDER_COIL = assemblePlan({
  * lot. Delete this and its entry in `TRACKS` when real content replaces it.
  */
 const PROVING_RING: readonly Section[] = [
-  sector('proving-clear', 'The clear run', [S(220), B(70, 90)]),
+  sector('proving-clear', 'The clear run', [S(220), B(70, -90)]),
   // Thick: the same entry throws you wider here than it did on the stretch
   // before, which is the one comparison the whole track exists to make.
-  sector('proving-nebula', 'The nebula', [S(140), B(45, 90)], {
+  sector('proving-nebula', 'The nebula', [S(140), B(45, -90)], {
     environment: 'nebula',
   }),
   // It scrapes, and the straight through it is worth flying.
-  sector('proving-debris', 'The scrapyard', [P(S(220), { pocket: 9 }), B(70, 90)], {
+  sector('proving-debris', 'The scrapyard', [P(S(220), { pocket: 9 }), B(70, -90)], {
     environment: 'debris',
   }),
-  sector('proving-shadow', 'The dark', [S(140), B(45, 90)], { environment: 'shadow' }),
+  sector('proving-shadow', 'The dark', [S(140), B(45, -90)], { environment: 'shadow' }),
 ];
 
 /** Four stretches of plain road, each made of something different. */
@@ -783,14 +783,14 @@ export const PROVING_GROUND = assemblePlan({
         0,
         'proving-wide',
         'The long way round',
-        [B(90, -50)],
+        [B(90, 50)],
         120,
       ),
     },
   ],
   fixtures: [
     { id: 'mine', kind: 'mine', sector: 1, route: 0, at: 0.45, offset: 0, power: 26 },
-    { id: 'hole', kind: 'black-hole', sector: 3, route: 0, at: 0.5, offset: 4, power: 22 },
+    { id: 'hole', kind: 'black-hole', sector: 3, route: 0, at: 0.5, offset: -4, power: 22 },
   ],
 });
 

@@ -12,10 +12,16 @@
 // golden path curves left.
 
 import { describe, expect, it } from 'vitest';
-import { TRACKS, normalOf, placeSmooth, sampleAt, type Track } from '../../src/sim/track';
+import {
+  TRACKS,
+  normalOf,
+  placeSmooth,
+  sampleAt,
+  type Track,
+} from '../../src/sim/track';
 import { eyeFor } from '../../src/render/chase';
 import { heightAt, reliefOf } from '../../src/render/height';
-import { fitView, project } from '../../src/render/map';
+import { fitView, project, shipFacing } from '../../src/render/map';
 import { lensFor, toEye, toScreen } from '../../src/render/camera';
 import type { RouteView, ShipView } from '../../src/render/view';
 
@@ -117,6 +123,115 @@ describe('a bend goes the same way in both views', () => {
         );
         expect(left.x, `${track.name} at ${at}`).toBeLessThan(middle.x);
       }
+    }
+  });
+});
+
+describe('the ship on the map', () => {
+  /**
+   * Which way it is actually travelling on screen: the angle between where it
+   * is drawn now and where it is drawn a moment later.
+   */
+  const movingTowards = (
+    view: ReturnType<typeof fitView>,
+    track: Track,
+    at: number,
+  ): number => {
+    const now = project(view, placeSmooth(track, at, 0).pos);
+    const soon = project(view, placeSmooth(track, at + 4, 0).pos);
+    return Math.atan2(soon.y - now.y, soon.x - now.x);
+  };
+
+  /** The smaller angle between two headings, in radians. */
+  const apart = (a: number, b: number): number => {
+    const tau = Math.PI * 2;
+    const d = Math.abs(((a - b) % tau) + tau) % tau;
+    return Math.min(d, tau - d);
+  };
+
+  it('points the way it is going, not the way it came', () => {
+    // The map used to hand a *world* heading to `ctx.rotate`, which turns the
+    // other way, with a `- π/2` bolted on for the rotated case. That was wrong
+    // twice and the two wrongs cancelled against a projection that was itself
+    // mirrored. Fixing the projection left the marker pointing backwards.
+    for (const track of TRACKS) {
+      for (const size of [
+        [300, 300],
+        [420, 200],
+        [200, 420],
+      ] as [number, number][]) {
+        const view = fitView(track, size[0], size[1]);
+        for (let at = 0; at < track.length; at += 17) {
+          const here = placeSmooth(track, at, 0);
+          const off = apart(shipFacing(view, here, 0), movingTowards(view, track, at));
+          expect(
+            off,
+            `${track.name} at ${at} on a ${size[0]}x${size[1]} panel (rotate=${view.rotate}): ` +
+              `the marker is ${((off * 180) / Math.PI).toFixed(0)}° off its travel`,
+          ).toBeLessThan(0.2);
+        }
+      }
+    }
+  });
+
+  it('points the same way whatever side of the path it has been thrown to', () => {
+    // A ship out at the corridor wall is still going the same way.
+    const track = TRACKS[0] as Track;
+    const view = fitView(track, 300, 300);
+    for (let at = 0; at < track.length; at += 31) {
+      const here = placeSmooth(track, at, 0);
+      const middle = shipFacing(view, here, 0);
+      for (const out of [-20, 20]) {
+        expect(apart(shipFacing(view, here, out), middle)).toBeLessThan(0.05);
+      }
+    }
+  });
+});
+
+describe('the lap runs clockwise', () => {
+  /**
+   * The signed area of the projected lap. Canvas y grows downward, so a loop
+   * that reads clockwise on screen comes out positive here — the opposite of
+   * the sign the same formula gives in the world, which is the whole point.
+   */
+  const wind = (view: ReturnType<typeof fitView>, track: Track): number => {
+    let area = 0;
+    const step = Math.max(1, track.length / 360);
+    for (let at = 0; at < track.length; at += step) {
+      const a = project(view, placeSmooth(track, at, 0).pos);
+      const b = project(view, placeSmooth(track, Math.min(at + step, track.length), 0).pos);
+      area += a.x * b.y - b.x * a.y;
+    }
+    return area / 2;
+  };
+
+  it('on the map, on every track that ships', () => {
+    // Which way round a loop goes is level data — the sign of every bend — not
+    // a rendering choice, so this is watching the tracks rather than the view.
+    // It went the other way until the bends were mirrored, and a mirrored track
+    // is still a track: nothing but a test notices.
+    for (const track of TRACKS) {
+      expect(
+        wind(fitView(track, 300, 300), track),
+        `${track.name} runs anticlockwise on the map`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('and turns mostly right, which is the same statement in the sim', () => {
+    for (const track of TRACKS) {
+      let swept = 0;
+      for (let i = 1; i < track.samples.length; i += 1) {
+        const a = track.samples[i - 1]?.heading ?? 0;
+        const b = track.samples[i]?.heading ?? 0;
+        let step = b - a;
+        while (step > Math.PI) step -= Math.PI * 2;
+        while (step < -Math.PI) step += Math.PI * 2;
+        swept += step;
+      }
+      // A lap is one turn, and in the world's axes — y up — that is negative
+      // for a loop going clockwise.
+      expect((swept * 180) / Math.PI, `${track.name}`).toBeLessThan(-300);
     }
   });
 });

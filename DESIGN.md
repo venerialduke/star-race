@@ -330,12 +330,43 @@ Anything that sits *on* the road — the ship, its shadow, its wake, a shot
 between two ships, the scuffs a swing leaves — is measured from the road rather
 than from the plane, or it carries straight on through a hill.
 
+**The ship leans with the road too.** Drawn level while the road climbed away
+beneath it, a ship reads as ignoring the hill even once it is at the right
+height. So the hull is pitched by the gradient of the road under it, capped a
+little over 20° because a ramp is steepest in the middle and a short sector can
+stack a bump on a taper — the Cinder reaches 46° of road, and a ship standing on
+its tail is not what this is for. It is a drawing and nothing else: the pitch is
+read off the same relief the road is, which the simulation cannot see.
+
+The one number this needs that is not obvious is how much of the screen a unit
+of *height* is worth against a unit of *road ahead*. They are not the same and
+are not close — the road in front of the ship is foreshortened almost flat while
+the vertical barely is, about three to one under this camera — so the ratio is
+measured by projecting both and the lean carries it. Taking them as equal was
+the first version, and it tilted the ship by a third of what the road was doing.
+
+**A world angle is never handed to the canvas.** They turn opposite ways — a
+heading anticlockwise, a canvas rotation clockwise — and the map's projection
+flips the vertical axis on top of that and may turn the whole panel a quarter.
+Anything that needs a direction on screen projects a step along the heading and
+takes the angle between the two screen points, which is right for all three and
+needs no special case for any of them.
+
 **Both views agree about which way a bend goes**, which they did not until now:
 the map projected the world's y straight onto the canvas's, and canvas y grows
 downward while the world's grows up, so the whole map was mirrored. True since
 V1 and unnoticed, because a mirrored track still looks like a plausible track.
 It only shows when you compare it against something — which is now a test, on
 every bend of every track, against the simulation's own `turn`.
+
+**Every track runs clockwise.** Which way round a loop goes is level data — the
+sign of each bend — and nothing else: mirroring a track changes its picture and
+not one number in it, which was measured rather than assumed. Lap length, tick,
+speed, shields and every swing come back identical on all four tracks under all
+three corner plans; the only thing that moves is the sign of a lateral offset,
+because left and right have swapped. They were all anticlockwise before, which
+nobody had chosen. A test now watches the winding on the map, because a track
+that turns the wrong way is still a perfectly plausible track.
 
 **None of this was needed to keep the race honest**, which is worth saying
 because it is easy to assume otherwise. A ship's position is a canonical
@@ -352,11 +383,12 @@ A track is a closed **loop** walked out from an ordered list of **pieces**:
 | Piece      | What it is                                                        |
 | ---------- | ----------------------------------------------------------------- |
 | `straight` | a length, in track units                                          |
-| `bend`     | a radius and a signed sweep in degrees; the sign is the direction |
+| `bend`     | a radius and a signed sweep in degrees; positive turns left       |
 
 Walking the pieces produces the **centreline** — the golden path — as a
 polyline, and fixes where every bend starts and ends. Geometry is level data,
-not tuning: the shape of a track is content.
+not tuning: the shape of a track is content. Every track that ships sweeps a
+full turn **negative**, so the lap runs clockwise.
 
 Three tracks are built, and they exist to ask whether one strategy wins
 everywhere. They do not:

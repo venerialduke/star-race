@@ -26,7 +26,7 @@ import {
   type Piece,
   type Track,
 } from '../../src/sim/track';
-import { HEIGHT, eyeFor } from '../../src/render/chase';
+import { HEIGHT, eyeFor, hullOf, shipTilt } from '../../src/render/chase';
 import { heightAt, reliefOf } from '../../src/render/height';
 import { lensFor, toEye, toScreen } from '../../src/render/camera';
 import type { RouteView, ShipView } from '../../src/render/view';
@@ -159,5 +159,148 @@ describe('the eye', () => {
         expect(eye.pitch).toBeCloseTo(0.3, 6);
       }
     }
+  });
+});
+
+describe('the ship leans with the road', () => {
+  const liftOf = (track: Track) => {
+    const relief = reliefOf(track);
+    return (d: number, r: number): number => heightAt(track, relief, d, r);
+  };
+
+  it('stays flat where the road is flat', () => {
+    // The shipped tracks bridge only their splits, so a player on the golden
+    // path never climbs on any of them and should never be drawn as if it did.
+    for (const track of TRACKS) {
+      const lift = liftOf(track);
+      for (let at = 0; at < track.length; at += 3) {
+        expect(shipTilt(track, lift, at, 0), `${track.name} at ${at}`).toBe(0);
+      }
+    }
+  });
+
+  it('noses up going onto a bridge and down coming off it', () => {
+    const track = hilly();
+    const lift = liftOf(track);
+    let climbing = 0;
+    let falling = 0;
+    let worst = 0;
+    for (let at = 0; at < track.length; at += 1) {
+      const tilt = shipTilt(track, lift, at, 0);
+      // Up where the road under it is going up, down where it is going down.
+      const rise = lift(at + 6, 0) - lift(at - 6, 0);
+      if (Math.abs(rise) > 0.2) expect(Math.sign(tilt), `at ${at}`).toBe(Math.sign(rise));
+      if (tilt > 0.02) climbing += 1;
+      if (tilt < -0.02) falling += 1;
+      worst = Math.max(worst, Math.abs(tilt));
+    }
+    // It really does both, and a bridge that goes up has to come back down.
+    expect(climbing).toBeGreaterThan(20);
+    expect(falling).toBeGreaterThan(20);
+    expect(climbing).toBeCloseTo(falling, -1);
+    // Visible, and never further than a ship on its tail.
+    expect(worst).toBeGreaterThan(0.2);
+    expect(worst).toBeLessThanOrEqual(0.36);
+  });
+
+  it('does not flinch at the start line', () => {
+    // The gradient is read either side of the ship, so at distance 0 one of
+    // those samples is off the back of the lap. Wrapped, not clamped.
+    const track = hilly();
+    const lift = liftOf(track);
+    for (let at = -3; at <= 3; at += 0.5) {
+      const here = shipTilt(track, lift, at, 0);
+      const next = shipTilt(track, lift, at + 0.5, 0);
+      expect(Math.abs(next - here), `at ${at}`).toBeLessThan(0.05);
+    }
+  });
+});
+
+describe('the hull that is drawn', () => {
+  /**
+   * How much of the screen a unit of height takes against a unit of road ahead.
+   * Measured in the game; roughly three, because the road ahead of the ship is
+   * foreshortened almost flat and the vertical hardly at all.
+   */
+  const RISE = 2.95;
+
+  /** A hull point in plain screen pixels, out of the frame `facing` turned. */
+  const onScreen = (
+    facing: number,
+    tilt: number,
+    forward: number,
+    across: number,
+    rise = RISE,
+  ): { x: number; y: number } => {
+    const [x, y] = hullOf(facing, tilt, 10, rise)(forward, across);
+    return {
+      x: x * Math.cos(facing) - y * Math.sin(facing),
+      y: x * Math.sin(facing) + y * Math.cos(facing),
+    };
+  };
+
+  it('is the same flat dart it always was when the road is flat', () => {
+    for (const facing of [0, 0.7, -1.9, Math.PI, 3]) {
+      for (const rise of [0.5, 1, RISE, 4]) {
+        const corner = hullOf(facing, 0, 10, rise);
+        expect(corner(1, 0)[0]).toBeCloseTo(0, 9);
+        expect(corner(1, 0)[1]).toBeCloseTo(-10, 9);
+        expect(corner(-0.75, 0.95)[0]).toBeCloseTo(9.5, 9);
+        expect(corner(-0.75, 0.95)[1]).toBeCloseTo(7.5, 9);
+        expect(corner(-0.3, 0)[1]).toBeCloseTo(3, 9);
+      }
+    }
+  });
+
+  it('lifts the nose up the screen on a climb, whichever way the ship faces', () => {
+    // The trap this is here for: the frame is turned by `facing` before the
+    // hull is drawn, so leaning the nose toward that frame's own "up" would
+    // roll the ship instead of pitching it, and would do it differently
+    // depending on where on the map the hill happened to be.
+    for (const facing of [0, 0.7, -1.9, Math.PI, 3, -2.6]) {
+      const level = onScreen(facing, 0, 1, 0);
+      const up = onScreen(facing, 0.3, 1, 0);
+      const down = onScreen(facing, -0.3, 1, 0);
+      expect(up.y, `facing ${facing}`).toBeLessThan(level.y);
+      expect(down.y, `facing ${facing}`).toBeGreaterThan(level.y);
+      // And the wings, which are behind the ship, go the other way.
+      expect(onScreen(facing, 0.3, -0.75, 0.95).y).toBeGreaterThan(
+        onScreen(facing, 0, -0.75, 0.95).y,
+      );
+    }
+  });
+
+  it('keeps the span across the ship, so a pitch is not a roll', () => {
+    // Tilting turns the hull about its own across axis. The two wingtips are on
+    // that axis, so they stay exactly as far apart and exactly as level with
+    // each other as they were.
+    for (const facing of [0, 1.1, -2.2]) {
+      for (const tilt of [-0.36, -0.1, 0, 0.2, 0.36]) {
+        const right = onScreen(facing, tilt, -0.75, 0.95);
+        const left = onScreen(facing, tilt, -0.75, -0.95);
+        expect(Math.hypot(right.x - left.x, right.y - left.y)).toBeCloseTo(19, 9);
+        const flatRight = onScreen(facing, 0, -0.75, 0.95);
+        const flatLeft = onScreen(facing, 0, -0.75, -0.95);
+        // Both wingtips move the same way and by the same amount: no roll.
+        expect(right.y - flatRight.y).toBeCloseTo(left.y - flatLeft.y, 9);
+      }
+    }
+  });
+
+  it('leans by as much as the screen says a unit of height is worth', () => {
+    // The first version treated a unit of height and a unit of road ahead as
+    // the same number of pixels. They are not — it is about three to one under
+    // this camera — and taking them as equal made the tilt a third of what the
+    // road was doing, which on a bridge reads as a ship not quite keeping up.
+    const facing = 0;
+    const flat = onScreen(facing, 0, 1, 0).y;
+    const lifted = (rise: number): number => flat - onScreen(facing, 0.3, 1, 0, rise).y;
+    // The lean is linear in the ratio: the foreshortening of the body is not
+    // part of it, which is why this is a difference rather than a multiple.
+    expect(lifted(3) - lifted(2)).toBeCloseTo(lifted(2) - lifted(1), 6);
+    expect(lifted(3)).toBeGreaterThan(lifted(1));
+    // Visible at the ratio the game actually measures: the nose ends up most of
+    // a ship-length further up the screen than it was.
+    expect(lifted(RISE)).toBeGreaterThan(6);
   });
 });

@@ -68,6 +68,20 @@ npm run mechanics-page   # design/catalogue/ → public/design/mechanics.html
 npm run balance          # whole seasons, policy against policy
 ```
 
+**Previews.** Every open pull request is built to
+`/star-race/preview/<number>/`, listed at `/star-race/preview/`, and rebuilt on
+every push. Pages gives a repository one deployment, so a preview cannot be its
+own site — it is a folder inside this one, which is why each deploy rebuilds
+main *and* every open PR. Stateless on purpose: a preview cannot outlive its
+pull request. `BASE_PATH` is what makes it work, because Vite bakes the base
+into every asset URL at build time, so a preview has to be built for where it
+will be served from.
+
+Two things to know. Previews are skipped for pull requests from forks, which get
+a read-only token and cannot deploy. And building a branch runs that branch's
+`npm ci`, so a preview trusts the branch the way the owner's own machine would —
+fine while every branch comes from the owner, worth revisiting if that changes.
+
 The **track builder** is a second page of the same site: `/star-race/builder.html`,
 or `builder.html` under `npm run dev`. Pieces from a catalogue into sectors, the
 loop closed for you when it is open, and TypeScript out at the bottom to paste

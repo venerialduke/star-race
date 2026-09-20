@@ -1,9 +1,9 @@
-// How high off the ground each stretch of a track is drawn.
+// How high off the ground each stretch of road is drawn.
 //
 // A loop laid out in two dimensions can cross itself, and a road that runs
 // through another road looks like a mistake. Real circuits answer this with a
-// bridge, and so does this: where the lap passes over itself, one strand climbs
-// and the other dips, so the two never occupy the same place.
+// bridge, and so does this: where two roads cross, one climbs and the other
+// dips, so the two are never in the same place.
 //
 // **This file lives in `render/` on purpose, and that is the whole design.**
 // `src/sim` is forbidden by ESLint from importing anything here, so height
@@ -18,43 +18,66 @@
 // never able to interfere in the first place. A mine in sector 1 is found by
 // `sector === 1`, not by being near something. Height is about what the road
 // looks like, and only that.
+//
+// **Every road, not just the golden path.** A split is a road in its own right
+// and can cross the main line, another split, or a different sector entirely.
+// Height is therefore a function of *which road* as well as how far along it —
+// a split and the main line span the same canonical distances, so one number
+// per lap could never separate them from each other.
 
-import type { Track } from '../sim/track';
+import { alongOf, routeOf, sectorOf, type Route, type Track } from '../sim/track';
 import { PATH_HALF_WIDTH, TRACK_HALF_WIDTH } from '../sim/tuning';
 
-/**
- * Where the lap passes over itself, in canonical distances.
- *
- * Derived by walking the line, never authored — the same rule checkpoint poses
- * follow, and for the same reason: two sources of truth about where the road is
- * can disagree, and the disagreement is silent.
- */
-export interface Crossing {
-  /** The strand that goes above, as a distance round the lap. */
-  readonly over: number;
-  /** The strand that goes below. */
-  readonly under: number;
+/** One road, named the way the race names one. */
+export interface RoadId {
+  readonly sector: number;
+  readonly route: number;
 }
 
-/** How far apart the two strands of a crossing are held, in track units. */
-const CLEARANCE = 26;
+const keyOf = (road: RoadId): string => `${road.sector}:${road.route}`;
+
+/** Where one road passes over another, each measured along its own road. */
+export interface Crossing {
+  readonly over: RoadId;
+  readonly overAt: number;
+  readonly under: RoadId;
+  readonly underAt: number;
+}
 
 /**
- * How far either side of a crossing the road takes to climb.
+ * How far apart the two strands of a crossing are held, in track units.
  *
- * Long enough to read as a slope rather than a step. Shorter than the shortest
- * sensible gap between two crossings, or two bumps merge into one hill and the
- * clearance between them is lost — which `separation` below measures rather
- * than assumes.
+ * Bigger than it first looks like it needs to be, and measured rather than
+ * picked. The full gap is only reached *at* the crossing; a little to either
+ * side the two roads are still within a corridor of each other while the ramp
+ * has not finished climbing, and that approach is the binding case, not the
+ * crossing itself. On a figure-eight loop, 30 at the crossing left only 20.4
+ * where the roads pass a corridor apart, against the 19.4 a corridor needs —
+ * passing, with a unit of margin, which is not margin. 38 leaves 25.8.
  */
-const RAMP = 110;
+const CLEARANCE = 38;
+
+/** How far either side of a crossing the road takes to climb. */
+const RAMP = 90;
 
 /**
- * Two stretches count as crossing only if they are this far apart along the
- * lap. Consecutive samples share endpoints and would otherwise all read as
+ * Two stretches of the **same** road count as crossing only this far apart
+ * along it. Consecutive samples share endpoints and would otherwise all read as
  * crossings of themselves.
  */
 const NOT_ITSELF = 60;
+
+/**
+ * How far from each end of a road its height is forced back to the ground.
+ *
+ * Every road is flat at both of its checkpoints, which is what lets roads that
+ * meet there agree without solving anything: a ship crossing a checkpoint may
+ * switch roads, and a step in the road at the moment it does would be the one
+ * place a bridge is allowed to look broken. The cost is real and is not hidden
+ * — a crossing within a ramp of a checkpoint cannot be lifted clear, so
+ * `separation` reports it and the shipped-track rule refuses it.
+ */
+const TAPER = 70;
 
 /** Do two plan-view segments meet? The standard orientation test. */
 function meets(
@@ -63,157 +86,235 @@ function meets(
   c: { x: number; y: number },
   d: { x: number; y: number },
 ): boolean {
-  const cross = (
+  const turn = (
     p: { x: number; y: number },
     q: { x: number; y: number },
     r: { x: number; y: number },
   ): number => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
-  const d1 = cross(a, b, c);
-  const d2 = cross(a, b, d);
-  const d3 = cross(c, d, a);
-  const d4 = cross(c, d, b);
+  const d1 = turn(a, b, c);
+  const d2 = turn(a, b, d);
+  const d3 = turn(c, d, a);
+  const d4 = turn(c, d, b);
   return (
     ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
     ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
   );
 }
 
-/** A gap round a loop, brought into (-loop/2, loop/2]. */
-function wrapGap(raw: number, loop: number): number {
-  if (loop <= 0) return raw;
-  const gap = ((raw % loop) + loop) % loop;
-  return gap > loop / 2 ? gap - loop : gap;
+interface Road extends RoadId {
+  readonly route: number;
+  readonly line: Route;
+}
+
+/** Every road on the track: the golden path of each sector, then its splits. */
+export function roadsOf(track: Track): readonly Road[] {
+  const roads: Road[] = [];
+  track.sectors.forEach((sector) => {
+    sector.routes.forEach((line, route) => {
+      roads.push({ sector: sector.index, route, line });
+    });
+  });
+  return roads;
 }
 
 /**
- * Every place the golden path passes over itself.
+ * Every place two roads cross in the plan view.
  *
- * Which strand goes over is decided by canonical distance — the later one
- * climbs — because it has to be decided *somehow* and this is the one rule that
- * cannot depend on where anything is drawn. It is deterministic, which is what
- * matters: the same track always gets the same bridges.
+ * Which one goes over is decided by road order and then by distance along —
+ * the later one climbs — because it has to be decided *somehow* and that is the
+ * one rule which cannot depend on how anything is drawn. Deterministic, so the
+ * same track always gets the same bridges.
+ *
+ * Two roads through the *same* sector are not crossing when they part at one
+ * checkpoint and meet again at the other; that is what a fork is. Only the
+ * ground between the tapers is considered, which is exactly the ground where
+ * they can be lifted apart anyway.
  */
 export function crossingsOf(track: Track): readonly Crossing[] {
+  const roads = roadsOf(track);
   const found: Crossing[] = [];
-  const samples = track.samples;
-  const n = samples.length;
-  if (n < 4 || track.length <= 0) return found;
-  const step = track.length / n;
 
-  for (let i = 0; i < n; i += 1) {
-    const a = samples[i]?.pos;
-    const b = samples[(i + 1) % n]?.pos;
-    if (a === undefined || b === undefined) continue;
-    for (let j = i + 1; j < n; j += 1) {
-      const c = samples[j]?.pos;
-      const d = samples[(j + 1) % n]?.pos;
-      if (c === undefined || d === undefined) continue;
-      const apart = Math.abs(wrapGap((j - i) * step, track.length));
-      if (apart < NOT_ITSELF) continue;
-      if (!meets(a, b, c, d)) continue;
-      const here = i * step;
-      const there = j * step;
-      // One crossing, not the four or five neighbouring sample pairs that all
-      // straddle it.
-      const already = found.some(
-        (was) =>
-          Math.abs(wrapGap(was.under - here, track.length)) < NOT_ITSELF &&
-          Math.abs(wrapGap(was.over - there, track.length)) < NOT_ITSELF,
-      );
-      if (!already) found.push({ under: here, over: there });
+  const near = (road: Road, along: number): boolean =>
+    along < TAPER || along > road.line.length - TAPER;
+
+  for (let a = 0; a < roads.length; a += 1) {
+    for (let b = a; b < roads.length; b += 1) {
+      const one = roads[a] as Road;
+      const two = roads[b] as Road;
+      const sameRoad = a === b;
+      for (let i = 0; i + 1 < one.line.samples.length; i += 1) {
+        const p = one.line.samples[i]?.pos;
+        const q = one.line.samples[i + 1]?.pos;
+        const atOne = one.line.cum[i] as number;
+        if (p === undefined || q === undefined || near(one, atOne)) continue;
+        for (let j = sameRoad ? i + 1 : 0; j + 1 < two.line.samples.length; j += 1) {
+          const r = two.line.samples[j]?.pos;
+          const s = two.line.samples[j + 1]?.pos;
+          const atTwo = two.line.cum[j] as number;
+          if (r === undefined || s === undefined || near(two, atTwo)) continue;
+          if (sameRoad && Math.abs(atTwo - atOne) < NOT_ITSELF) continue;
+          if (!meets(p, q, r, s)) continue;
+
+          const already = found.some(
+            (was) =>
+              keyOf(was.under) === keyOf(one) &&
+              keyOf(was.over) === keyOf(two) &&
+              Math.abs(was.underAt - atOne) < NOT_ITSELF &&
+              Math.abs(was.overAt - atTwo) < NOT_ITSELF,
+          );
+          if (!already) {
+            found.push({ under: one, underAt: atOne, over: two, overAt: atTwo });
+          }
+        }
+      }
     }
   }
   return found;
 }
 
-/**
- * How high the road is at a distance round the lap.
- *
- * A raised cosine at each strand of each crossing: zero away from them, so most
- * of a track is flat and a track that never crosses itself is flat everywhere.
- * Bumps add, which is what keeps the profile continuous where two crossings sit
- * near each other — and periodic by construction, because every offset is a
- * wrapped one, so the height at the start line is the height at the end of the
- * lap and a loop never has a step in it.
- */
-export function heightAt(
-  crossings: readonly Crossing[],
-  distance: number,
-  loop: number,
-): number {
-  let height = 0;
-  for (const crossing of crossings) {
-    height += bump(distance, crossing.over, loop) * (CLEARANCE / 2);
-    height -= bump(distance, crossing.under, loop) * (CLEARANCE / 2);
-  }
-  return height;
-}
-
 /** One raised cosine, 1 at the centre and 0 at `RAMP` either side. */
-function bump(distance: number, centre: number, loop: number): number {
-  const away = Math.abs(wrapGap(distance - centre, loop));
+function bump(along: number, centre: number): number {
+  const away = Math.abs(along - centre);
   if (away >= RAMP) return 0;
   return 0.5 + 0.5 * Math.cos((Math.PI * away) / RAMP);
 }
 
+/** Held to the ground at both ends, so every road meets its checkpoints flat. */
+function taper(along: number, length: number): number {
+  if (length <= 0) return 0;
+  return Math.max(0, Math.min(1, along / TAPER, (length - along) / TAPER));
+}
+
+/** How high one road is at a distance along it. */
+function heightOfRoad(
+  crossings: readonly Crossing[],
+  road: RoadId,
+  along: number,
+  length: number,
+): number {
+  let height = 0;
+  const key = keyOf(road);
+  for (const crossing of crossings) {
+    if (keyOf(crossing.over) === key) {
+      height += bump(along, crossing.overAt) * (CLEARANCE / 2);
+    }
+    if (keyOf(crossing.under) === key) {
+      height -= bump(along, crossing.underAt) * (CLEARANCE / 2);
+    }
+  }
+  return height * taper(along, length);
+}
+
 /**
- * The whole profile, sampled the way the track is.
+ * The whole profile, sampled the way each road is.
  *
- * Built once per track rather than per frame: it is a few hundred numbers and
- * it never changes, and the chase camera would otherwise re-solve every
- * crossing sixty times a second.
+ * Built once per track rather than per frame: solving every crossing is a walk
+ * over every pair of segments on the circuit, and the chase camera would
+ * otherwise redo it sixty times a second.
  */
 export interface Relief {
   readonly crossings: readonly Crossing[];
-  readonly heights: readonly number[];
-  /** Arc between samples, so a distance can be turned into an index. */
-  readonly step: number;
-  readonly loop: number;
+  /** Height at each sample of each road, keyed by road. */
+  readonly heights: ReadonlyMap<string, readonly number[]>;
+  /** Arc length at each sample of each road, so a distance finds its sample. */
+  readonly cum: ReadonlyMap<string, readonly number[]>;
+  readonly lengths: ReadonlyMap<string, number>;
 }
 
 export function reliefOf(track: Track): Relief {
   const crossings = crossingsOf(track);
-  const step = track.samples.length > 0 ? track.length / track.samples.length : 1;
-  const heights = track.samples.map((_, i) =>
-    heightAt(crossings, i * step, track.length),
-  );
-  return { crossings, heights, step, loop: track.length };
+  const heights = new Map<string, readonly number[]>();
+  const cum = new Map<string, readonly number[]>();
+  const lengths = new Map<string, number>();
+  for (const road of roadsOf(track)) {
+    const key = keyOf(road);
+    heights.set(
+      key,
+      road.line.cum.map((at) => heightOfRoad(crossings, road, at, road.line.length)),
+    );
+    cum.set(key, road.line.cum);
+    lengths.set(key, road.line.length);
+  }
+  return { crossings, heights, cum, lengths };
 }
 
-/** How high the road is at a distance, read off a built profile. */
-export function heightOn(relief: Relief, distance: number): number {
-  const n = relief.heights.length;
-  if (n === 0 || relief.step <= 0) return 0;
-  const wrapped = ((distance % relief.loop) + relief.loop) % relief.loop;
-  const at = wrapped / relief.step;
-  const low = Math.floor(at) % n;
-  const high = (low + 1) % n;
-  const t = at - Math.floor(at);
+/** How high a road is at a distance along it, read off a built profile. */
+export function heightOn(
+  relief: Relief,
+  sector: number,
+  route: number,
+  along: number,
+): number {
+  const key = keyOf({ sector, route });
+  const heights = relief.heights.get(key);
+  const cum = relief.cum.get(key);
+  if (heights === undefined || cum === undefined || heights.length === 0) return 0;
+
+  // Samples are not evenly spaced on a route, so the index is searched rather
+  // than divided out — the same reason `sampleOn` binary-searches `cum`.
+  let low = 0;
+  let high = cum.length - 1;
+  if (along <= 0) return heights[0] as number;
+  if (along >= (cum[high] as number)) return heights[high] as number;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if ((cum[mid] as number) <= along) low = mid;
+    else high = mid - 1;
+  }
+  const next = Math.min(low + 1, heights.length - 1);
+  const span = (cum[next] as number) - (cum[low] as number);
+  const t = span <= 0 ? 0 : (along - (cum[low] as number)) / span;
   // Interpolated, because a camera follows this: snapping to a sample would put
   // a stair in every slope.
-  return (relief.heights[low] as number) * (1 - t) + (relief.heights[high] as number) * t;
+  return (heights[low] as number) * (1 - t) + (heights[next] as number) * t;
+}
+
+/** How high the road under a ship is, given where it is round the lap. */
+export function heightAt(
+  track: Track,
+  relief: Relief,
+  distance: number,
+  routeIndex: number,
+): number {
+  const sector = sectorOf(track, distance);
+  const route = routeOf(sector, routeIndex);
+  return heightOn(
+    relief,
+    sector.index,
+    routeIndex,
+    alongOf(track, sector, route, distance),
+  );
 }
 
 /**
  * The smallest vertical gap at any crossing on this track.
  *
- * Bumps add, so two crossings close together can eat into each other's
- * clearance. This measures what actually came out rather than trusting the
- * construction — and it is what the tests assert on.
+ * Bumps add and the taper subtracts, so what a crossing actually gets is not
+ * what it was asked for. This measures the result rather than trusting the
+ * construction, and it is what the shipped-track rule asserts on.
  */
 export function separation(relief: Relief): number {
   let least = Infinity;
   for (const crossing of relief.crossings) {
-    least = Math.min(
-      least,
-      Math.abs(heightOn(relief, crossing.over) - heightOn(relief, crossing.under)),
+    const over = heightOn(
+      relief,
+      crossing.over.sector,
+      crossing.over.route,
+      crossing.overAt,
     );
+    const under = heightOn(
+      relief,
+      crossing.under.sector,
+      crossing.under.route,
+      crossing.underAt,
+    );
+    least = Math.min(least, Math.abs(over - under));
   }
   return least;
 }
 
 /**
  * How much clearance a crossing needs before the two roads are really apart:
- * the corridor a ship can be thrown across, plus the width of the road itself.
+ * the corridor a ship can be thrown across, plus some of the road's own width.
  */
 export const NEEDED_CLEARANCE = PATH_HALF_WIDTH + TRACK_HALF_WIDTH * 0.4;

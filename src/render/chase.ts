@@ -37,7 +37,7 @@ import {
   type Eye,
   type Lens,
 } from './camera';
-import { heightOn, reliefOf, type Relief } from './height';
+import { heightAt, reliefOf, type Relief } from './height';
 import { drawSky, type Sky } from './sky';
 import type { FixtureView, RouteView, ShipView } from './draw';
 import {
@@ -61,8 +61,14 @@ const AHEAD = 460;
 const BEHIND = 70;
 const STEP = 6;
 
-/** How high the road is at a distance round the lap. Drawing only, always. */
-type Lift = (distance: number) => number;
+/**
+ * How high a road is at a distance round the lap. Drawing only, always.
+ *
+ * It takes the route as well as the distance because a split and the golden
+ * path span the same canonical distances — one number per lap could never tell
+ * a bridge from the road under it.
+ */
+type Lift = (distance: number, route: number) => number;
 
 /** How high the corridor wall is drawn. A field, not a fence: it has no top edge. */
 const WALL_HEIGHT = 13;
@@ -189,7 +195,8 @@ export function drawChase(
    * `src/sim` is forbidden to import. A track that never crosses itself is flat
    * and every number below is what it always was.
    */
-  const lift = (distance: number): number => heightOn(relief, distance);
+  const lift = (distance: number, route: number): number =>
+    heightAt(track, relief, distance, route);
 
   const player = ships.find((s) => s.isPlayer) ?? ships[0];
   if (player === undefined) {
@@ -202,13 +209,13 @@ export function drawChase(
   // offset instead would swing the whole world every time it was thrown.
   const me = shipPoint(track, player);
   const yaw = me.at.heading;
-  const underfoot = lift(player.distance);
+  const underfoot = lift(player.distance, player.route);
   const target = {
     x: me.x - Math.cos(yaw) * BACK,
     y: me.y - Math.sin(yaw) * BACK,
     // The camera climbs with the road, or a bridge would take the ship out of
     // frame on the way up and bury it on the way down.
-    height: HEIGHT + lift(player.distance - BACK),
+    height: HEIGHT + lift(player.distance - BACK, player.route),
     yaw,
     pitch: PITCH,
   };
@@ -232,7 +239,7 @@ export function drawChase(
   // colour there and fades from there to the horizon.
   const underMe = toScreen(lens, toEye(lens, me.x, me.y, underfoot)).y;
   drawRoad(ctx, lens, track, routes, player, underMe, lift);
-  drawGates(ctx, lens, track, player, lift);
+  drawGates(ctx, lens, track, player);
   drawMarks(ctx, lens, track, player);
   // On the road, before the ships, so a rival is never hidden behind a mine.
   for (const fixture of fixtures) drawFixture(ctx, lens, track, fixture, lift);
@@ -249,7 +256,7 @@ export function drawChase(
       return {
         ...row,
         point,
-        eye: toEye(lens, point.x, point.y, LIFT + lift(row.ship.distance)),
+        eye: toEye(lens, point.x, point.y, LIFT + lift(row.ship.distance, row.ship.route)),
       };
     })
     .filter((row) => row.eye.depth > 0)
@@ -332,7 +339,7 @@ function drawFixture(
   fixture: FixtureView,
   lift: Lift,
 ): void {
-  const up = lift(fixture.distance);
+  const up = lift(fixture.distance, fixture.route);
   const at = placeOn(track, fixture.distance, fixture.route);
   const n = normalOf(at);
   const cx = at.pos.x + n.x * fixture.offset;
@@ -612,7 +619,7 @@ function railAlong(
     const n = normalOfHeading(at.heading);
     // Everything on this rung sits on the road, and the road is wherever the
     // relief put it. A flat track lifts by zero and nothing moves.
-    const ground = lift(distance);
+    const ground = lift(distance, route);
     const point = (out: number, up = 0): Eye =>
       toEye(lens, at.pos.x + n.x * out, at.pos.y + n.y * out, ground + up);
     rail.push({
@@ -764,7 +771,6 @@ function drawGates(
   lens: Lens,
   track: Track,
   player: ShipView,
-  lift: Lift,
 ): void {
   for (const distance of track.checkpoints) {
     // The nearest copy of this checkpoint, since the lap keeps counting up.
@@ -778,9 +784,11 @@ function drawGates(
     const post = (side: number): void => {
       const x = at.pos.x + n.x * reach * side;
       const y = at.pos.y + n.y * reach * side;
-      const up = lift(base);
-      const foot = toEye(lens, x, y, up);
-      const top = toEye(lens, x, y, up + 11);
+      // Every road is held to the ground at its own two checkpoints, so a gate
+      // is always at zero — which is also what lets two roads meeting there
+      // agree on a height without anything being solved.
+      const foot = toEye(lens, x, y, 0);
+      const top = toEye(lens, x, y, 11);
       if (!traceLine(ctx, lens, [foot, top])) return;
       ctx.strokeStyle = 'rgba(232, 238, 255, 0.45)';
       ctx.lineWidth = Math.min(6, Math.max(1.2, scaleAt(lens, foot.depth) * 0.35));

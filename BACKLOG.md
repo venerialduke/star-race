@@ -898,7 +898,10 @@ Two smaller things left behind by the same stage:
   three sliders (sector, road, how far along), which is enough to author with
   and is not enough to author *comfortably*. Sectors themselves now drag.
 
-**Splits could be allowed to cross the circuit now.** `tests/sim/section.test.ts`
+**~~Splits could be allowed to cross the circuit now.~~** _Done._ The rule is
+now "two roads may cross, they may not be in the same place", measured against
+the relief. Figure-eights and crossovers are authorable; nothing that ships uses
+one yet. Old note, for the reasoning: `tests/sim/section.test.ts`
 refuses any shipped track whose split runs within a corridor of another part of
 the loop, because "a road that crosses another road is a junction the game has
 no rules for". Verticality is what makes that rule narrower than it needs to

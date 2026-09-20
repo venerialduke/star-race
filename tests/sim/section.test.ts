@@ -22,6 +22,19 @@ import {
 } from '../../src/sim/section';
 import { B, S, TRACKS, assemblePlan, sector, type Piece } from '../../src/sim/track';
 import { TRACK_HALF_WIDTH } from '../../src/sim/tuning';
+import {
+  NEEDED_CLEARANCE,
+  heightOn,
+  reliefOf,
+  roadsOf,
+} from '../../src/render/height';
+
+/**
+ * How close to a checkpoint two roads are allowed to be in the same place.
+ * They are converging on the same point, which is what a fork is — and it is
+ * also the stretch the relief holds flat, so nothing could be lifted there.
+ */
+const MERGE_WINDOW = 70;
 
 // `S`, `B` and `sector` come from `track.ts` rather than being redefined here:
 // they are the vocabulary a track is authored in, and a test that writes its
@@ -152,38 +165,63 @@ describe('the tracks that ship', () => {
     }
   });
 
-  it('keep every split clear of the rest of the circuit', () => {
-    // A split is a road now, not a bulge, so it can be authored anywhere —
-    // including straight across the infield into another sector. Two roads
-    // closer than a corridor is a junction the game has no rules for, and the
-    // only thing that catches it is looking.
+  it('never put two roads in the same place, in three dimensions', () => {
+    // The rule used to be that a split must not come within a corridor of any
+    // other part of the circuit, because "a road that crosses another road is a
+    // junction the game has no rules for". That was the right rule while the
+    // world was flat. It is too strict now: where two roads cross, one is
+    // carried over the other, so what matters is not whether they meet in plan
+    // but whether they are ever in the *same place* — and a plan-view crossing
+    // with a bridge over it is not.
+    //
+    // Which is what unlocks figure-eights and crossovers. Three of the tracks
+    // that ship already relied on the old rule's one exemption: their wide-line
+    // splits cross their own sector's golden path, which the old rule skipped
+    // rather than allowed. Now it is allowed, measured, and drawn.
+    //
+    // Height comes from `render/`, which is where this test reaches for it. The
+    // simulation cannot: it is forbidden to import from there, which is exactly
+    // the point — a crossing is a fact about the picture and never about the
+    // race, since a ship is a distance and an offset and never a point.
     for (const track of TRACKS) {
-      for (const sector of track.sectors) {
-        for (const route of sector.routes.slice(1)) {
-          // How far round the lap two distances are, the short way.
-          const apart = (a: number, b: number): number => {
-            const d = Math.abs(((a - b) % track.length + track.length) % track.length);
-            return Math.min(d, track.length - d);
-          };
-          let nearest = Infinity;
-          for (const point of route.samples) {
-            track.samples.forEach((online, i) => {
-              const at = i * 3;
-              // Its own sector's stretch is shared ground: they meet at both
-              // checkpoints by construction. Wrapped, because a split arriving
-              // at checkpoint 0 meets the line at 0, which is also the lap.
-              if (apart(at, sector.start) <= 60 || apart(at, sector.end) <= 60) return;
-              if (at > sector.start && at < sector.end) return;
-              nearest = Math.min(
-                nearest,
-                Math.hypot(point.pos.x - online.pos.x, point.pos.y - online.pos.y),
+      const relief = reliefOf(track);
+      const roads = roadsOf(track);
+
+      /** Roads legitimately converge at a checkpoint; that is what a fork is. */
+      const merging = (road: (typeof roads)[number], along: number): boolean =>
+        along < MERGE_WINDOW || along > road.line.length - MERGE_WINDOW;
+
+      for (let a = 0; a < roads.length; a += 1) {
+        for (let b = a; b < roads.length; b += 1) {
+          const one = roads[a] as (typeof roads)[number];
+          const two = roads[b] as (typeof roads)[number];
+          // Two roads through the *same* sector are alternatives: a ship is on
+          // exactly one of them, so they may share as much ground as they like.
+          // That is what a fork is, and the old rule exempted them too — it
+          // skipped a split's own sector rather than allowing it.
+          if (a !== b && one.sector === two.sector) continue;
+          one.line.samples.forEach((p, i) => {
+            const atOne = one.line.cum[i] as number;
+            if (merging(one, atOne)) return;
+            two.line.samples.forEach((q, j) => {
+              const atTwo = two.line.cum[j] as number;
+              if (merging(two, atTwo)) return;
+              // A road is always near itself.
+              if (a === b && Math.abs(atTwo - atOne) < MERGE_WINDOW) return;
+
+              const apart = Math.hypot(p.pos.x - q.pos.x, p.pos.y - q.pos.y);
+              if (apart > TRACK_HALF_WIDTH) return;
+              const rise = Math.abs(
+                heightOn(relief, one.sector, one.route, atOne) -
+                  heightOn(relief, two.sector, two.route, atTwo),
               );
+              expect(
+                rise,
+                `${track.name}: ${one.line.name} and ${two.line.name} pass ` +
+                  `${apart.toFixed(0)} apart with only ${rise.toFixed(0)} of height between them`,
+              ).toBeGreaterThan(NEEDED_CLEARANCE);
             });
-          }
-          expect(
-            nearest,
-            `${track.name} ${route.name} runs ${nearest.toFixed(0)} from another part of the circuit`,
-          ).toBeGreaterThan(TRACK_HALF_WIDTH);
+          });
         }
       }
     }

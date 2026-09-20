@@ -159,9 +159,22 @@ Two things follow that a bulge could never have. A split has **authored bends at
 authored radii**, so the curvature-reading that used to infer them — and that
 lied about exactly the corners that mattered, turning a 42-radius hairpin into a
 60 — is gone from the codebase. And a split can be **wrong**: it can fail to
-meet its checkpoint, or stray across another part of the circuit. Both are
-checked, because a road that crosses another road is a junction the game has no
-rules for.
+meet its checkpoint, or end up in the same place as another road.
+
+**Two roads may cross; they may not be in the same place.** The rule used to be
+that a split must not come within a corridor of any other part of the circuit,
+because a road running through another road is a junction with no rules. That
+was right while the world was flat, and it is too strict now: where two roads
+cross, one is carried over the other, so what matters is whether they are ever
+in the same place rather than whether they meet in plan. Figure-eights and
+crossovers become authorable.
+
+Two roads through the **same sector** are exempt, and always were: they are
+alternatives, and a ship is on exactly one of them, so they may share as much
+ground as they like. That is what a fork is. Three of the four tracks that ship
+have a wide line crossing its own sector's golden path — the old rule skipped a
+split's own sector rather than permitting it, so this was always happening and
+is now drawn as what it is.
 
 **A ring must go somewhere, and every sector in it must be a road.** A ring
 whose sectors are all empty finishes exactly where it started, so it reported
@@ -271,13 +284,25 @@ is a thing a reviewer would see.
 
 Heights are **derived, never authored**, like checkpoint poses and for the same
 reason: two sources of truth about where the road is can disagree, and the
-disagreement is silent. Crossings are found by walking the line; the strand at
-the later canonical distance is the one that goes over, because it has to be
-decided somehow and that is the one rule independent of how anything is drawn.
-Each strand gets a raised cosine, so the profile is flat away from crossings,
-continuous where two crossings sit near each other, and periodic around the lap
-— a loop with a step in it is not a loop. All four tracks that ship are plain
-loops and come out perfectly flat.
+disagreement is silent. Crossings are found by walking every road against every
+other — a split is a road in its own right and can cross the main line, another
+split, or a different sector entirely — so height is a function of *which road*
+as well as how far along it. One number per lap could never tell a split from
+the golden path beneath it, since they span the same canonical distances.
+
+Every road is **held to the ground at both of its own checkpoints**. That is
+what lets roads meeting there agree without anything being solved: a ship
+crossing a checkpoint may change roads, and a step in the road at that moment is
+the one place a bridge would be allowed to look broken. The cost is real and is
+not hidden — a crossing within a ramp of a checkpoint cannot be lifted clear, so
+it is measured and refused rather than drawn badly.
+
+The gap is set by what the approach needs, not by the crossing. The full height
+is only reached *at* the crossing; a little to either side the two roads are
+still within a corridor while the ramp is still climbing, and that is the
+binding case. Measured on a figure-eight: 30 units at the crossing left 20.4
+where the roads pass a corridor apart, against the 19.4 a corridor needs —
+passing by a unit, which is not margin. It is 38 now, which leaves 25.8.
 
 **None of this was needed to keep the race honest**, which is worth saying
 because it is easy to assume otherwise. A ship's position is a canonical

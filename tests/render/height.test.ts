@@ -19,6 +19,7 @@ import { closingSection } from '../../src/sim/section';
 import {
   B,
   S,
+  PROVING_GROUND,
   TRACKS,
   assemblePlan,
   sector,
@@ -26,14 +27,24 @@ import {
   type Track,
 } from '../../src/sim/track';
 import { startRace, stepRace, type RaceConfig } from '../../src/sim/race';
+import { TRACK_HALF_WIDTH } from '../../src/sim/tuning';
 import { bareShip } from '../../src/sim/ship';
 import {
   NEEDED_CLEARANCE,
   crossingsOf,
-  heightOn,
+  heightAt,
   reliefOf,
+  heightOn,
+  roadsOf,
   separation,
 } from '../../src/render/height';
+
+/** Height of a road at a distance along it, given the road itself. */
+const heightAt2 = (
+  relief: ReturnType<typeof reliefOf>,
+  road: ReturnType<typeof roadsOf>[number],
+  along: number,
+): number => heightOn(relief, road.sector, road.route, along);
 
 /** A loop that runs back over itself, built by letting the closer find the way. */
 function crossedLoop(): Track {
@@ -46,15 +57,39 @@ function crossedLoop(): Track {
   return assemblePlan({ name: 'Crossed', shape: 'x', par: 1000, ring: [...ring, home] });
 }
 
-describe('a track that never crosses itself', () => {
-  it('is flat, so nothing about it moves', () => {
-    // Every track that ships is a plain loop. If any of them gained a hill,
-    // this feature would have changed the game rather than the picture.
+describe('the tracks that ship', () => {
+  it('bridge their wide lines and nothing else', () => {
+    // Three of the four have a split that crosses its own sector's golden path
+    // on the way round. That was always true and always allowed — the old rule
+    // skipped a split's own sector rather than permitting it — and it is now
+    // drawn as what it is: one road carried over the other.
     for (const track of TRACKS) {
       const relief = reliefOf(track);
-      expect(relief.crossings, `${track.name} has a crossing`).toHaveLength(0);
-      expect(Math.max(...relief.heights)).toBe(0);
-      expect(Math.min(...relief.heights)).toBe(0);
+      // Never more than a wide line or two. A shipped track is a loop, not a knot.
+      expect(relief.crossings.length, `${track.name}`).toBeLessThan(3);
+      if (relief.crossings.length > 0) {
+        expect(separation(relief), `${track.name}`).toBeGreaterThan(NEEDED_CLEARANCE);
+      }
+    }
+  });
+
+  it('never cross the golden path over itself', () => {
+    // The main line of a shipped track is a plain loop. A crossing here would
+    // mean the lap runs back through itself, which none of them do.
+    for (const track of TRACKS) {
+      const main = crossingsOf(track).filter(
+        (c) => c.over.route === 0 && c.under.route === 0,
+      );
+      expect(main, `${track.name} crosses its own golden path`).toHaveLength(0);
+    }
+  });
+
+  it('leave a track with no crossings perfectly flat', () => {
+    const relief = reliefOf(PROVING_GROUND);
+    expect(relief.crossings).toHaveLength(0);
+    for (const heights of relief.heights.values()) {
+      expect(Math.max(...heights, 0)).toBe(0);
+      expect(Math.min(...heights, 0)).toBe(0);
     }
   });
 });
@@ -74,13 +109,18 @@ describe('a track that does cross itself', () => {
     expect(separation(relief)).toBeGreaterThan(NEEDED_CLEARANCE);
   });
 
-  it('comes back to the same height at the start line', () => {
-    // A loop with a step in it is not a loop. Every offset inside the height
-    // function is a wrapped one, which makes the profile periodic by
-    // construction — this is the check that the construction holds.
+  it('meets every checkpoint at the ground', () => {
+    // A ship crossing a checkpoint may change roads, so every road has to be at
+    // the same height there — which is what the taper buys, and the only reason
+    // roads meeting at a checkpoint need nothing solved between them.
     const track = crossedLoop();
     const relief = reliefOf(track);
-    expect(heightOn(relief, 0)).toBeCloseTo(heightOn(relief, track.length), 6);
+    for (const road of roadsOf(track)) {
+      const sector = track.sectors[road.sector];
+      if (sector === undefined) continue;
+      expect(heightAt(track, relief, sector.start, road.route)).toBeCloseTo(0, 6);
+      expect(heightAt(track, relief, sector.end - 1e-6, road.route)).toBeCloseTo(0, 6);
+    }
   });
 
   it('climbs and falls rather than stepping', () => {
@@ -90,7 +130,10 @@ describe('a track that does cross itself', () => {
     const relief = reliefOf(track);
     let worst = 0;
     for (let d = 0; d < track.length; d += 1) {
-      worst = Math.max(worst, Math.abs(heightOn(relief, d + 1) - heightOn(relief, d)));
+      worst = Math.max(
+        worst,
+        Math.abs(heightAt(track, relief, d + 1, 0) - heightAt(track, relief, d, 0)),
+      );
     }
     expect(worst).toBeLessThan(1);
   });
@@ -98,10 +141,60 @@ describe('a track that does cross itself', () => {
   it('is flat everywhere except near a crossing', () => {
     const track = crossedLoop();
     const relief = reliefOf(track);
-    const raised = relief.heights.filter((h) => Math.abs(h) > 0.01).length;
+    const all = [...relief.heights.values()].flat();
+    const raised = all.filter((h) => Math.abs(h) > 0.01).length;
     expect(raised).toBeGreaterThan(0);
     // Most of a lap is ordinary road.
-    expect(raised).toBeLessThan(relief.heights.length * 0.8);
+    expect(raised).toBeLessThan(all.length * 0.8);
+  });
+});
+
+describe('two roads are never in the same place', () => {
+  it('lets a loop cross itself, which the flat rule could not', () => {
+    // The permission the rule change buys. Before this, a road coming within a
+    // corridor of another part of the circuit was refused outright; now it is
+    // refused only if the relief does not lift one clear of the other. This is
+    // the shape that was impossible and now is not.
+    const track = crossedLoop();
+    const relief = reliefOf(track);
+    const roads = roadsOf(track);
+    expect(relief.crossings.length).toBeGreaterThan(0);
+
+    const MERGE = 70;
+    const merging = (road: (typeof roads)[number], along: number): boolean =>
+      along < MERGE || along > road.line.length - MERGE;
+
+    let closest = Infinity;
+    let least = Infinity;
+    for (let a = 0; a < roads.length; a += 1) {
+      for (let b = a; b < roads.length; b += 1) {
+        const one = roads[a] as (typeof roads)[number];
+        const two = roads[b] as (typeof roads)[number];
+        if (a !== b && one.sector === two.sector) continue;
+        one.line.samples.forEach((p, i) => {
+          const atOne = one.line.cum[i] as number;
+          if (merging(one, atOne)) return;
+          two.line.samples.forEach((q, j) => {
+            const atTwo = two.line.cum[j] as number;
+            if (merging(two, atTwo)) return;
+            if (a === b && Math.abs(atTwo - atOne) < MERGE) return;
+            const apart = Math.hypot(p.pos.x - q.pos.x, p.pos.y - q.pos.y);
+            if (apart > TRACK_HALF_WIDTH) return;
+            closest = Math.min(closest, apart);
+            least = Math.min(
+              least,
+              Math.abs(
+                heightAt2(relief, one, atOne) - heightAt2(relief, two, atTwo),
+              ),
+            );
+          });
+        });
+      }
+    }
+    // It really does come within a corridor somewhere — otherwise the check
+    // below proves nothing about crossing tracks.
+    expect(closest).toBeLessThanOrEqual(TRACK_HALF_WIDTH);
+    expect(least).toBeGreaterThan(NEEDED_CLEARANCE);
   });
 });
 
@@ -161,8 +254,10 @@ describe('a degenerate track', () => {
     });
     const relief = reliefOf(tiny);
     expect(relief.crossings).toEqual([]);
-    expect(heightOn(relief, 0)).toBe(0);
-    expect(heightOn(relief, -50)).toBe(0);
-    expect(heightOn(relief, 1e6)).toBe(0);
+    expect(heightAt(tiny, relief, 0, 0)).toBe(0);
+    expect(heightAt(tiny, relief, -50, 0)).toBe(0);
+    expect(heightAt(tiny, relief, 1e6, 0)).toBe(0);
+    // A road index nobody has is not a crash.
+    expect(heightAt(tiny, relief, 10, 7)).toBe(0);
   });
 });

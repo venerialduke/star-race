@@ -238,10 +238,18 @@ When it gets one, that assumption is the work, not the geometry.
    Both are refused at assembly now, and the builder says which sector is at
    fault rather than claiming a closed circuit the assembler will reject.
 
-7. **Verticality** — **done**. Crossings are found by walking the line and given
+7. **Verticality, and the split rule** — **done**. Crossings are found by walking the line and given
    a bridge; see `DESIGN.md`. It lives in `src/render/height.ts` so that the
    ESLint boundary makes "this cannot affect the race" structural rather than a
    promise. What it does *not* do is fix a class of bug, because that class does
    not exist: the simulation holds a ship as a canonical distance and a lateral
    offset and never as a point on a plane, so two roads overlapping in the plan
    view were never able to interfere.
+
+   What it does change is the rule for what may ship. "A split must not come
+   within a corridor of any other part of the circuit" is now "two roads may
+   cross, they may not be in the same place" — measured against the relief, with
+   roads through the same sector exempt because they are alternatives and a ship
+   is on exactly one. The old rule already skipped a split's own sector, so that
+   exemption is not new; what is new is that a road may now cross a *different*
+   sector, which is what makes a figure-eight authorable.

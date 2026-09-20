@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { closingSection } from '../../src/sim/section';
 import {
   B,
+  PROVING_GROUND,
   S,
   TRACKS,
   assemblePlan,
@@ -30,6 +31,9 @@ import { HEIGHT, eyeFor, hullOf, shipTilt } from '../../src/render/chase';
 import { heightAt, reliefOf } from '../../src/render/height';
 import { lensFor, toEye, toScreen } from '../../src/render/camera';
 import type { RouteView, ShipView } from '../../src/render/view';
+
+/** The tracks whose golden path never leaves the ground. Not the Proving Ground. */
+const LEVEL_TRACKS = TRACKS.filter((track) => track !== PROVING_GROUND);
 
 const WIDE = 1200;
 const TALL = 700;
@@ -50,10 +54,10 @@ const shipAt = (distance: number): ShipView => ({
 /**
  * A loop whose **golden path** climbs a bridge.
  *
- * The four tracks that ship are bridged only on their splits, so a player on
- * the main line never goes over a hill on any of them — which makes them
- * useless for testing what a hill does. This one crosses itself, so the line
- * being flown is the one that climbs.
+ * The three race tracks are bridged only on their splits, so a player on the
+ * main line never goes over a hill on any of them. The Proving Ground does
+ * cross itself now, and is checked below; this one stays because it is steeper
+ * and shorter than anything that ships, which is what a limit is for.
  */
 function hilly(): Track {
   const ring = [
@@ -148,9 +152,11 @@ describe('the eye', () => {
   });
 
   it('is left exactly as it was on a track with no hills', () => {
-    // All four shipped tracks are bridged on their splits, so the line a player
-    // flies is level the whole way round. Nothing about it may have changed.
-    for (const track of TRACKS) {
+    // The three race tracks are bridged only on their splits, so the line a
+    // player flies is level the whole way round and nothing about the eye may
+    // have changed. The Proving Ground is excluded because its golden path
+    // climbs on purpose — that is what the test above is measuring.
+    for (const track of LEVEL_TRACKS) {
       const relief = reliefOf(track);
       const lift = (d: number, r: number): number => heightAt(track, relief, d, r);
       for (let at = 0; at < track.length; at += 3) {
@@ -169,14 +175,25 @@ describe('the ship leans with the road', () => {
   };
 
   it('stays flat where the road is flat', () => {
-    // The shipped tracks bridge only their splits, so a player on the golden
-    // path never climbs on any of them and should never be drawn as if it did.
-    for (const track of TRACKS) {
+    // The race tracks bridge only their splits, so a player on the golden path
+    // never climbs on any of them and should never be drawn as if it did.
+    for (const track of LEVEL_TRACKS) {
       const lift = liftOf(track);
       for (let at = 0; at < track.length; at += 3) {
         expect(shipTilt(track, lift, at, 0), `${track.name} at ${at}`).toBe(0);
       }
     }
+  });
+
+  it('leans on the one shipped track that has a hill on its main line', () => {
+    // The Proving Ground, which a season always opens on. Without this the
+    // tilt is a thing only the test loop above ever sees.
+    const lift = liftOf(PROVING_GROUND);
+    let most = 0;
+    for (let at = 0; at < PROVING_GROUND.length; at += 1) {
+      most = Math.max(most, Math.abs(shipTilt(PROVING_GROUND, lift, at, 0)));
+    }
+    expect(most).toBeGreaterThan(0.1);
   });
 
   it('noses up going onto a bridge and down coming off it', () => {

@@ -172,10 +172,22 @@ describe('the simulation is untouched by any of it', () => {
       'Kestrel Loop': [2066, 1911, 1797],
       'Meridian Run': [2981, 2944, 2910],
       'Cinder Coil': [1407, 1282, 1240],
-      // The properties track. Lift is slowest and Charge fastest here as
-      // everywhere, but the gap is narrow: three of its four stretches do
-      // something to the ship, and two of those do it to Charge hardest.
-      'The Proving Ground': [1600, 1484, 1455],
+      // The properties track, and the only row here that has ever moved for a
+      // reason of its own. Its shape changed: the lap folds back through itself
+      // now so that the one track a player meets first is the one track with a
+      // hill on the line they fly. 16% longer, and its long bend is written as
+      // two corners rather than one 230° sweep — the same curve to thirteen
+      // decimal places, but the corner plan fires at each bend, so two in a row
+      // is not the same proposition as one long one. Lift is untouched by that
+      // (it brakes to a holding speed both halves share); Carry and Charge are
+      // not.
+      //
+      // Lift still slowest and Charge still fastest, as everywhere. The gap is
+      // wider than it was — 244 ticks against 145 — because there is more bend
+      // to be good at. Splitting the hook is most of that: with it written as
+      // one 230° sweep these read 1876, 1769, 1673, so Lift and Carry did not
+      // notice and Charge found 41 ticks.
+      'The Proving Ground': [1876, 1769, 1632],
     };
     for (const track of TRACKS) {
       const lap = (plan: 'lift' | 'carry' | 'charge'): number => {

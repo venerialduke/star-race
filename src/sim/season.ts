@@ -25,7 +25,7 @@ import { finishRace, newGarage, type Garage } from './garage';
 import type { RaceState, ShipStats } from './race';
 import { makeRng } from './rng';
 import { resolveBuild } from './ship';
-import { TRACKS, type Track } from './track';
+import { PROVING_GROUND, TRACKS, type Track } from './track';
 import {
   GROUP_SIZE,
   HEATS_PER_PHASE,
@@ -122,8 +122,25 @@ export function newSeason(seed: number): Season {
   return { seed, phase: 0, heat: 0, paced: false, racers, log: [] };
 }
 
-/** Which track a given heat is on. The season decides; the player does not. */
+/**
+ * Which track a given heat is on. The season decides; the player does not.
+ *
+ * **Except the first, which is always the Proving Ground.** A season opens with
+ * the pacing lap, and the pacing lap is the first sight of a track and of the
+ * game — so it is worth spending on the one track that says what a road can be
+ * made of. Every property is on it, one per sector, and one of each kind of
+ * fixture; its golden path crosses itself, so it is also the only track where a
+ * player on the main line goes over a hill. Drawing that at random meant three
+ * seasons in four opened on a plain loop.
+ *
+ * It costs the variety nothing, because it is one heat of nine. And it has to
+ * be *this* function rather than a special case at the pacing lap: the opening
+ * track is also heat one, and the rivals shop against it before the season
+ * starts. Three callers, one answer, or the field turns up built for a track it
+ * is not racing.
+ */
 export function trackAt(seed: number, phase: number, heat: number): Track {
+  if (phase === 0 && heat === 0) return PROVING_GROUND;
   const draw = makeRng(seed)
     .fork(phase * 101 + heat * 17)
     .unitInterval();

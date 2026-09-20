@@ -46,6 +46,21 @@ const heightAt2 = (
   along: number,
 ): number => heightOn(relief, road.sector, road.route, along);
 
+/** A plain loop that never comes near itself: four straights and four corners. */
+function plainLoop(): Track {
+  return assemblePlan({
+    name: 'Plain',
+    shape: 'o',
+    par: 1000,
+    ring: [
+      sector('a', 'A', [S(220), B(70, -90)] as Piece[]),
+      sector('b', 'B', [S(140), B(45, -90)] as Piece[]),
+      sector('c', 'C', [S(220), B(70, -90)] as Piece[]),
+      sector('d', 'D', [S(140), B(45, -90)] as Piece[]),
+    ],
+  });
+}
+
 /** A loop that runs back over itself, built by letting the closer find the way. */
 function crossedLoop(): Track {
   const ring = [
@@ -58,14 +73,16 @@ function crossedLoop(): Track {
 }
 
 describe('the tracks that ship', () => {
-  it('bridge their wide lines and nothing else', () => {
+  it('are bridged, and never more than a loop needs', () => {
     // Three of the four have a split that crosses its own sector's golden path
     // on the way round. That was always true and always allowed — the old rule
     // skipped a split's own sector rather than permitting it — and it is now
-    // drawn as what it is: one road carried over the other.
+    // drawn as what it is: one road carried over the other. The fourth, the
+    // Proving Ground, crosses its main line instead, twice, by the symmetry of
+    // a half walked twice.
     for (const track of TRACKS) {
       const relief = reliefOf(track);
-      // Never more than a wide line or two. A shipped track is a loop, not a knot.
+      // Never more than a bridge or two. A shipped track is a loop, not a knot.
       expect(relief.crossings.length, `${track.name}`).toBeLessThan(3);
       if (relief.crossings.length > 0) {
         expect(separation(relief), `${track.name}`).toBeGreaterThan(NEEDED_CLEARANCE);
@@ -73,24 +90,44 @@ describe('the tracks that ship', () => {
     }
   });
 
-  it('never cross the golden path over itself', () => {
-    // The main line of a shipped track is a plain loop. A crossing here would
-    // mean the lap runs back through itself, which none of them do.
+  it('cross the golden path over itself on exactly one of them', () => {
+    // The three race tracks are plain loops: a crossing on the main line would
+    // mean the lap runs back through itself, which none of them do. The Proving
+    // Ground does, on purpose — it is the track a season opens on and the only
+    // one where the line a player flies goes over a hill.
     for (const track of TRACKS) {
       const main = crossingsOf(track).filter(
         (c) => c.over.route === 0 && c.under.route === 0,
       );
-      expect(main, `${track.name} crosses its own golden path`).toHaveLength(0);
+      if (track === PROVING_GROUND) {
+        expect(main.length, 'the Proving Ground stopped crossing itself').toBeGreaterThan(0);
+      } else {
+        expect(main, `${track.name} crosses its own golden path`).toHaveLength(0);
+      }
     }
   });
 
   it('leave a track with no crossings perfectly flat', () => {
-    const relief = reliefOf(PROVING_GROUND);
+    // Built here rather than borrowed from the shipped four: every one of them
+    // is bridged somewhere now, so there is no flat one left to point at.
+    const relief = reliefOf(plainLoop());
     expect(relief.crossings).toHaveLength(0);
     for (const heights of relief.heights.values()) {
       expect(Math.max(...heights, 0)).toBe(0);
       expect(Math.min(...heights, 0)).toBe(0);
     }
+  });
+
+  it('put the hill where a player on the main line will meet it', () => {
+    // A bridge a player never drives over is a bridge nobody sees. This is the
+    // whole reason the Proving Ground was reshaped, so it is worth asserting
+    // rather than assuming: the golden path itself climbs.
+    const relief = reliefOf(PROVING_GROUND);
+    let highest = 0;
+    for (let at = 0; at < PROVING_GROUND.length; at += 1) {
+      highest = Math.max(highest, heightAt(PROVING_GROUND, relief, at, 0));
+    }
+    expect(highest).toBeGreaterThan(NEEDED_CLEARANCE);
   });
 });
 

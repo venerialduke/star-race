@@ -27,13 +27,12 @@ import {
   upgrade,
   type Garage,
 } from '../../src/sim/garage';
-import { resolveBuild } from '../../src/sim/ship';
+import { COMPONENTS, resolveBuild } from '../../src/sim/ship';
 import {
   BASE_HANDLING,
   BASE_THRUST,
   PROGRESS_PRICE,
   REROLL_COST,
-  REROLL_STEP,
   SHOP_OFFERS,
   SLOTS_AT_START,
   SLOT_COST_BASE,
@@ -214,24 +213,33 @@ describe('the shop is a window, not a catalogue', () => {
     expect(buyOffer(offered, -1)).toBe(offered);
   });
 
-  it('charges more for each reroll of the same trip', () => {
-    const rich = drawOffer({ ...newGarage(), credits: 500 }, 7);
-    expect(rerollCost(rich)).toBe(REROLL_COST);
-    const once = reroll(rich, 8);
-    expect(once.credits).toBe(rich.credits - REROLL_COST);
-    expect(once.offer).not.toEqual(rich.offer);
-    expect(rerollCost(once)).toBe(REROLL_COST + REROLL_STEP);
-    const twice = reroll(once, 9);
-    expect(twice.credits).toBe(once.credits - REROLL_COST - REROLL_STEP);
+  it('charges the same for every reroll, however many have been taken', () => {
+    // Flat on purpose. Looking again is an ordinary thing to do; the choice
+    // worth making is which of the four to take.
+    let garage = drawOffer({ ...newGarage(), credits: 500 }, 7);
+    let seed = 8;
+    for (let n = 0; n < 5; n += 1) {
+      expect(rerollCost(), `reroll ${n + 1}`).toBe(REROLL_COST);
+      const before = garage;
+      garage = reroll(garage, seed);
+      seed += 1;
+      expect(garage.credits).toBe(before.credits - REROLL_COST);
+      expect(garage.offer).not.toEqual(before.offer);
+    }
   });
 
-  it('resets the reroll price when the window refreshes', () => {
-    // Refreshing between heats is free. The rising price is for wanting a
-    // different four *now*, and it should not follow you into the next heat.
+  it('is cheap against the things it is offering', () => {
+    // A reroll a player has to save up for is a tax on playing with the shop.
+    const cheapest = Math.min(...COMPONENTS.map((c) => c.levels[0].cost));
+    expect(REROLL_COST).toBeLessThan(cheapest / 2);
+  });
+
+  it('counts rerolls so the next look is a different one, and resets each heat', () => {
+    // The counter is no longer a price. It is what the draw is seeded off, so
+    // without it every reroll would deal the same four again.
     const rolled = reroll(drawOffer({ ...newGarage(), credits: 500 }, 7), 8);
     expect(rolled.rerolls).toBe(1);
     expect(drawOffer(rolled, 9).rerolls).toBe(0);
-    expect(rerollCost(drawOffer(rolled, 9))).toBe(REROLL_COST);
   });
 
   it('refuses a reroll that cannot be paid for', () => {

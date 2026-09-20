@@ -235,15 +235,14 @@ export const PROGRESS_PRICE = 45;
 export const SHOP_OFFERS = 4;
 
 /**
- * What a reroll costs: this much for the first of a trip, rising by the step
- * for each one after it.
+ * What a reroll costs. Flat, and cheap against a component's 26 to 40.
  *
- * Rising, because a flat reroll a player can afford ten of is not a choice —
- * it is a wait until the shop hands over whatever was wanted, which is the
- * same open menu with extra clicking.
+ * Looking again is meant to be an ordinary thing to do rather than a decision
+ * with a budget attached: the interesting choice is which of the four to take,
+ * not whether you can afford to see four more. A rising price made the third
+ * look expensive enough to skip, which is a tax on playing with the shop.
  */
-export const REROLL_COST = 12;
-export const REROLL_STEP = 8;
+export const REROLL_COST = 5;
 
 /** Research from breaking one component down. */
 export const RESEARCH_PER_COPY = 1;

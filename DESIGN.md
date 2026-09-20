@@ -1079,11 +1079,11 @@ and what you are shown is the decision. A menu of everything is not a shop; it
 is a list, and a build made from a list is whatever the spreadsheet says is best
 that week. `SHOP_OFFERS` sets how many.
 
-The window **refreshes free with every heat** and a **reroll costs credits
-within a trip** — `REROLL_COST`, rising by `REROLL_STEP` each time and resetting
-when the heat does. Rising, because a flat price a player can pay ten times is
-not a choice: it is a wait until the shop hands over whatever was wanted, which
-is the old catalogue with extra clicking.
+The window **refreshes free with every heat**, and within a trip a **reroll
+costs `REROLL_COST`** — flat, and cheap against a component's 26 to 40. Looking
+again is meant to be an ordinary thing to do rather than a decision with a
+budget attached: the interesting choice is which of the four to take, not
+whether you can afford to see four more.
 
 The draw is **with replacement**, so the same part can appear twice in one
 window. That is not a wasted offer, because of the next rule.

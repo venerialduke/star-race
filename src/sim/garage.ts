@@ -12,7 +12,6 @@ import { makeRng } from './rng';
 import {
   PROGRESS_PRICE,
   REROLL_COST,
-  REROLL_STEP,
   RESEARCH_PER_COPY,
   RESEARCH_FOR_LEVEL,
   FIT_LIMIT,
@@ -43,7 +42,13 @@ export interface Garage {
   readonly research: Readonly<Record<string, number>>;
   /** What the shop is offering, as component ids. Empty until it is drawn. */
   readonly offer: readonly string[];
-  /** Rerolls taken since the offer last refreshed, which price the next one. */
+  /**
+   * Rerolls taken since the offer last refreshed.
+   *
+   * Not a price any more — a reroll is flat — but the draw is seeded off it, so
+   * this is what makes the second look at the shop show something other than
+   * the first.
+   */
   readonly rerolls: number;
 }
 
@@ -252,14 +257,14 @@ export function drawOffer(garage: Garage, seed: number): Garage {
   return { ...garage, offer, rerolls: 0 };
 }
 
-/** What the next reroll of this trip costs. */
-export function rerollCost(garage: Garage): number {
-  return REROLL_COST + REROLL_STEP * garage.rerolls;
+/** What a reroll costs. The same every time, however many you have taken. */
+export function rerollCost(): number {
+  return REROLL_COST;
 }
 
 /** Pay for a fresh set of offers. The price rises within a trip. */
 export function reroll(garage: Garage, seed: number): Garage {
-  const cost = rerollCost(garage);
+  const cost = rerollCost();
   if (cost > garage.credits) return garage;
   const rolled = drawOffer(garage, seed);
   return {

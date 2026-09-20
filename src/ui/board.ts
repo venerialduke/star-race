@@ -225,8 +225,7 @@ export function mountBoard(
               .join('')}`;
 
       // The shop is four things drawn from the catalogue, not the catalogue.
-      // What it offers is the decision; what it costs to see four more is the
-      // other one.
+      // What it offers is the decision; looking again is cheap on purpose.
       const shopRows =
         garage.offer.length === 0
           ? '<div class="part idle"><span class="t"><em>Nothing on offer until the next heat.</em></span></div>'
@@ -258,9 +257,9 @@ export function mountBoard(
               .join('');
 
       const rerollRow = `<div class="part">
-          <span class="t"><span>Another four</span><em>a fresh window; the price rises each time, and resets next heat</em></span>
+          <span class="t"><span>Another four</span><em>a fresh window, same price every time — and free at the next heat</em></span>
           <span class="actions">
-            <button type="button" data-do="reroll" ${rerollCost(garage) > garage.credits ? 'disabled' : ''}>Reroll ${rerollCost(garage)}c</button>
+            <button type="button" data-do="reroll" ${rerollCost() > garage.credits ? 'disabled' : ''}>Reroll ${rerollCost()}c</button>
           </span>
         </div>`;
 

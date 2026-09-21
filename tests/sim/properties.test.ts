@@ -173,33 +173,37 @@ function fly(track: Track, nav = NAV_BEST, ticks = 3000, thrust = 2.4) {
   let bitTicks = 0;
   let lost = 0;
   let inFirst = 0;
+  let fastestInFirst = 0;
   for (let i = 0; i < ticks; i += 1) {
     const next = stepRace(state, config);
     if (next.shields < state.shields - 1e-9) {
       bitTicks += 1;
       lost += state.shields - next.shields;
     }
-    if (sectorAt(track, next.distance) === 0) inFirst += 1;
+    if (sectorAt(track, next.distance) === 0) {
+      inFirst += 1;
+      fastestInFirst = Math.max(fastestInFirst, next.speed);
+    }
     state = next;
   }
-  return { state, bitTicks, lost, inFirst };
+  return { state, bitTicks, lost, inFirst, fastestInFirst };
 }
 
-/** The widest this ship was thrown. */
-const widest = (state: RaceState): number =>
-  state.swings.reduce((most, s) => Math.max(most, s.swing), 0);
 
 describe('grip', () => {
-  it('throws the same ship wider through the same bend', () => {
-    // The bet the whole game rests on, applied to a stretch instead of to a
-    // build: same shape, less grip, further off the line.
+  it('lowers the speed a ship can hold through the stretch', () => {
+    // This used to claim the same bend threw the ship *wider*, and under the
+    // swing it did: a swing was a function of excess over the holding speed,
+    // and thinning the grip lowered the holding speed without slowing the
+    // ship down.
     //
-    // Flown with no navigation, because a ship that knows where the line is
-    // *answers* thin grip by going slower — so what a nebula costs a good
-    // pilot is time, and the width only shows on one that misjudges.
-    const clear = fly(loop(), 0);
-    const thick = fly(loop(half, { environment: 'nebula' }), 0);
-    expect(widest(thick.state)).toBeGreaterThan(widest(clear.state));
+    // A ship flies itself now, so it answers thin grip the only way there is —
+    // by going slower. Grip reaches the line rather than the clock only when
+    // the speed is held fixed, which a race never does; that property is
+    // pinned in `tests/lab/flight.test.ts`, where a speed can be held.
+    const clear = fly(loop());
+    const thick = fly(loop(half, { environment: 'nebula' }));
+    expect(thick.fastestInFirst).toBeLessThan(clear.fastestInFirst);
   });
 
   it('costs time, because a ship with less grip is a ship going slower', () => {

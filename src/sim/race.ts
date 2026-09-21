@@ -5,7 +5,7 @@
 // Nothing here reads the clock, the DOM, or anything but its arguments.
 
 import { fires, grantsOf, type AbilityId, type Grant } from './ability';
-import { makeRng, type Rng } from './rng';
+import { makeRng } from './rng';
 import {
   bareShip,
   fullCondition,
@@ -501,14 +501,14 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   // What the navigation system is wrong about this tick. Two slow wanders,
   // seeded off the tick so a race still replays exactly. A chained bend is
   // flown perfectly, which is the whole of what the ability buys now.
-  const wanderLine = wanderOn(
-    state.wanderLine,
-    drawFor(config.seed, `nav:line:${state.tick}`, state.lap).unitInterval(),
-  );
-  const wanderPace = wanderOn(
-    state.wanderPace,
-    drawFor(config.seed, `nav:pace:${state.tick}`, state.lap).unitInterval(),
-  );
+  //
+  // Seeded off the tick as an integer rather than through a string key. The
+  // string form hashed a freshly built name twice a tick for every ship in the
+  // field, and measured at a fifth of the whole tick's cost — worth having
+  // back now that a race runs for two to three times as many ticks as it did.
+  const wander = makeRng((config.seed ^ Math.imul(state.tick + 1, 0x9e3779b9)) >>> 0);
+  const wanderLine = wanderOn(state.wanderLine, wander.unitInterval());
+  const wanderPace = wanderOn(state.wanderPace, wander.unitInterval());
   const skill = chaining ? { reads: 1, line: 0, pace: 0 } : skillOf(stats.nav);
 
   const curvatureOn = (at: number): number => {
@@ -1081,14 +1081,6 @@ function breakSomething(
   return { condition: { parts }, broken };
 }
 
-/** A stream of its own per bend per lap, so one bend's draw never shifts another's. */
-function drawFor(seed: number, key: string, lap: number): Rng {
-  let hash = 2166136261;
-  for (let i = 0; i < key.length; i += 1) {
-    hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
-  }
-  return makeRng(seed).fork(((hash >>> 0) % 1000003) + lap * 31);
-}
 
 /**
  * The next bend a ship will meet, looking past the end of its own line into

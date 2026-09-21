@@ -153,10 +153,10 @@ describe('the simulation is untouched by any of it', () => {
     // makes these numbers what they are. Nothing here is a target — the
     // balance pass against them is still owed.
     const expected: Record<string, number> = {
-      'Kestrel Loop': 4568,
-      'Meridian Run': 5544,
-      'Cinder Coil': 3078,
-      'The Proving Ground': 4113,
+      'Kestrel Loop': 4661,
+      'Meridian Run': 6121,
+      'Cinder Coil': 3233,
+      'The Proving Ground': 4255,
     };
     for (const track of TRACKS) {
       const config = { track, stats: bareShip(1, 1), seed: seedFrom('kestrel') };

@@ -201,18 +201,25 @@ export function bumperPush(offset: number, from: number, push: number): number {
 }
 
 /**
- * A slow wander, one tick on. Normalised so the result has a standard
- * deviation of one whatever `WANDER_SETTLE` is — without that the filter
- * quietly shrinks its own input by about seventeen times at the rate used
- * here, and every amplitude that reads it means a fraction of what it says.
+ * Normalisation for the filter below, so its result has a standard deviation
+ * of one whatever `WANDER_SETTLE` is. Without it the filter quietly shrinks
+ * its own input by about seventeen times at the rate used here, and every
+ * amplitude that reads it means a fraction of what it says.
+ *
+ * A constant rather than a square root per call: this runs twice a tick for
+ * every ship in the field.
+ */
+const WANDER_GAIN = Math.sqrt((3 * (2 - WANDER_SETTLE)) / WANDER_SETTLE);
+
+/**
+ * A slow wander, one tick on.
  *
  * Slow on purpose. Fast jitter is filtered out by the ship's own steering lag
  * and changes almost nothing; it reads as a twitch rather than as
  * misjudgement, and bad flying is being in the wrong place and late to notice.
  */
 export function wanderOn(was: number, unitDraw: number): number {
-  const gain = Math.sqrt((3 * (2 - WANDER_SETTLE)) / WANDER_SETTLE);
-  return was + ((unitDraw * 2 - 1) * gain - was) * WANDER_SETTLE;
+  return was + ((unitDraw * 2 - 1) * WANDER_GAIN - was) * WANDER_SETTLE;
 }
 
 /** How well a navigation rating flies, broken into the three things it is. */

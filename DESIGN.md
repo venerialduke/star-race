@@ -18,10 +18,15 @@ They were the part that worked.
 ## The game
 
 Ships race a loop. The player does not drive: they build the ship between
-heats, plan how it takes bends, and watch it fly. The bet the whole game rests
-on is one sentence — **the faster a ship goes into a bend, the wider and less
-predictably it swings off the golden path** — and everything else exists to
-make that trade interesting.
+heats, plan its route, and watch it fly. The bet the whole game rests on is one
+sentence — **the faster a ship goes into a bend, the wider it runs off the
+golden path, and the better it is built and navigated the less it does** — and
+everything else exists to make that trade interesting.
+
+It used to end "the less predictably it swings", and the unpredictability was a
+seeded draw. It is not drawn any more. A bend applies a force, the ship answers
+it with grip, and where it ends up is what those two add to; what varies
+between ships is how well they read the road, not what the dice said.
 
 ## The two rules
 
@@ -29,7 +34,7 @@ make that trade interesting.
    `simulate(track, entrants, seed) → outcome`. No rendering, no timers, no
    `Date`, no `Math.random` outside the seeded RNG. Thousands of races can run
    in a script.
-2. **The race advances on a fixed integer tick.** Speed, position, swing and
+2. **The race advances on a fixed integer tick.** Speed, position, yaw and
    everything else update per tick. Real time never enters the sim; `main.ts`
    converts wall-clock time into whole ticks.
 
@@ -233,20 +238,19 @@ numbers. What a stretch comes to is four numbers:
 | Effect   | What it does                                                    |
 | -------- | --------------------------------------------------------------- |
 | `grip`   | multiplies the speed a bend there can be held at                 |
-| `sight`  | how well the road can be read, which decides how set you are     |
+| `sight`  | how many ticks of road ahead a bend can be seen coming            |
 | `hazard` | damage on entering the stretch, scaled by the speed you meet it at |
 | `pocket` | salvage for the ground flown through it                          |
 
-- **Nebula** is thick: it lowers the holding speed, so the same entry swings
-  wider. That is the bet the whole game rests on, applied to a place instead of
-  to a build.
+- **Nebula** is thick: it lowers the grip, so the same bend throws the same
+  ship further and a pilot that knows it answers by going slower. That is the
+  bet the whole game rests on, applied to a place instead of to a build.
 - **Debris** scrapes. Cheap on the line, expensive at speed.
-- **Shadow** hides the bend until you are into it. It is spent as extra excess
-  on the swing, beside the ship's own, rather than as a new kind of loss — a
-  bend you could not see coming is one you are into before you are set. A ship
-  answers it by aiming lower: `safeAim` takes sight off the line, so what the
-  dark costs a well-navigated ship is time rather than width, and what it costs
-  a badly navigated one is both.
+- **Shadow** hides the bend until you are nearly into it. It is spent as
+  *warning*: how many ticks of road the ship reads ahead, cut by the stretch's
+  sight. A bend it has not seen is one it has not started slowing for, and
+  since the braking a bend needs grows with speed while the warning does not,
+  the dark costs most to whoever is carrying the most into it.
 
 
 Nothing here is a new thing for a player to learn. Every one of the four is
@@ -454,155 +458,136 @@ In S1 a ship has two stats, set directly rather than by components:
 | **Thrust**   | sets top speed on a straight, and how hard the ship accelerates toward it        |
 | **Handling** | sets the holding speed of every bend, and how fast a wide ship recovers the path |
 
-## The racing line, and who can find it
+## Flight: how a ship goes round a bend
 
-**There is no corner plan.** There used to be three — Lift, Carry, Charge —
-chosen before the run and applied at every bend. It was a decision with no
-information behind it, and measurement showed there was nothing to decide:
-always-Lift was 18% to 48% off the best way round, on every shape tried.
+**The swing is gone, and so is the corner plan.** There used to be a draw — a
+bend threw a ship a seeded distance sideways, scaled by how much faster than
+its holding speed it arrived — and before that three plans to pick between. The
+draw was replaced because of one sentence from the owner, which it could not
+meet:
 
-What a bend should be entered at is a fact, and it falls out of the swing
-rather than out of anybody's judgement. A bend throws a ship
-`SWING_SPREAD * excess^SWING_EXPONENT * tightness` wide at the worst draw, and
-the path is `PATH_HALF_WIDTH` either side, so the excess that still fits is:
+> The same ship, going the same speed into a curve, but with better handling
+> should deviate less.
 
-```
-tightness = (SWING_REFERENCE_RADIUS / radius) ^ SWING_TIGHTNESS
-line      = 1 + (PATH_HALF_WIDTH / (SWING_SPREAD * tightness)) ^ (1 / SWING_EXPONENT)
-```
+A swing is drawn once, at turn-in, and **nothing the ship does between the
+turn-in and the exit can change where it ends up**. Handling reached it only
+through `holdingSpeed`, which the entry was quoted as a multiple of, so it
+cancelled. No tuning number fixes that; it is the shape of the rule.
 
-`safeAim` is that number. **It depends on the bend and not on the ship**: about
-1.33 at a 26-radius hairpin and 1.57 at a 110-radius sweeper. The racing line is
-the racing line — what differs between ships is whether they can find it, and
-whether they can reach it at all. Sight comes off it, so in the dark the line is
-slower, for everybody.
+What replaced it is physics, worked out in the feel lab and now shared by both:
+`src/sim/flight.ts` holds the model, `src/sim/race.ts` feeds it a circuit, and
+`src/lab` feeds it one bend you can fly by hand.
 
-`npm run table` is how that closed form is kept honest. It flies a grid of bends
-and ships across the whole range of entry speeds and prints what actually goes
-round quickest, so the formula can be checked against what flying rewards rather
-than trusted. The measured optimum spans **1.25 to 1.65** where a ship can reach
-the bend's limit at all, and being 0.3 out costs 6% to 19%.
-
-**Navigation decides how near a ship gets.** `aimFor` blurs the line by
-`NAV_SLIP`, less `NAV_SLIP_PER_LEVEL` for each level of nav, drawn per bend off
-the race seed. The blur is **symmetric**: a poor navigator brakes too early as
-often as too late. It is inconsistent, not reckless — a ship only ever wrong in
-the fast direction would be telling the same one-sided story the wide-penalty
-used to.
-
-The slip is measured against the only thing it is for — **how often a bend
-throws you off the path** — and the first attempt got that wrong. Sizing it
-against the swing's *spread* gave 0.14, which left a ship with no navigation
-system leaving the path on 9% of the Meridian's bends: tidy, when it should have
-looked lost. Two reasons. The realised swing is `spread × draw`, so a slip sized
-against the spread only reaches the edge when the swing draw is high too; and
-the blur is centred on the line, so half of it brakes early and cannot go wide
-at all.
-
-Of the bends a speed build actually meets:
-
-| | nav 0 | nav 1 | nav 2 | nav 3 |
-| --- | --- | --- | --- | --- |
-| Kestrel Loop | 31% | 26% | 20% | 9% |
-| Meridian Run | 18% | 10% | 9% | 2% |
-| Cinder Coil | 32% | 25% | 24% | 20% |
-
-Wider than `NAV_SLIP` 0.25 buys little and costs a lot. A symmetric blur cannot
-push a bad driver much past a third of bends — the slow half of it only ever
-brakes early — and past 0.25 the widest excursion reaches the corridor wall,
-which is a ban rather than a risk.
-
-**This is what a navigation system is for**, and it is now the stat that decides
-how a race *looks*: a well-navigated ship is smooth and on the line, and a badly
-navigated one is visibly all over the road.
-
-### Four things make the answer depend on the situation
-
-Without them the racing line came out a **constant** — 1.44 everywhere, for
-every ship on every bend — and a constant is nothing to be good at. Measured
-over eighteen shapes crossed with three ships, the optimum did not move with
-radius, with sweep, or with the straight in front of the bend. Each of these is
-a route by which something about the situation reaches the answer:
-
-- **The swing knows how tight the bend is.** `SWING_TIGHTNESS` scales it by
-  `(SWING_REFERENCE_RADIUS / radius)`. It had no geometry at all before: a
-  hairpin and a sweeper threw a ship exactly the same distance for the same
-  relative excess. This is the one that matters most, because entry speed is
-  quoted as a multiple of the holding speed and holding speed already contains
-  the radius — so with no radius in the swing either, the shape of a bend had
-  nothing left to change.
-- **The swing compounds.** `SWING_COMPOUND` measures it from where the ship
-  actually is rather than from the centre line. A bend used to forgive whatever
-  came before it, which is why a run of bends was no harder than one bend.
-  Arriving wide on the outside now compounds; arriving wide on the inside is a
-  good line in and gives some of it back.
-- **Holding the line pays the exit.** `EXIT_BONUS` hands back speed for having
-  held the path through a bend, so carrying too much in costs the straight that
-  follows — the trade real racing is built on, which this game had no version
-  of. It is also how "distance to the next curve" reaches the answer.
-- **Braking is finite and Handling is most of it.** `BRAKE_PER_HANDLING`. A flat
-  rate meant every ship arrived at exactly what it aimed for whatever the
-  approach, which decoupled entry speed from everything including the length of
-  the straight it came down.
-
-`npm run optimal` is the instrument. It flies a grid of shapes and ships across
-the whole range of entry speeds and reports two optima: the quickest that keeps
-the ship on the golden path, and the quickest full stop. Where they agree the
-swing is priced right; where the second is higher, the game is paying a ship to
-be thrown wide.
-
-## The swing
-
-The rule the game is built on. At the moment a ship enters a bend:
+### The one relation
 
 ```
-excess  = max(0, entrySpeed - holdingSpeed) / holdingSpeed
-spread  = SWING_SPREAD * excess ^ SWING_EXPONENT
-swing   = spread * rng.unitInterval()        // one seeded draw per bend
+a bend of radius r throws a ship outward at   v² / r
+a ship answers with at most                   grip
+so flat out through the bend is               v = sqrt(grip · r)
 ```
 
-`excess` is how much faster the ship is than the bend allows, as a fraction.
-`spread` grows **steeply** with it — that is the exponent's whole job — so a
-ship a little too fast is usually fine and a ship much too fast is unpredictable
-rather than merely slow. The draw is seeded, so a race replays exactly.
+which is `holdingSpeed` exactly, unchanged. Grip is `HOLD_GRIP · handling`, and
+a stretch's own grip multiplies it — twice, because `effect.grip` was written
+to multiply the holding *speed*.
 
-The swing pushes the ship **outward** from the centreline, measured in track
-units of lateral offset. Through the bend the offset grows toward the drawn
-swing; on the straight after it, the ship pulls back toward the path at a rate
-set by Handling.
+### Yaw, which is the whole difference
 
-**Wide** is where the cost lands, in time and now in damage. A ship whose offset exceeds
-`PATH_HALF_WIDTH` has left the golden path, and what it keeps of its speed
-falls the further out it is:
+**`yaw` is how far the ship points away from where the road goes.** The nose
+turns at `lateral acceleration / speed`; the road's heading turns at
+`curvature × speed`; yaw is the difference. A ship with yaw is going sideways
+and **keeps going sideways until something turns it back**, so correcting a
+line costs room and time, and a sliding ship makes less progress along the road
+while it does it.
 
-```
-over = |offset| - PATH_HALF_WIDTH
-keep = max(WIDE_SPEED_FLOOR, WIDE_SPEED_AT_EDGE - over * WIDE_SPEED_PER_UNIT)
-```
+That single piece of state is what the swing had no version of, and it is why
+the swing could never be flown.
 
-Clipping the edge barely costs anything; being thrown right out is expensive.
-A flat penalty was the first version, and it made Thrust strictly dominant —
-any speed was worth any swing, because the worst case cost the same as the
-mildest. Scaling it is what prices the gamble.
+### How a ship flies itself
 
-**The scale was too gentle, and it was measured rather than argued.** Scoring a
-lap on time alone, "never lift off" came within 2% of the best way round in six
-cases out of six: the game was paying a ship to leave the path. `WIDE_SPEED_FLOOR`
-went 0.42 to 0.18 and `WIDE_SPEED_PER_UNIT` 0.028 to 0.12, which takes the
-cases where staying on the line *is* the quickest way round from 16 of 36 to 27,
-and the worst gap from 16.7% to 3.8%.
+Two closed forms, no search. Speed comes from a ceiling read off the road
+ahead; steering is the lock the bend needs plus a correction for where the ship
+actually is. Three rules make it work, and each was found by a measurement that
+contradicted the obvious thing:
 
-What closes that gap is a ramp that bites **early**, not a deeper floor: a
-penalty spread evenly across the corridor only reaches 4 cases in 9, one that
-hits its floor within the first third reaches 8. `WIDE_SPEED_AT_EDGE` is
-untouched, so clipping the very edge still costs 6%.
+1. **Read a steering lag ahead, not underfoot.** Steering answers over
+   `1 / STEER_RATE` ticks. A ship that waits for the bend to arrive has been
+   thrown wide by the time the lock is on, and at the limit there is no lock
+   left over to correct with, so the moment is not recoverable. Measured: 0.4
+   units off the line against 17–23, on every ship and bend tried.
+   **Anticipation is what a navigation system buys.**
+2. **The bend is served first.** The correction may only have the lock the
+   feed-forward is not using, plus `RECOVER_OVERDRAW`. Without it a stiff
+   correction fights the feed-forward and the ship leaves the bend: 6.8 units
+   off with the rule, 60.7 without.
+3. **When there is no lock spare, slow down.** If getting back needs `fix` of
+   it, the bend may only have `1 - fix`, so the ship must be down to
+   `sqrt(grip · (1 - fix) / curvature)`.
 
-The swing itself was left alone. Making it wider or steeper moved almost
-nothing — it was never the swing that was mispriced, it was what happens once
-you are out there.
+Rule 3 is where **the cost of going wide comes from**. Nothing punishes being
+off the line any more — `WIDE_SPEED_FLOOR` and its friends are gone. It is slow
+by itself, because getting back spends the grip the bend was using, and because
+a ship pointing off the road covers less road.
 
-The ship hauls itself back proportionally — fast at first, fighting the last
-few units — at a rate set by Handling.
+### Speed has an in-between
+
+Acceleration tapers as a ship nears its top speed, and the throttle eases
+rather than switching. A flat rate is why a ship used to be only ever flat out
+or stopped. Drag bites only off the power — applied under thrust as well it
+fights the taper and a ship settles below the top speed its own engine claims.
+
+### The bumpers
+
+Outside the golden path the road leans on a ship: a soft lateral push back
+toward it, easing in over `BUMPER_RAMP` and saturating after. Not a wall, not a
+penalty, and not the pilot's doing. The force is **absolute** rather than
+scaled by grip, because it belongs to the road — a grippy ship should not be
+shoved home harder than a loose one.
+
+It exists so a deep excursion is bounded without anybody yanking at the
+steering, and that is what let the correction be gentle: a recovery used to
+swing past the centre and out the far side by nine units and ring back and
+forth. It now returns monotonically.
+
+## Navigation is how well a ship is flown
+
+`nav` used to decide which grades of split a ship could plan, and blurred a
+number. It still plans routes, and it is now also **the only thing that decides
+how well a ship flies**. At `NAV_BEST` a ship flies the reference line exactly,
+with no randomness in it at all. Below that the *same pilot* is worse informed
+in three ways, each something a pilot would plausibly be bad at:
+
+- **how far ahead it reads the road** — deterministic, and the big lever;
+- **where it thinks the line is** — a slow wander;
+- **how fast it thinks it can go** — a slow wander.
+
+Both wanders are slow on purpose. Fast jitter is filtered out by the ship's own
+steering lag and changes almost nothing; it reads as a twitch rather than as
+misjudgement, and flying badly is being in the wrong place and late to notice.
+
+They fade at **different rates**, and that is deliberate. A straight line
+through all three made no navigation and half of it feel like the same ship;
+making the bottom worse made none and a quarter feel alike instead. What
+separates them is failing *differently* — anticipation comes back fast, the
+wobble fades evenly, and misjudging its own pace is concentrated at the very
+bottom, so a ship with no navigation does not wobble more, it arrives at bends
+hopelessly wrong and blows them.
+
+Measured on the tracks that ship, a stock hull with no navigation system laps
+between two and three times slower than the same hull with a maxed one, and
+spends about a third of the lap off the golden path against none at all.
+
+## Sight is warning, measured in ticks
+
+A stretch that hides the road cuts how far ahead a ship reads a bend. The
+number is **in ticks**, not units, so the distance scales with speed and every
+ship gets the same amount of *time* to react.
+
+Written as a distance first, and that was wrong twice over. Long enough to be
+plausible, it could never bite at all: by the time a far bend constrains a
+ship the gap is already short, so ignoring it changes nothing. Short enough to
+bite, it read as a ship that cannot see forty units ahead. As a reaction time
+it is neither — and since the braking a bend needs grows with speed while the
+warning does not, **the dark catches exactly the ships carrying speed into it.**
 
 ## The route
 
@@ -650,6 +635,12 @@ sees through it. The ladder is the framework's:
 | 2   | Plan the dark ones: every split on the track is yours. |
 | 3   | Re-plan the route at a pit stop. Takes a second slot.  |
 
+**And on top of all of it, the same stat now decides how well the ship is
+flown** — see *Navigation is how well a ship is flown* above. That is a large
+amount of work for one number to do and it may want splitting later; it is one
+stat today because the flight model wanted a rating and this was the rating the
+game already had.
+
 A split one grade beyond your navigation is drawn as a hint — you can see
 something turns off there and no more than that. Anything further out you
 cannot see at all, which is the reason to buy a better system. Androids read a
@@ -664,33 +655,37 @@ The grades are not sprinkled at random: a split you need a system to read is a
 better split than one anybody can see, or the system would not be worth its
 slot.
 
-## The corridor
+## The corridor, which nothing reaches any more
 
-Off the golden path is ground a ship can be thrown across. Past the **corridor**
-there is something solid — call it a field, call it a rail — and the ship does
-not go through it.
+Off the golden path is ground a ship can be thrown across. Past the
+**corridor** there is something solid — call it a field, call it a rail — and
+the ship does not go through it.
 
-Before it, a swing could throw a ship any distance at all: on the Cinder Coil a
-low-handling ship charging its hairpins wanted to go 128 units off the line,
-which is seven times the width of the path and nowhere that could reasonably be
-called a track. The corridor is about three times the path's half-width, so a
-ship still has room to go properly wide — that is the whole bet — and only the
-extremes ever find the wall. A capable ship never touches it at all.
+It was the answer while a swing could throw a ship any distance at all: on the
+Cinder Coil a low-handling ship charging its hairpins wanted to go 128 units
+off the line, seven times the width of the path.
 
-**The position is capped; the cost is not.** Damage is charged on how far the
-swing _wanted_ to throw the ship rather than on how far it got, and hitting the
-wall scrubs speed on top, scaled the same way. Without that, the worst swing in
-the game would be cheaper than a merely bad one, which is the opposite of what
-the swing is for.
+**Under the flight model nothing gets near it.** Across every track, engine and
+handling the suite flies, the widest any ship gets is about fifteen units,
+against a wall at twenty-six — because the bumpers lean on a ship from the edge
+of the golden path and a pilot that is off the line is slow until it is back
+on. The corridor is still there, still clamps, and still scrubs speed once per
+contact rather than per tick (per tick was a death spiral: a ship pinned
+through a long bend reached the speed floor and could not finish a lap). But it
+is now a rule about something that does not happen.
 
-The wall charges **once per contact, not per tick**. Per tick was a death
-spiral: a ship pinned through a long bend scrubbed every tick, reached the speed
-floor and could not finish the lap at all. Damage learned the same lesson first,
-and for the same reason.
+That is recorded rather than deleted, because it is a live tuning question:
+**the corridor is currently doing no work**, and whether the bumpers should sit
+further out to give it some is a decision for the balance pass, not something
+to settle by quietly changing a number.
 
-**Later:** a swing extreme enough to carry a ship out of its corridor and onto
-another split — as something a player chooses to fit, not something that happens
-to them.
+Hitting it, if anything ever does, costs speed scaled by how sideways the ship
+arrived — sliding into the wall costs more than drifting onto it. The old rule
+charged it on how far the swing *wanted* to throw the ship, which there is no
+longer any such thing as.
+
+**Later:** a ship carried out of its corridor and onto another split — as
+something a player chooses to fit, not something that happens to them.
 
 ## Being swung into the wrong split
 

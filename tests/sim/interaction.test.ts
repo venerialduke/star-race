@@ -29,6 +29,7 @@ import {
   PERFECT_BENDS,
   SPEED_PER_THRUST,
   TRACK_HALF_WIDTH,
+  PATH_HALF_WIDTH,
 } from '../../src/sim/tuning';
 import {
   ageFixtures,
@@ -157,7 +158,11 @@ describe('a thing on the road bites once', () => {
       if (state.met.length > before) bites += 1;
     }
     // It flies right past it, well inside the reach, for many ticks.
-    expect(state.distance).toBeGreaterThan(400);
+    // Far enough past the mine to have been near it for a long time. A ship
+    // covers less ground in 900 ticks than it used to — it works its way up to
+    // speed rather than starting at it — so the bar is what the mine sits at
+    // plus room, not a number carried over from a faster start.
+    expect(state.distance).toBeGreaterThan(340);
     expect(bites).toBe(1);
   });
 
@@ -244,7 +249,10 @@ describe('what answers a weapon', () => {
 
   it('stops a weapon outright when the shields are deeper than it', () => {
     const deep = shoved([fit('speed-engine', 2), fit('general-shields', 3, 2)], 20);
-    expect(deep.offset).toBe(0);
+    // Not exactly zero: a ship flies its line rather than being placed on it,
+    // so the pilot is always correcting a fraction of a unit. The claim is
+    // that nothing shoved it, not that it is on a mathematical centre.
+    expect(Math.abs(deep.offset)).toBeLessThan(0.01);
     expect(deep.lastHit).toBeUndefined();
     // The shielding is spent answering it, even though nothing got through.
     expect(deep.shields).toBeLessThan(resolveBuild([
@@ -276,7 +284,7 @@ describe('what answers a weapon', () => {
     });
     expect(state.salvage).toBeGreaterThan(0);
     // It never lands: the ship is not moved an inch by a weapon it kept.
-    expect(state.offset).toBe(0);
+    expect(Math.abs(state.offset)).toBeLessThan(0.01);
     // But catching it loads the shield, so the next one has to wait for the
     // recharge. Without that the shield never leaves full and captures
     // everything for the rest of the race for nothing.
@@ -298,7 +306,7 @@ describe('what answers a weapon', () => {
     const caught = stepRace(startRace(stats, build), { ...config, incoming: [big] });
     // The missiles worth catching are exactly the ones that outweigh a shield.
     expect(caught.salvage).toBeGreaterThan(0);
-    expect(caught.offset).toBe(0);
+    expect(Math.abs(caught.offset)).toBeLessThan(0.01);
     expect(caught.shields).toBe(0);
 
     // And the next one lands, because the shields are no longer full. That is
@@ -516,30 +524,46 @@ describe('charge, and what a ship spends it on', () => {
       seed: 5,
       id: 'a',
     };
-    // Every bend entered while the chain still has one left must take no swing
-    // at all; the first bend after it runs out must be able to swing again.
+    // A chained bend is flown by a pilot that knows exactly where the line is;
+    // once the chain runs out the ship is back to its own navigation, which on
+    // this build is none at all. So the claim is about the *line*, not about
+    // entry speed: a pilot that brakes to a ceiling almost never arrives over
+    // what a bend holds, which makes `excess` nothing to measure here.
+    //
+    // A mark is written when a bend *ends* now rather than when it begins, so
+    // what it is checked against is how much chain was left when it began.
     let inChain = 0;
     let afterChain = 0;
     let swungAfter = false;
+    const entered: number[] = [];
+    let wasKey: string | undefined;
     for (let i = 0; i < 2000; i += 1) {
       const before = state.swings.length;
       const chainLeft = state.perfectLeft;
       state = stepRace(state, config);
       if (state.swings.length > before) {
         const swing = state.swings[state.swings.length - 1];
-        if (chainLeft > 0 || state.lastFiredTick === state.tick) {
-          expect(swing?.excess).toBe(0);
+        if (entered.length > 0 && entered[0]! > 0) {
+          // Flown by a pilot that can see: never off the golden path.
+          expect(swing?.swing).toBeLessThan(PATH_HALF_WIDTH);
           inChain += 1;
         } else {
           afterChain += 1;
-          if ((swing?.excess ?? 0) > 0) swungAfter = true;
+          if ((swing?.swing ?? 0) > PATH_HALF_WIDTH) swungAfter = true;
         }
+        entered.shift();
       }
+      // A bend has been entered when the key changes; remember how much chain
+      // was left at that moment, because that is what decided how it was flown.
+      if (state.bendKey !== undefined && state.bendKey !== wasKey) entered.push(chainLeft);
+      wasKey = state.bendKey;
       // Never let it charge back up, so exactly one chain is measured.
       state = { ...state, charge: Math.min(state.charge, 0.9) };
     }
     expect(inChain).toBe(PERFECT_BENDS);
     expect(afterChain).toBeGreaterThan(0);
+    // And once it is over, the ship's own navigation is what it has: it leaves
+    // the path on a bend the chain would have held.
     expect(swungAfter).toBe(true);
   });
 });

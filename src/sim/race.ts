@@ -25,11 +25,23 @@ import {
   sampleOn,
   sectorAt,
   sectorOf,
-  type Effect,
   type Route,
   type Sector,
   type Track,
 } from './track';
+import {
+  advance,
+  alongStep,
+  bumperPush,
+  leadOf,
+  pilot,
+  skillOf,
+  wanderOn,
+  type Control,
+  type Flier,
+  type Motion,
+  type Sighted,
+} from './flight';
 import {
   ACCEL_PER_THRUST,
   BASE_HANDLING,
@@ -37,7 +49,6 @@ import {
   BRAKE_PER_TICK,
   CONDITION_PER_DAMAGE,
   DAMAGE_PER_EXTRA_PART,
-  CARRY_SCRUB,
   PATH_HALF_WIDTH,
   GRAVITY_PER_ACCEL,
   GRAVITY_PER_CORNER,
@@ -51,27 +62,17 @@ import {
   TRACK_HALF_WIDTH,
   WALL_CLEAR,
   WALL_SCRUB,
-  RECOVER_FLOOR,
+  PILOT_SIGHT,
   REPAIR_PER_TICK,
-  RECOVER_PER_HANDLING,
   SHIELD_REGEN,
-  NAV_SLIP,
-  NAV_SLIP_PER_LEVEL,
-  SIGHT_EXCESS,
-  SWING_COMPOUND,
-  EXIT_BONUS,
   BRAKE_PER_HANDLING,
   SPEED_PER_THRUST,
   STAT_MAX,
   STAT_MIN,
-  SWING_EXPONENT,
-  SWING_RISE,
-  SWING_SPREAD,
-  SWING_REFERENCE_RADIUS,
-  SWING_TIGHTNESS,
-  WIDE_SPEED_AT_EDGE,
-  WIDE_SPEED_FLOOR,
-  WIDE_SPEED_PER_UNIT,
+  HOLD_GRIP,
+  MIN_ROLLING_SPEED,
+  BUMPER_FROM,
+  BUMPER_PUSH,
   WORN_HANDLING_LOSS,
   BLACK_HOLE_CARRY,
   BLACK_HOLE_POWER,
@@ -168,6 +169,20 @@ export interface RaceState {
   readonly speed: number;
   /** Lateral offset from the centreline: positive is left of travel. */
   readonly offset: number;
+  /**
+   * How far the ship points away from where the road goes, in radians.
+   *
+   * The state the swing had no version of, and the reason it could never be
+   * flown: a ship with yaw is going sideways and keeps going sideways until
+   * something turns it back, so correcting a line costs room and time.
+   */
+  readonly yaw: number;
+  /** Where the steering and throttle actually are, which lag where they were asked to be. */
+  readonly steer: number;
+  readonly throttle: number;
+  /** What the navigation system is currently wrong about. Slow, and seeded. */
+  readonly wanderLine: number;
+  readonly wanderPace: number;
   readonly wide: boolean;
   readonly lap: number;
   readonly sector: number;
@@ -207,8 +222,11 @@ export interface RaceState {
    * a stretch that says nothing about itself.
    */
   readonly bandKey: string | undefined;
-  /** Where the current swing is pulling the ship. */
-  readonly swingTarget: number;
+  /** What this bend was entered at, kept so the exit can report what it did. */
+  readonly bendEntry: number;
+  readonly bendHolding: number;
+  readonly bendRadius: number;
+  readonly bendStart: number;
   /** How far off the path this bend has taken the ship, worst so far. */
   readonly bendWorst: number;
   /** Recent positions, oldest first. Bounded, so a long race stays cheap. */
@@ -316,8 +334,16 @@ export function startRace(
     onWall: false,
     bendKey: undefined,
     bandKey: undefined,
-    swingTarget: 0,
+    bendEntry: 0,
+    bendHolding: 0,
+    bendRadius: 0,
+    bendStart: 0,
     bendWorst: 0,
+    yaw: 0,
+    steer: 0,
+    throttle: 0,
+    wanderLine: 0,
+    wanderPace: 0,
     trail: [],
     charge: 0,
     boostLeft: 0,
@@ -339,11 +365,6 @@ export function startRace(
 /** How many positions the wake remembers. Structural: the size of a buffer. */
 const TRAIL_LENGTH = 60;
 
-/** How far it takes to slow from `from` to `to`. */
-function brakingDistance(from: number, to: number, brake = BRAKE_PER_TICK): number {
-  if (from <= to) return 0;
-  return (from * from - to * to) / (2 * brake);
-}
 
 /**
  * One tick. Pure: the same state, config and tick number always produce the
@@ -449,72 +470,82 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     (towLeft > 0 ? TRACTOR_TOW : 0);
   const accel = ACCEL_PER_THRUST * thrust;
 
-  // 1. Speed. The corner plan decides what happens about a bend — unless the
-  // chain is running, which takes the bend perfectly whatever the plan says.
+  // 1. Flight. The bend applies a force, the ship answers it with grip, and
+  // where it ends up is whatever those two add to. Nothing is drawn: the same
+  // ship at the same speed on the same bend does the same thing every time,
+  // and what varies is how well the navigation system reads the road.
   //
+  // `effect.grip` used to multiply the holding *speed*, so it multiplies grip
+  // itself twice over — the translation is exact, not a re-tune.
+  const grip = HOLD_GRIP * handling * effect.grip * effect.grip;
+  // Braking is finite and Handling is most of it, so a ship cannot always
+  // arrive at exactly what it aimed for. That is how the length of a straight
+  // reaches the answer: a long one arrives fast and is a real braking problem.
+  const brake = BRAKE_PER_TICK * (1 + (handling - 1) * BRAKE_PER_HANDLING);
+  const flier: Flier = { topSpeed, accel, brake, grip };
+
   // A tractor beam is taken off the top: no shield answers a pull, and a black
   // hole read as a corner is speed the ship gains rather than loses.
-  let speed =
-    state.speed * (1 - arrived.scrub) +
-    arrived.carry +
-    (towLeft > 0 ? TRACTOR_TOW_PULL : 0);
+  const entry: Motion = {
+    speed:
+      state.speed * (1 - arrived.scrub) +
+      arrived.carry +
+      (towLeft > 0 ? TRACTOR_TOW_PULL : 0),
+    offset: state.offset,
+    yaw: state.yaw,
+    steer: state.steer,
+    throttle: state.throttle,
+  };
+
   const chaining = state.perfectLeft > 0 || fired?.id === 'three-bends';
-  // What this ship is trying to do about the bend it is on or coming to. The
-  // player used to choose; there was never anything to choose between, because
-  // the line is a fact about the track and the ship either finds it or does not.
-  //
-  // `config.aim` overrides it, which is how `npm run optimal` sweeps the whole
-  // range to check that what the ship aims for is in fact the best there is.
-  const onLine = (key: string, radius: number): number =>
-    config.aim ??
-    aimFor(
-      effect,
-      radius,
-      stats.nav,
-      drawFor(config.seed, `${key}:aim`, state.lap).unitInterval(),
-    );
+  // What the navigation system is wrong about this tick. Two slow wanders,
+  // seeded off the tick so a race still replays exactly. A chained bend is
+  // flown perfectly, which is the whole of what the ability buys now.
+  const wanderLine = wanderOn(
+    state.wanderLine,
+    drawFor(config.seed, `nav:line:${state.tick}`, state.lap).unitInterval(),
+  );
+  const wanderPace = wanderOn(
+    state.wanderPace,
+    drawFor(config.seed, `nav:pace:${state.tick}`, state.lap).unitInterval(),
+  );
+  const skill = chaining ? { reads: 1, line: 0, pace: 0 } : skillOf(stats.nav);
 
-  const nowBend = onBend ? bendOn(route, along) : undefined;
-  const aim =
-    nowBend === undefined
-      ? undefined
-      : onLine(bendKeyOf(sector.index, state.route, nowBend), nowBend.radius);
+  const curvatureOn = (at: number): number => {
+    const b = bendOn(route, at);
+    return b === undefined ? 0 : b.turn / b.radius;
+  };
 
-  if (onBend) {
-    const cap = holding * (aim ?? 1);
-    if (chaining) {
-      speed = Math.min(topSpeed, speed + accel);
-    } else if (speed > cap) {
-      speed = Math.max(cap, speed - CARRY_SCRUB);
-    } else {
-      // Below what the bend allows, a ship still gets on with it. Without this
-      // Lift and Carry did nothing at all on a bend they were already slow
-      // enough for — which never mattered while every route began on a
-      // straight, and stalled a ship at a standstill the moment one did not.
-      speed = Math.min(Math.min(topSpeed, cap), speed + accel);
-    }
-  } else {
-    const ahead = lookAhead(track, sector, route, along, config.routes);
-    let braking = false;
-    if (ahead !== undefined) {
-      // The same aim the bend itself will use, drawn off the same key — or the
-      // ship would brake for one target and then take the bend at another.
-      const target =
-        holdingSpeed(ahead.bend.radius, handling) *
-        effect.grip *
-        onLine(ahead.key, ahead.bend.radius);
-      // Braking is finite and Handling is most of it, so a ship cannot always
-      // arrive at exactly what it aimed for. That is what lets the length of
-      // the straight reach the answer: a long one arrives fast and is a real
-      // braking problem, a short one never got going. It used to be a flat
-      // rate, which meant every entry hit its target and nothing before the
-      // bend could matter.
-      const brake = BRAKE_PER_TICK * (1 + (handling - 1) * BRAKE_PER_HANDLING);
-      braking = ahead.gap <= brakingDistance(speed, target, brake);
-      if (braking) speed = Math.max(target, speed - brake);
-    }
-    if (!braking) speed = Math.min(topSpeed, speed + accel);
+  // The fastest the road ahead allows, given what the ship can brake. Sight is
+  // spent here and nowhere else: a bend you cannot see yet is one you have not
+  // started slowing for, which is what being in the dark costs.
+  let ceiling = topSpeed;
+  if (onBend) ceiling = Math.min(ceiling, holding);
+  const ahead = lookAhead(track, sector, route, along, config.routes);
+  // Sight is spent in one place: how much warning the ship gets. A bend it has
+  // not seen yet is one it has not started slowing for, and the braking a bend
+  // needs grows with speed while the warning does not — so the dark costs most
+  // to whoever is carrying the most into it.
+  const warning = Math.max(entry.speed, MIN_ROLLING_SPEED) * PILOT_SIGHT * effect.sight;
+  if (ahead !== undefined && ahead.gap <= warning) {
+    const limit = holdingSpeed(ahead.bend.radius, handling) * effect.grip;
+    ceiling = Math.min(ceiling, Math.sqrt(limit * limit + 2 * brake * ahead.gap));
   }
+
+  const seen: Sighted = {
+    ahead: curvatureOn(along + leadOf(skill, entry.speed)),
+    under: curvatureOn(along),
+    ceiling: ceiling * (1 + wanderPace * skill.pace),
+    linePlace: wanderLine * skill.line * PATH_HALF_WIDTH,
+  };
+  const control: Control = pilot(flier, entry, seen);
+  const flown = advance(flier, entry, control, {
+    curvature: seen.under,
+    // The bumpers: the road leaning on a ship that is well off it, so that a
+    // deep excursion is bounded without the pilot having to yank at anything.
+    bumper: bumperPush(entry.offset, BUMPER_FROM, BUMPER_PUSH),
+  });
+  let speed = flown.speed;
 
   // 1b. Gravity: what the crew actually feels. A bend taken fast is lateral
   // load — speed squared over the radius, which is why a tight corner at pace
@@ -540,98 +571,68 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     ),
   );
 
-  // 2. Entering a bend: one seeded draw decides how wide this one throws us.
-  const bend = nowBend;
+  // 2. The bend, start to finish. There is no draw any more: what a bend does
+  // to a ship is what the ship's own speed and grip make it do, and the mark
+  // left behind records what happened rather than what was rolled.
+  const bend = onBend ? bendOn(route, along) : undefined;
   // The same bend on two routes is not the same bend, so the name carries both.
   const key = bend === undefined ? undefined : bendKeyOf(sector.index, state.route, bend);
   let bendKey = state.bendKey;
-  let swingTarget = state.swingTarget;
+  let bendEntry = state.bendEntry;
+  let bendHolding = state.bendHolding;
+  let bendRadius = state.bendRadius;
+  let bendStart = state.bendStart;
   let perfectLeft = fired?.id === 'three-bends' ? PERFECT_BENDS : state.perfectLeft;
   let lastPerfectTick = state.lastPerfectTick;
   const swings = [...state.swings];
   if (bend !== undefined && key !== bendKey) {
     bendKey = key;
+    bendEntry = speed;
     // The stretch the bend is *entered* on sets its grip. A bend that runs out
-    // of a nebula is still a nebula bend: what decides the swing is the moment
-    // of entry, which is the moment this whole block is about.
-    const bendHolding = holdingSpeed(bend.radius, handling) * effect.grip;
-    // A bend inside the chain is taken perfectly — no swing at all — and one
-    // reached soon after the last pays speed for the run being quick. That is
-    // what makes the chain want a coil of bends rather than three stray ones.
-    const perfect = perfectLeft > 0;
-    if (perfect) {
+    // of a nebula is still a nebula bend.
+    bendHolding = holdingSpeed(bend.radius, handling) * effect.grip;
+    bendRadius = bend.radius;
+    bendStart = bend.start;
+    // A bend inside the chain is flown perfectly, and one reached soon after
+    // the last pays speed for the run being quick. That is what makes the
+    // chain want a coil of bends rather than three stray ones.
+    if (perfectLeft > 0) {
       perfectLeft -= 1;
       const quick =
         lastPerfectTick !== undefined && state.tick - lastPerfectTick <= PERFECT_WINDOW;
       if (quick) speed = Math.min(topSpeed, speed + PERFECT_BONUS * topSpeed);
       lastPerfectTick = state.tick;
     }
-    const rawExcess = Math.max(0, speed - bendHolding) / bendHolding;
-    // Sight is spent here, beside Charge's own bonus and for the same reason: a
-    // bend you could not see coming is one you are into before you are set, so
-    // the swing is drawn from a worse place rather than punished separately.
-    // Lift takes no swing at all, which makes it the plan shadow cannot touch —
-    // giving up the speed is giving up the surprise.
-    const excess = perfect ? 0 : rawExcess + (1 - effect.sight) * SIGHT_EXCESS;
-    const tight = Math.pow(SWING_REFERENCE_RADIUS / bend.radius, SWING_TIGHTNESS);
-    const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT) * tight;
-    const draw = drawFor(config.seed, key as string, state.lap).unitInterval();
-    const swing = spread * draw;
-    // The swing throws the ship outward: away from the way the bend turns.
-    // **The swing is measured from where the ship is, not from the centre.**
-    // Arriving wide on the outside compounds; arriving wide on the inside is a
-    // good line into the bend and gives some of it back — the racing line
-    // falling out of the rule rather than drawn on top of it.
-    //
-    // Deliberately *not* clamped. The offset is held inside the corridor every
-    // tick, so a bad run cannot escape, but the target is what `exposure`
-    // charges the excursion on: clamping it would make a huge swing cost the
-    // same as one that merely reaches the wall, which is the opposite of the
-    // bet the game rests on. That clamp was here for one commit and a corridor
-    // test caught it.
-    swingTarget = state.offset * SWING_COMPOUND - bend.turn * swing;
+  }
+  // How near the path this bend has been held, worst point so far. It is what
+  // the mark is drawn from, so it has to be watched all the way through.
+  let bendWorst = key !== undefined && key === state.bendKey ? state.bendWorst : 0;
+  if (onBend) bendWorst = Math.max(bendWorst, Math.abs(state.offset));
+
+  // Leaving a bend: record what it did. The mark is written at the exit rather
+  // than the entry because until then there is nothing to say — the swing used
+  // to be known the moment the bend began, and now it is flown.
+  if (!onBend && state.bendKey !== undefined) {
+    const held = state.bendHolding;
     swings.push({
       tick: state.tick,
       sector: sector.index,
       route: state.route,
-      bendStart: bend.start,
-      radius: bend.radius,
-      entrySpeed: speed,
-      holding: bendHolding,
-      excess,
-      swing,
-      wentWide: swing > PATH_HALF_WIDTH,
+      bendStart: state.bendStart,
+      radius: state.bendRadius,
+      entrySpeed: state.bendEntry,
+      holding: held,
+      excess: Math.max(0, state.bendEntry - held) / Math.max(0.001, held),
+      swing: state.bendWorst,
+      wentWide: state.bendWorst > PATH_HALF_WIDTH,
     });
-  }
-  // How near the path this bend has been held, worst point so far. It is what
-  // the exit is paid on, so it has to be watched all the way through.
-  let bendWorst = key !== undefined && key === state.bendKey ? state.bendWorst : 0;
-  if (onBend) bendWorst = Math.max(bendWorst, Math.abs(state.offset));
-
-  // Leaving a bend: speed back for having held the line through it. This is the
-  // trade the game had no version of — entry speed used to buy exit speed with
-  // nothing owed, so there was never a reason to give any up.
-  if (!onBend) {
-    if (state.bendKey !== undefined) {
-      const held = Math.max(0, 1 - state.bendWorst / PATH_HALF_WIDTH);
-      speed = Math.min(topSpeed, speed + held * EXIT_BONUS * speed);
-    }
     bendKey = undefined;
     bendWorst = 0;
-    swingTarget = 0;
+    bendEntry = 0;
   }
 
-  // 3. Offset. It opens up through the bend and is hauled back afterwards.
-  let offset = state.offset;
-  if (onBend) {
-    offset += (swingTarget - offset) * SWING_RISE;
-  } else {
-    const pull = Math.max(
-      RECOVER_FLOOR,
-      Math.abs(offset) * RECOVER_PER_HANDLING * handling,
-    );
-    offset = Math.abs(offset) <= pull ? 0 : offset - Math.sign(offset) * pull;
-  }
+  // 3. Offset, as the flight worked it out.
+  let offset = flown.offset;
   // What a weapon or a fixture does is push you off your line. It lands here,
   // in the same units the swing is paid in, and the corridor holds it in the
   // same way — so being shot is being thrown wide by somebody else's choice.
@@ -671,7 +672,9 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   // arrives gradually, and stopped taking excursion damage at all.
   const outside =
     wide || (state.outside && Math.abs(offset) > PATH_HALF_WIDTH * EXCURSION_CLEAR);
-  const exposure = Math.min(1, Math.abs(state.swingTarget) / HAZARD_FULL_EXPOSURE);
+  // How exposed the excursion was: how far off the line the ship actually got,
+  // rather than how far a draw wanted to throw it. There is no draw now.
+  const exposure = Math.min(1, Math.abs(offset) / HAZARD_FULL_EXPOSURE);
   // 3c. And the road itself. Debris is danger **on** the path rather than
   // beside it, so it does not wait for an excursion — but it bites once, on the
   // way into the stretch, for exactly the reason the excursion above does.
@@ -706,17 +709,22 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
 
   // 4. Move. Being off the golden path costs time, not damage — and the
   // further out the ship is thrown, the more of its speed it loses.
-  const keep = wide
-    ? Math.max(WIDE_SPEED_FLOOR, WIDE_SPEED_AT_EDGE - over * WIDE_SPEED_PER_UNIT)
-    : 1;
+  // Nothing is charged for being off the path any more. It is slow on its own:
+  // getting back spends the grip the bend was using, so the pilot has to be
+  // slower through it. A penalty that falls out of the physics beats one that
+  // is invented, and `WIDE_SPEED_*` were the invented ones.
   if (hitWall) {
-    // How much further the swing wanted to throw it than the corridor allows.
-    const past = Math.max(0, Math.abs(swingTarget) - TRACK_HALF_WIDTH) / TRACK_HALF_WIDTH;
+    // How hard it arrived at the wall, which is what hitting it costs.
+    const past = Math.min(1, Math.abs(Math.sin(flown.yaw)));
     speed = Math.max(0.1, speed * (1 - WALL_SCRUB * Math.min(1, 0.5 + past)));
   }
+  // A sliding ship makes less progress along the road, which is the last of
+  // the reasons an excursion costs time and the only one that is free.
+  //
   // A short line buys canonical distance faster than a long one: that, and
   // the bends it hands you, is the whole of what a split is worth.
-  const distance = state.distance + speed * keep * rateOf(sector, route);
+  const distance =
+    state.distance + alongStep({ ...flown, speed }) * rateOf(sector, route);
 
   // 5. Checkpoints, laps, and the fork.
   const tick = state.tick + 1;
@@ -752,8 +760,16 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     outside,
     onWall,
     bendKey,
-    swingTarget,
+    bendEntry,
+    bendHolding,
+    bendRadius,
+    bendStart,
     bendWorst,
+    yaw: flown.yaw,
+    steer: flown.steer,
+    throttle: flown.throttle,
+    wanderLine,
+    wanderPace,
     trail: [...state.trail, { distance, offset, route: nextRoute }].slice(-TRAIL_LENGTH),
     // A charge spent is a charge gone, whatever it bought.
     charge: fired === undefined ? charge : 0,
@@ -767,7 +783,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     // long way round that holds one can be worth more than the short way even
     // though it costs time. That trade is the whole reason properties exist.
     salvage:
-      state.salvage + arrived.salvage + (effect.pocket * speed * keep) / POCKET_PER,
+      state.salvage + arrived.salvage + (effect.pocket * speed) / POCKET_PER,
     darkMatter: state.darkMatter + arrived.darkMatter,
     met: arrived.met.length === 0 ? state.met : [...state.met, ...arrived.met],
     lastHit: arrived.hit ?? state.lastHit,
@@ -1104,45 +1120,6 @@ function lookAhead(
 /** A bend's name. The same bend on two routes is not the same bend. */
 function bendKeyOf(sector: number, route: number, bend: { start: number }): string {
   return `${sector}:${route}:${Math.round(bend.start)}`;
-}
-
-/**
- * The fastest a bend can be entered without leaving the golden path.
- *
- * Not a table and not a guess — it falls out of the swing. A bend throws the
- * ship `SWING_SPREAD * excess^SWING_EXPONENT` wide at the worst draw, scaled by
- * how tight the bend is, and the path is `PATH_HALF_WIDTH` either side — so the
- * excess that still fits falls out of the tuning and the radius.
- *
- * **It depends on the bend and not on the ship.** A hairpin wants a lower entry
- * than a sweeper, and that is the same answer for everybody: the racing line is
- * the racing line. What differs between ships is whether they can find it, and
- * whether they can reach it at all.
- *
- * Sight comes off it, because a bend you cannot see coming is one you are into
- * before you are set — so in the dark the line is slower, for everybody.
- */
-export function safeAim(effect: Effect, radius: number): number {
-  const tight = Math.pow(SWING_REFERENCE_RADIUS / Math.max(1, radius), SWING_TIGHTNESS);
-  const fits = Math.pow(PATH_HALF_WIDTH / (SWING_SPREAD * tight), 1 / SWING_EXPONENT);
-  return 1 + Math.max(0, fits - (1 - effect.sight) * SIGHT_EXCESS);
-}
-
-/**
- * What a ship actually aims for: the line, blurred by how well it navigates.
- *
- * The blur is symmetric. A poor navigator is inconsistent rather than reckless
- * — it brakes too early as often as too late — so a navigation system buys
- * precision, and the time it saves comes from both sides.
- */
-export function aimFor(
-  effect: Effect,
-  radius: number,
-  nav: number,
-  draw: number,
-): number {
-  const slip = Math.max(0, NAV_SLIP - Math.max(0, nav) * NAV_SLIP_PER_LEVEL);
-  return safeAim(effect, radius) * (1 + (draw * 2 - 1) * slip);
 }
 
 /**

@@ -147,23 +147,22 @@ describe.each(TRACKS)('$name splits', (track: Track) => {
 });
 
 describe('what a split is worth', () => {
-  it('changes the lap, and which way depends on what the ship can hold', () => {
-    // The Meridian's inside line is now the sharpest case, and it is sharper
-    // than anything was before: 221 ticks *worse* for a ship with no handling
-    // to spare, 52 ticks *better* for one that has it. A 273-tick swing on the
-    // same piece of road.
+  it('costs less the more grip a ship has, on a tighter line', () => {
+    // **No split that ships is currently a win.** Every one of them was
+    // authored against the swing, where a tighter line was worth taking if you
+    // could hold it; under the flight model a tighter line is simply a lower
+    // holding speed, and the ship slows for it. Measured on the Meridian's
+    // inside line over sixteen seeds it costs 159 / 74 / 32 ticks at handling
+    // 0.7 / 1.2 / 1.8 — always a cost, never a saving.
     //
-    // It used to be the Kestrel's needle. Putting the radius into the swing
-    // made every tight line harsher — a hairpin now throws a ship further than
-    // a sweeper for the same excess, which it did not before — and the
-    // Kestrel's three splits are all short tight ones, so all three went from
-    // "a choice" to "strictly worse". That is recorded in BACKLOG.md as
-    // splits needing a re-tune against the new geometry; they were authored
-    // against a swing that had none.
+    // That is a content job rather than an engineering one, and it is recorded
+    // in BACKLOG.md: the splits need re-authoring against the road the ships
+    // now fly. What is still true, and worth pinning so a regression shows, is
+    // that the cost is a function of what the ship can hold — a grippy ship
+    // gives up a fifth of what a loose one does for the same piece of road.
     //
-    // Averaged over seeds, not measured on one. Taking a split changes which
-    // seeded stream its bends draw from, so any single seed can flatter or damn
-    // a line by a swing it happened to get.
+    // Averaged over seeds, not measured on one: taking a split changes which
+    // seeded stream its navigation draws from.
     const seeds = Array.from({ length: 16 }, (_, i) => `worth${i}`);
     const over = (routes: readonly number[], handling: number): number =>
       seeds.reduce(
@@ -173,8 +172,10 @@ describe('what a split is worth', () => {
 
     const main = [0, 0, 0, 0];
     const inside = [0, 0, 1, 0];
-    expect(over(inside, 0.7)).toBeGreaterThan(over(main, 0.7));
-    expect(over(inside, 1.8)).toBeLessThan(over(main, 1.8));
+    const cost = (handling: number): number => over(inside, handling) - over(main, handling);
+    expect(cost(0.7)).toBeGreaterThan(0);
+    expect(cost(1.8)).toBeGreaterThan(0);
+    expect(cost(1.8)).toBeLessThan(cost(0.7) / 2);
   });
 
   it('puts the ship on a different road, not just on a different clock', () => {

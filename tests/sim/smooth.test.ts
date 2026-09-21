@@ -142,18 +142,21 @@ describe('the simulation is untouched by any of it', () => {
     // reached into the race.
     //
     // It used to be three numbers a track — one per corner plan — and the
-    // history of every time they moved is in this file's git log. There is one
-    // now, because there is one way round a bend: the ship works out the
-    // fastest entry that keeps it on the golden path and drives that, and a
-    // navigation system decides how near it gets. A stock ship has no
-    // navigation at all, so these are laps flown with the full slip either
-    // side of the line, which is the widest this number can be and still be
-    // deterministic.
+    // history of every time they moved is in this file's git log.
+    //
+    // These moved a long way when the swing became flight. A `bareShip` has
+    // `BASE_NAV`, which is no navigation system at all, and a ship that cannot
+    // see where the line is now *flies* like one: it misjudges the line and
+    // its own pace, spends a third of the lap off the path, and gets home
+    // between two and three times slower than the same hull with a maxed
+    // navigation system. That gap is the point of the model, and it is what
+    // makes these numbers what they are. Nothing here is a target — the
+    // balance pass against them is still owed.
     const expected: Record<string, number> = {
-      'Kestrel Loop': 1814,
-      'Meridian Run': 2914,
-      'Cinder Coil': 1379,
-      'The Proving Ground': 1624,
+      'Kestrel Loop': 4568,
+      'Meridian Run': 5544,
+      'Cinder Coil': 3078,
+      'The Proving Ground': 4113,
     };
     for (const track of TRACKS) {
       const config = { track, stats: bareShip(1, 1), seed: seedFrom('kestrel') };

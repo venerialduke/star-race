@@ -1,3 +1,4 @@
+import { bumperPush as push } from '../sim/flight';
 /**
  * The test shape: a straight, one bend, a straight.
  *
@@ -162,15 +163,13 @@ export function crossedBump(shape: Shape, was: number, now: number): Bump | unde
 }
 
 /**
- * The lateral acceleration the bumpers apply at an offset, positive to the
- * ship's right. Zero inside them, easing in over `ramp`, and capped after —
- * a ship a long way out is pushed back steadily, not flung.
+ * The lateral acceleration this shape's bumpers apply at an offset.
+ *
+ * The rule itself lives in `src/sim/flight.ts`; this only reads it off the
+ * shape, so the lab and the race lean on a ship the same way.
  */
 export function bumperPush(shape: Shape, offset: number): number {
   const bumpers = shape.bumpers;
-  if (bumpers === undefined || bumpers.push <= 0) return 0;
-  const past = Math.abs(offset) - bumpers.from;
-  if (past <= 0) return 0;
-  const strength = Math.min(1, past / Math.max(1, bumpers.ramp));
-  return -Math.sign(offset) * bumpers.push * strength;
+  if (bumpers === undefined) return 0;
+  return push(offset, bumpers.from, bumpers.push);
 }

@@ -130,19 +130,21 @@ describe('the model', () => {
   });
 
   it('reads a longer approach as room to carry more speed', () => {
-    // A ship fast enough that its own top speed is not what limits it.
+    // A ship fast enough that its own top speed is not what limits it, and
+    // going fast enough to be reading a long way ahead: what a pilot can see
+    // is a number of *ticks* of road, so it scales with speed.
     const ship = { ...shipWith(1.2), topSpeed: 2.6 };
-    const near = ceilingAhead(ship, { ...SHAPE, entry: 120 }, 0);
-    const far = ceilingAhead(ship, { ...SHAPE, entry: 600 }, 0);
+    const near = ceilingAhead(ship, { ...SHAPE, entry: 120 }, 0, 2.6);
+    const far = ceilingAhead(ship, { ...SHAPE, entry: 600 }, 0, 2.6);
     expect(far).toBeGreaterThan(near);
   });
 
   it('holds a lower ceiling the nearer the bend gets', () => {
     const ship = { ...shipWith(1.2), topSpeed: 2.6 };
-    const far = ceilingAhead(ship, SHAPE, bendStart(SHAPE) - 300);
-    const near = ceilingAhead(ship, SHAPE, bendStart(SHAPE) - 30);
+    const far = ceilingAhead(ship, SHAPE, bendStart(SHAPE) - 300, 2.6);
+    const near = ceilingAhead(ship, SHAPE, bendStart(SHAPE) - 30, 2.6);
     expect(near).toBeLessThan(far);
-    expect(ceilingAhead(ship, SHAPE, bendStart(SHAPE) + 10)).toBeCloseTo(
+    expect(ceilingAhead(ship, SHAPE, bendStart(SHAPE) + 10, 2.6)).toBeCloseTo(
       holdingSpeed(ship, SHAPE.radius),
       6,
     );
@@ -392,7 +394,7 @@ describe('the bumpers', () => {
   const ship = shipWith(1.2);
   const WALLED: Shape = {
     ...SHAPE,
-    bumpers: { from: PATH_HALF_WIDTH * BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
+    bumpers: { from: BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
   };
 
   it('does nothing on the path, pushes back off it, and saturates', () => {
@@ -443,7 +445,7 @@ describe('recovery is firm, not violent', () => {
   const ship = shipWith(1.2);
   const WALLED: Shape = {
     ...SHAPE,
-    bumpers: { from: PATH_HALF_WIDTH * BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
+    bumpers: { from: BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
   };
 
   // The regression that must not come back. A shove used to send the ship back

@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { seedFrom } from '../../src/sim/rng';
 import { bareShip, integrity, resolveBuild } from '../../src/sim/ship';
 import { simulate, startRace, stepRace, type RaceConfig } from '../../src/sim/race';
+import { PATH_HALF_WIDTH } from '../../src/sim/tuning';
 import {
   CINDER_COIL,
   KESTREL_LOOP,
@@ -20,6 +21,19 @@ const base = (overrides: Partial<RaceConfig> = {}): RaceConfig => ({
   stats: bareShip(1, 1),
   seed: seedFrom('kestrel'),
   ...overrides,
+});
+
+/**
+ * The same ship, navigating better or worse.
+ *
+ * Nobody picks a line any more and nothing can be forced off one by fiat: a
+ * ship works out its own entry speed and its navigation system decides how
+ * near it gets. So a test that used to ask "what if it drove badly" asks for a
+ * ship with no navigation instead, which is the only way to fly badly there is.
+ */
+const navving = (nav: number, thrust = 1, handling = 1) => ({
+  ...bareShip(thrust, handling),
+  nav,
 });
 
 describe.each(TRACKS)('$name', (track: Track) => {
@@ -49,15 +63,16 @@ describe.each(TRACKS)('$name', (track: Track) => {
     expect(new Set(track.bends.map((b) => b.radius)).size).toBeGreaterThan(1);
   });
 
-  it('can be lapped, and how it is driven changes the lap', () => {
-    // Nobody chooses this any more — a ship works out its own entry speed and
-    // a navigation system decides how close it gets. `aim` is the override the
-    // solver uses, and it is what lets a test ask "what if it drove badly".
-    const lap = (aim: number): number =>
-      simulate(base({ track, aim }), 9000).lastLapTicks ?? Infinity;
-    const laps = [lap(1.0), lap(1.44), lap(3.0)];
+  it('can be lapped, and how well it is navigated changes the lap', () => {
+    const lap = (nav: number): number =>
+      simulate(base({ track, stats: navving(nav) }), 20000).lastLapTicks ?? Infinity;
+    const laps = [lap(0), lap(1), lap(3)];
     expect(Math.max(...laps)).toBeLessThan(Infinity);
-    expect(new Set(laps).size).toBeGreaterThan(1);
+    expect(new Set(laps).size).toBe(3);
+    // A maxed navigation system is quicker than none, on every track. Steps in
+    // between are not a single-seed property — a bad lap at rating 1 can beat
+    // a lucky one at 0 — so only the ends are claimed here.
+    expect(laps[2]!).toBeLessThan(laps[0]!);
   });
 });
 
@@ -90,21 +105,20 @@ describe('the race', () => {
     expect(a.distance).not.toBe(b.distance);
   });
 
-  it('never swings at the bend limit, and swings past it', () => {
-    // The swing is a function of excess, so a ship that arrives at exactly the
-    // holding speed has none to spend. That was Lift's whole trick, and it is
-    // still there — it is just not a thing anybody picks off a menu.
-    // Under the limit, not exactly on it: a ship brakes toward the target in
-    // whole ticks and can arrive a hair above an exact 1.0, which is a sliver
-    // of excess and so a sliver of swing. The claim is about having nothing to
-    // spend, not about floating-point.
-    const onLimit = simulate(base({ aim: 0.9 }), 2500);
-    const past = simulate(base({ aim: 3.0 }), 2500);
-    expect(Math.max(...onLimit.swings.map((s) => s.swing))).toBe(0);
-    expect(Math.max(...past.swings.map((s) => s.swing))).toBeGreaterThan(0);
+  it('holds the path through every bend when it knows where the path is', () => {
+    // A mark now records how far off the line a bend actually threw the ship,
+    // not how far a draw wanted to. So the claim is about flying rather than
+    // about arithmetic: a ship that reads the road holds it, and one that does
+    // not is off it — same track, same engine.
+    const worstOf = (nav: number): number => {
+      const state = simulate(base({ stats: navving(nav), track: CINDER_COIL }), 4000);
+      return Math.max(0, ...state.swings.map((e) => e.swing));
+    };
+    expect(worstOf(3)).toBeLessThan(PATH_HALF_WIDTH);
+    expect(worstOf(0)).toBeGreaterThan(PATH_HALF_WIDTH);
   });
 
-  it('swings wider the more excess speed it carries', () => {
+  it('runs wider the more engine it carries and the less grip', () => {
     const steady = simulate(base({ stats: bareShip(0.6, 1.3) }), 2500);
     const reckless = simulate(base({ stats: bareShip(1.6, 0.6) }), 2500);
     const worst = (s: typeof steady): number =>
@@ -125,10 +139,14 @@ describe('hazards, shields and the crew', () => {
 
   it('hurts a ship that is thrown off the path, and not one that stays on it', () => {
     // Damage only has components to break, so this needs a ship with some.
-    const build = [
+    // `stepRace` re-derives a built ship's stats from its build, so a test
+    // about navigation has to *fit* one rather than assert one: passing
+    // `stats` alongside a `build` changes nothing at all.
+    const blind = [
       { uid: 'a', componentId: 'speed-engine', level: 1 },
       { uid: 'b', componentId: 'speed-engine', level: 1 },
     ];
+    const guided = [...blind, { uid: 'n', componentId: 'nav-system', level: 3 }];
     // Over many seeds rather than one. A single seed was enough while the draws
     // never moved; then a checkpoint moved, the one seed this stood on happened
     // to stop going wide, and the test failed without the claim being any less
@@ -136,21 +154,21 @@ describe('hazards, shields and the crew', () => {
     // twenty seeds and a quarter is a floor this clears comfortably and a
     // genuine regression would not.
     const seeds = Array.from({ length: 20 }, (_, i) => `s${i}`);
-    const raced = (aim: number): readonly number[] =>
+    const raced = (build: typeof blind): readonly number[] =>
       seeds.map((seed) =>
         integrity(
           simulate(
-            base({ stats: resolveBuild(build), build, aim, seed: seedFrom(seed) }),
+            base({ stats: resolveBuild(build), build, seed: seedFrom(seed) }),
             3000,
           ).condition,
         ),
       );
-    // Driving badly is not guaranteed to go wide on any given lap; it is guaranteed
-    // to be the plan that does.
-    expect(raced(3.0).filter((worth) => worth < 1).length).toBeGreaterThan(
+    // Navigating badly is not guaranteed to go wide on any given lap; it is
+    // guaranteed to be the ship that does.
+    expect(raced(blind).filter((worth) => worth < 1).length).toBeGreaterThan(
       seeds.length / 4,
     );
-    expect(raced(1.0).every((worth) => worth === 1)).toBe(true);
+    expect(raced(guided).every((worth) => worth === 1)).toBe(true);
   });
 
   it('bills an excursion once, not once per tick spent outside', () => {
@@ -161,31 +179,33 @@ describe('hazards, shields and the crew', () => {
   });
 
   it('spends shields before the ship itself, over the same ground', () => {
-    // Compared over one lap, not a fixed number of ticks: a shielded ship
-    // stays quicker, so by any tick count it has met more bends than the bare
-    // one and the comparison flips for the wrong reason.
-    const overALap = (
-      extra: readonly { uid: string; componentId: string; level: number }[],
-    ): number => {
+    // Same flying, same excursions, same number of parts to break; the one
+    // with something to absorb them is the one that comes home whole. The
+    // other arm carries an inert part rather than a crew, so what is measured
+    // is absorbing damage and not repairing it.
+    //
+    // Over several laps rather than one: an excursion is mild enough now that
+    // a single lap damages neither ship and the comparison proves nothing.
+    const worthAfter = (extra: {
+      uid: string;
+      componentId: string;
+      level: number;
+    }): number => {
       const build = [
         { uid: 'a', componentId: 'speed-engine', level: 1 },
         { uid: 'b', componentId: 'speed-engine', level: 1 },
-        ...extra,
+        extra,
       ];
-      const config = base({
-        // A track that actually throws the ship: on a circuit it can hold,
-        // neither ship is damaged and the comparison proves nothing.
-        track: CINDER_COIL,
-        stats: resolveBuild(build),
-        build,
-      });
+      // A track that actually throws the ship: on a circuit it can hold,
+      // neither ship is damaged and the comparison proves nothing.
+      const config = base({ track: CINDER_COIL, stats: resolveBuild(build), build });
       let state = startRace(config.stats, build);
-      while (state.lap < 1 && state.tick < 20000) state = stepRace(state, config);
+      while (state.tick < 16000) state = stepRace(state, config);
       return integrity(state.condition);
     };
     expect(
-      overALap([{ uid: 'c', componentId: 'general-shields', level: 3 }]),
-    ).toBeGreaterThan(overALap([{ uid: 'c', componentId: 'crew-androids', level: 1 }]));
+      worthAfter({ uid: 'c', componentId: 'general-shields', level: 3 }),
+    ).toBeGreaterThan(worthAfter({ uid: 'c', componentId: 'missile-rack', level: 1 }));
   });
 
   it('wears a crew on a track of tight bends, and a better crew resists it', () => {
@@ -223,33 +243,42 @@ describe('hazards, shields and the crew', () => {
 });
 
 describe('damage that breaks things', () => {
-  const kit = ['speed-engine', 'speed-engine', 'general-shields'].map((id, i) => ({
+  /**
+   * Two engines and nothing to absorb anything, on the tightest track there is.
+   *
+   * Damage used to be generated by picking Charge, and then by forcing a
+   * hopeless entry speed. A ship flies its own line now, so being thrown into
+   * things is what *bad navigation* does — and `bareShip` carries `BASE_NAV`,
+   * which is none at all, so a kit with no navigation system is flying blind.
+   *
+   * No shields, deliberately. An excursion is milder than it was: a ship is
+   * held near the line by the bumpers and gets back without flailing, so a
+   * shield pool of 22 soaks every excursion of a nineteen-bend race and
+   * regenerates between them. That is a real consequence of the new flight
+   * model, recorded in BACKLOG.md rather than tuned away here.
+   */
+  const kit = ['speed-engine', 'speed-engine'].map((id, i) => ({
     uid: `k${i}`,
     componentId: id,
     level: 1,
   }));
 
-  /**
-   * A heat on the tightest track there is, driven at `aim`.
-   *
-   * Damage used to be generated by picking Charge. A ship drives its own line
-   * now, so being thrown into things is something a test has to ask for — and
-   * asking for it is exactly what a poor navigator does by accident.
-   */
-  const heatOf = (build: typeof kit, aim: number, ticks = 4000) =>
+  /** The same kit that can see where it is going. */
+  const guided = [...kit, { uid: 'nav', componentId: 'nav-system', level: 3 }];
+
+  const heatOf = (build: typeof kit, ticks = 4000) =>
     simulate(
       {
         track: CINDER_COIL,
         stats: resolveBuild(build),
         build,
-        aim,
         seed: seedFrom('damage'),
       },
       ticks,
     );
 
   it('breaks parts rather than draining one pool', () => {
-    const state = heatOf(kit, 3.0);
+    const state = heatOf(kit);
     expect(state.condition.parts).toHaveLength(kit.length);
     const hurt = state.condition.parts.filter((c) => c < 1);
     expect(hurt.length).toBeGreaterThan(0);
@@ -257,45 +286,52 @@ describe('damage that breaks things', () => {
   });
 
   it('makes a damaged ship worth less for the rest of the race', () => {
-    const state = heatOf(kit, 3.0);
+    const state = heatOf(kit);
     const whole = resolveBuild(kit);
     expect(state.stats.thrust).toBeLessThan(whole.thrust);
   });
 
   it('leaves an undamaged ship at full worth', () => {
-    const state = heatOf(kit, 1.0);
+    const state = heatOf(guided);
     expect(integrity(state.condition)).toBe(1);
     expect(state.stats.thrust).toBe(resolveBuild(kit).thrust);
   });
 
   it('repairs faster with a crew that is good at it', () => {
-    const withNanites = [
-      ...kit.slice(0, 2),
-      { uid: 'c', componentId: 'crew-nanites', level: 1 },
-    ];
-    const withAndroids = [
-      ...kit.slice(0, 2),
-      { uid: 'c', componentId: 'crew-androids', level: 1 },
-    ];
-    expect(integrity(heatOf(withNanites, 3.0).condition)).toBeGreaterThan(
-      integrity(heatOf(withAndroids, 3.0).condition),
-    );
+    // Measured as time spent damaged, not as what the ship ends on. Both crews
+    // take the same hits and both eventually mend them, so the end state is 1
+    // for everybody and says nothing at all; what a better crew buys is being
+    // whole again sooner, and that only shows while the race is running.
+    const hurtTicks = (crew: string): number => {
+      const build = [...kit, { uid: 'c', componentId: crew, level: 1 }];
+      const config = base({ track: CINDER_COIL, stats: resolveBuild(build), build });
+      let state = startRace(config.stats, build);
+      let ticks = 0;
+      for (let i = 0; i < 12000; i += 1) {
+        state = stepRace(state, config);
+        if (integrity(state.condition) < 1) ticks += 1;
+      }
+      return ticks;
+    };
+    expect(hurtTicks('crew-nanites')).toBeLessThan(hurtTicks('crew-androids'));
   });
 
   it('spreads a bigger hit across more of the ship', () => {
     // Every part of a four-part ship should be able to take a hit, given a race
     // long enough to be thrown off the path a few times.
     //
-    // Flown with no shields and no engineer, which the shared kit has both of.
-    // With them the claim cannot be tested at all: an excursion hit is small
-    // enough that the shield pool soaks it and regenerates, and what does get
-    // through is patched by the crew faster than a lap can land the next one.
-    // That is worth knowing in itself — being thrown wide costs time now, and
-    // only reaches the ship at all on something with nothing to absorb it.
-    const exposed = ['speed-engine', 'nav-system', 'crew-androids', 'missile-rack'].map(
+    // Flown with nothing that absorbs, repairs or navigates. With any of them
+    // the claim cannot be tested at all: a shield pool soaks an excursion, a
+    // crew patches what gets through before the next one arrives, and a
+    // navigation system stops the ship leaving the path in the first place.
+    //
+    // Read at nine thousand ticks rather than later: parts repair on the base
+    // rate even with no crew aboard, so a long enough race hides how many of
+    // them were hit by mending them.
+    const exposed = ['speed-engine', 'speed-engine', 'missile-rack', 'missile-rack'].map(
       (componentId, i) => ({ uid: `x${i}`, componentId, level: 1 }),
     );
-    const state = heatOf(exposed, 3.0, 9000);
+    const state = heatOf(exposed, 9000);
     expect(state.condition.parts.filter((c) => c < 1).length).toBeGreaterThan(1);
   });
 });

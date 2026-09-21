@@ -1341,6 +1341,57 @@ with, bumpers included, so its tables are the numbers you actually feel.
   becomes unnecessary rather than wrong: compounding, the exit bonus and the
   radius term all fall out of the physics for free.
 
+## The flight model is the game's model now, and four things it changed
+
+_Landed 2026-09-21._ `src/sim/flight.ts` holds the physics and the pilot;
+`race.ts` feeds it a circuit and `src/lab` feeds it one bend. The swing,
+`safeAim`/`aimFor`, `config.aim`, the `WIDE_SPEED_*` penalties, `SWING_*`,
+`RECOVER_FLOOR`/`RECOVER_PER_HANDLING`, `SIGHT_EXCESS` and `EXIT_BONUS` are all
+gone, and `npm run optimal` and `npm run table` with them — they measured a
+thing that no longer exists.
+
+**The owner asked for a tuning pass afterwards. These are the four places that
+most want it, all measured, none of them touched:**
+
+**1. Laps are two to three times slower for a ship with no navigation.** A
+stock `bareShip(1, 1)` has `BASE_NAV` — no navigation system at all — and now
+flies like it:
+
+| track | nav 0 | nav 1 | nav 2 | nav 3 |
+| --- | --- | --- | --- | --- |
+| Kestrel Loop | 3535 | 3210 | 2607 | 1996 |
+| Meridian Run | 4149 | 3593 | 3061 | 2656 |
+| Cinder Coil | 2529 | 2358 | 1772 | 1358 |
+| Proving Ground | 3152 | 2959 | 2355 | 1779 |
+
+Every track's `par` was authored against the old model and is now only
+reachable with a good navigation system. That is arguably correct — it makes
+the component matter, which was the whole point — but it is a balance decision
+nobody has taken.
+
+**2. Excursion damage has become rare and mild.** A ship is held near the line
+by the bumpers and gets back without flailing, so a shield pool of 22 soaks
+every excursion of a nineteen-bend race and regenerates between them; a crew
+patches what gets through faster than the next one arrives. Damage now only
+reaches a ship flying blind with nothing aboard to absorb or repair. Several
+tests had to drop shields and crew to observe it at all.
+
+**3. The corridor is doing no work.** Across every track, engine and handling
+the suite flies, the widest any ship gets is ~15 units against a wall at 26.
+Nothing touches it. Either the bumpers move out to give the wall something to
+do, or the wall is honest scenery — but it should be a decision.
+
+**4. No split that ships is a win any more.** Every one was authored against a
+swing, where a tighter line was worth taking if you could hold it. Under
+flight, a tighter line is simply a lower holding speed and the ship slows for
+it. The Meridian's inside line costs 159 / 74 / 32 ticks at handling 0.7 / 1.2
+/ 1.8 — always a cost. The *cost* still scales with grip, which is what
+`route.test.ts` now pins, but the choice is gone until the splits are
+re-authored against the road ships actually fly. This is a content job.
+
+Also stale and unmeasured since: the 72-season balance harness, every number
+under S7, and where `nav` sits in the shop now that it does two jobs.
+
 ## Not scheduled
 
 **Real players.** The destination, and the reason for the third rule in

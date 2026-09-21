@@ -130,7 +130,7 @@ const lab: Lab = {
     exit: 320,
     hand: 1,
     halfWidth: 9,
-    bumpers: { from: 9 * BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
+    bumpers: { from: BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
   },
   you: atRest(),
   ghost: atRest(),
@@ -431,7 +431,7 @@ function buildTray(): void {
       lab.shape = {
         ...lab.shape,
         bumpers: {
-          from: lab.shape.bumpers?.from ?? lab.shape.halfWidth * BUMPER_FROM,
+          from: lab.shape.bumpers?.from ?? BUMPER_FROM,
           ramp: lab.shape.bumpers?.ramp ?? BUMPER_RAMP,
           push: v,
         },
@@ -443,7 +443,7 @@ function buildTray(): void {
   slider({
     name: 'Start at',
     low: 4, high: 60, step: 1,
-    read: () => lab.shape.bumpers?.from ?? lab.shape.halfWidth * BUMPER_FROM,
+    read: () => lab.shape.bumpers?.from ?? BUMPER_FROM,
     write: (v) => {
       lab.shape = {
         ...lab.shape,

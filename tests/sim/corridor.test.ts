@@ -7,7 +7,7 @@
 // solid either side, near enough invisible until you meet it.
 
 import { describe, expect, it } from 'vitest';
-import { startRace, stepRace, type CornerPlan, type RaceState } from '../../src/sim/race';
+import { startRace, stepRace, type RaceState } from '../../src/sim/race';
 import { seedFrom } from '../../src/sim/rng';
 import { bareShip } from '../../src/sim/ship';
 import { TRACKS, type Track } from '../../src/sim/track';
@@ -16,11 +16,18 @@ import { PATH_HALF_WIDTH, TRACK_HALF_WIDTH } from '../../src/sim/tuning';
 const overALap = (
   track: Track,
   handling: number,
-  plan: CornerPlan,
   seed: string,
   watch: (state: RaceState) => void,
+  /**
+   * Force the entry speed instead of letting the ship work it out.
+   *
+   * A ship drives its own line now, and the line is on the path by
+   * construction — so a test about what happens when one is thrown miles wide
+   * has to ask for a ship that is driving badly, which is what a high aim is.
+   */
+  aim?: number,
 ): void => {
-  const config = { track, stats: bareShip(1, handling), plan, seed: seedFrom(seed) };
+  const config = { track, stats: bareShip(1, handling), seed: seedFrom(seed), aim };
   let state = startRace(config.stats, []);
   while (state.lap < 1 && state.tick < 30000) {
     state = stepRace(state, config);
@@ -34,12 +41,10 @@ describe.each(TRACKS)('$name, inside the corridor', (track: Track) => {
   it('never puts a ship outside it, however badly the bend goes', () => {
     let widest = 0;
     for (const handling of [0.6, 1, 1.5]) {
-      for (const plan of ['lift', 'carry', 'charge'] as const) {
-        for (const seed of seeds) {
-          overALap(track, handling, plan, seed, (state) => {
-            widest = Math.max(widest, Math.abs(state.offset));
-          });
-        }
+      for (const seed of seeds) {
+        overALap(track, handling, seed, (state: RaceState) => {
+          widest = Math.max(widest, Math.abs(state.offset));
+        });
       }
     }
     expect(widest).toBeLessThanOrEqual(TRACK_HALF_WIDTH + 1e-9);
@@ -60,9 +65,17 @@ describe('what the wall costs', () => {
     // game cheaper than a merely bad one.
     let reach = 0;
     for (const seed of seeds) {
-      overALap(TRACKS[2] as Track, 0.6, 'charge', seed, (state) => {
-        reach = Math.max(reach, Math.abs(state.swingTarget));
-      });
+      overALap(
+        TRACKS[2] as Track,
+        0.6,
+        seed,
+        (state) => {
+          reach = Math.max(reach, Math.abs(state.swingTarget));
+        },
+        // Driving badly: never lifting off, which is what a ship with no
+        // navigation at all is doing its best not to do.
+        3.0,
+      );
     }
     expect(reach).toBeGreaterThan(TRACK_HALF_WIDTH * 2);
   });
@@ -71,8 +84,8 @@ describe('what the wall costs', () => {
     // Per tick was the first version, and it was a death spiral: a ship pinned
     // through a long bend scrubbed every tick, hit the speed floor, and could
     // not finish the lap.
-    // The Coil at low handling, charging its hairpins: the worst case in the
-    // game, and the one that produced the 128-unit swing.
+    // The Coil at low handling, never lifting off through its hairpins: the
+    // worst case in the game, and the one that produced the 128-unit swing.
     const coil = TRACKS[2] as Track;
     let hits = 0;
     let finished = 0;
@@ -82,16 +95,22 @@ describe('what the wall costs', () => {
       let wasOn = false;
       let last = 0;
       let run = 0;
-      overALap(coil, 0.6, 'charge', seed, (state) => {
-        if (state.onWall && !wasOn) hits += 1;
-        wasOn = state.onWall;
-        // The floor the scrub cannot take a ship below. Sitting on it is the
-        // spiral; passing through it on the way back up is just a bad corner.
-        run = state.speed <= 0.1 + 1e-9 ? run + 1 : 0;
-        worstRun = Math.max(worstRun, run);
-        pinned += state.speed <= 0.1 + 1e-9 ? 1 : 0;
-        last = state.lap;
-      });
+      overALap(
+        coil,
+        0.6,
+        seed,
+        (state) => {
+          if (state.onWall && !wasOn) hits += 1;
+          wasOn = state.onWall;
+          // The floor the scrub cannot take a ship below. Sitting on it is the
+          // spiral; passing through it on the way back up is a bad corner.
+          run = state.speed <= 0.1 + 1e-9 ? run + 1 : 0;
+          worstRun = Math.max(worstRun, run);
+          pinned += state.speed <= 0.1 + 1e-9 ? 1 : 0;
+          last = state.lap;
+        },
+        3.0,
+      );
       finished += last;
     }
     expect(hits).toBeGreaterThan(0);
@@ -109,7 +128,7 @@ describe('what the wall costs', () => {
     // limit for, which never showed while every route began on a straight —
     // and left a ship at a standstill forever the moment one did not.
     const track = TRACKS[0] as Track;
-    for (const plan of ['lift', 'carry'] as const) {
+    for (const plan of [{ routes: [] }, { routes: [] }] as const) {
       const config = { track, stats: bareShip(1, 1), plan, seed: seedFrom('start') };
       let state = startRace(config.stats, []);
       for (let i = 0; i < 120; i += 1) state = stepRace(state, config);

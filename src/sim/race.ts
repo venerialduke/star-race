@@ -25,6 +25,7 @@ import {
   sampleOn,
   sectorAt,
   sectorOf,
+  type Effect,
   type Route,
   type Sector,
   type Track,
@@ -37,10 +38,7 @@ import {
   CONDITION_PER_DAMAGE,
   DAMAGE_PER_EXTRA_PART,
   CARRY_SCRUB,
-  CHARGE_EXCESS_BONUS,
-  LIFT_MARGIN,
   PATH_HALF_WIDTH,
-  GRAVITY_CHARGE_MULTIPLIER,
   GRAVITY_PER_ACCEL,
   GRAVITY_PER_CORNER,
   GRAVITY_RECOVERY,
@@ -57,6 +55,8 @@ import {
   REPAIR_PER_TICK,
   RECOVER_PER_HANDLING,
   SHIELD_REGEN,
+  NAV_SLIP,
+  NAV_SLIP_PER_LEVEL,
   SIGHT_EXCESS,
   SPEED_PER_THRUST,
   STAT_MAX,
@@ -105,7 +105,6 @@ import {
 } from './world';
 
 /** What the ship does about the gap between its speed and a bend's holding speed. */
-export type CornerPlan = 'lift' | 'carry' | 'charge';
 
 export interface ShipStats {
   /** Top speed and how hard it accelerates. */
@@ -250,15 +249,13 @@ export interface RaceConfig {
   readonly stats: ShipStats;
   /** What it is built from, so damage knows what there is to break. */
   readonly build?: readonly Fitted[];
-  readonly plan: CornerPlan;
   /**
-   * How fast to enter a bend, as a multiple of its holding speed — one number
-   * that replaces the corner plan when it is set.
+   * Force the entry speed, as a multiple of a bend's holding speed, instead of
+   * letting the ship work it out.
    *
-   * It subsumes all three: 0.97 is Lift, and anything high enough that the
-   * braking distance never reaches is Charge. The point of a continuous aim is
-   * that there is an *optimum* between them, which a ship can be more or less
-   * good at finding. Set, it overrides `plan` entirely.
+   * Nothing in the game sets this. It exists so `npm run optimal` can sweep the
+   * whole range and check that what a ship aims for really is the best there
+   * is — a claim that would otherwise be untestable.
    */
   readonly aim?: number;
   /**
@@ -346,7 +343,7 @@ function brakingDistance(from: number, to: number): number {
  * and the bend it belongs to.
  */
 export function stepRace(state: RaceState, config: RaceConfig): RaceState {
-  const { track, plan } = config;
+  const { track } = config;
   // What the ship is worth this tick: its build, less whatever is broken. A
   // damaged engine gives less thrust, a damaged crew repairs more slowly, and
   // a shot shield soaks less — so one bad excursion is felt for the rest of
@@ -454,19 +451,27 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     arrived.carry +
     (towLeft > 0 ? TRACTOR_TOW_PULL : 0);
   const chaining = state.perfectLeft > 0 || fired?.id === 'three-bends';
-  const aim = config.aim;
+  // What this ship is trying to do about the bend it is on or coming to. The
+  // player used to choose; there was never anything to choose between, because
+  // the line is a fact about the track and the ship either finds it or does not.
+  //
+  // `config.aim` overrides it, which is how `npm run optimal` sweeps the whole
+  // range to check that what the ship aims for is in fact the best there is.
+  const onLine = (key: string): number =>
+    config.aim ?? aimFor(effect, stats.nav, drawFor(config.seed, `${key}:aim`, state.lap).unitInterval());
+
+  const nowBend = onBend ? bendOn(route, along) : undefined;
+  const aim =
+    nowBend === undefined
+      ? undefined
+      : onLine(bendKeyOf(sector.index, state.route, nowBend));
+
   if (onBend) {
-    // What this plan is willing to take the bend at. Charge ignores it.
-    const cap = aim !== undefined ? holding * aim : plan === 'lift' ? holding * LIFT_MARGIN : holding;
-    if (chaining || (aim === undefined && plan === 'charge')) {
+    const cap = holding * (aim ?? 1);
+    if (chaining) {
       speed = Math.min(topSpeed, speed + accel);
     } else if (speed > cap) {
-      speed =
-        aim !== undefined
-          ? Math.max(cap, speed - CARRY_SCRUB)
-          : plan === 'lift'
-            ? cap
-            : Math.max(cap, speed - CARRY_SCRUB);
+      speed = Math.max(cap, speed - CARRY_SCRUB);
     } else {
       // Below what the bend allows, a ship still gets on with it. Without this
       // Lift and Carry did nothing at all on a bend they were already slow
@@ -477,9 +482,11 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   } else {
     const ahead = lookAhead(track, sector, route, along, config.routes);
     let braking = false;
-    if ((aim !== undefined || plan === 'lift') && ahead !== undefined) {
+    if (ahead !== undefined) {
+      // The same aim the bend itself will use, drawn off the same key — or the
+      // ship would brake for one target and then take the bend at another.
       const target =
-        holdingSpeed(ahead.bend.radius, handling) * effect.grip * (aim ?? LIFT_MARGIN);
+        holdingSpeed(ahead.bend.radius, handling) * effect.grip * onLine(ahead.key);
       braking = ahead.gap <= brakingDistance(speed, target);
       if (braking) speed = Math.max(target, speed - BRAKE_PER_TICK);
     }
@@ -495,11 +502,11 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   // a Charge that holds top speed never "accelerates", so it read as the
   // gentlest plan in the game.
   const cornering = onBend ? (speed * speed) / here.radius : 0;
-  const charging = aim === undefined && plan === 'charge';
-  const pushing = Math.max(0, speed - state.speed) + (onBend && charging ? accel : 0);
-  const load =
-    (cornering * GRAVITY_PER_CORNER + pushing * GRAVITY_PER_ACCEL) *
-    (onBend && charging ? GRAVITY_CHARGE_MULTIPLIER : 1);
+  // Gravity is what the crew feels: lateral load from the bend, plus whatever
+  // the engine is adding. Both come out of the numbers now rather than out of
+  // which plan was picked, which is one special case fewer.
+  const pushing = Math.max(0, speed - state.speed);
+  const load = cornering * GRAVITY_PER_CORNER + pushing * GRAVITY_PER_ACCEL;
   const endurance = Math.max(0.05, stats.endurance);
   // Coasting is what recovers a crew, so the two never cancel each other out.
   const worn = Math.min(
@@ -511,12 +518,9 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   );
 
   // 2. Entering a bend: one seeded draw decides how wide this one throws us.
-  const bend = onBend ? bendOn(route, along) : undefined;
+  const bend = nowBend;
   // The same bend on two routes is not the same bend, so the name carries both.
-  const key =
-    bend === undefined
-      ? undefined
-      : `${sector.index}:${state.route}:${Math.round(bend.start)}`;
+  const key = bend === undefined ? undefined : bendKeyOf(sector.index, state.route, bend);
   let bendKey = state.bendKey;
   let swingTarget = state.swingTarget;
   let perfectLeft = fired?.id === 'three-bends' ? PERFECT_BENDS : state.perfectLeft;
@@ -545,15 +549,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     // the swing is drawn from a worse place rather than punished separately.
     // Lift takes no swing at all, which makes it the plan shadow cannot touch —
     // giving up the speed is giving up the surprise.
-    const excess = perfect
-      ? 0
-      : aim !== undefined
-        ? rawExcess + (1 - effect.sight) * SIGHT_EXCESS
-        : plan === 'lift'
-          ? 0
-          : rawExcess +
-            (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0) +
-            (1 - effect.sight) * SIGHT_EXCESS;
+    const excess = perfect ? 0 : rawExcess + (1 - effect.sight) * SIGHT_EXCESS;
     const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT);
     const draw = drawFor(config.seed, key as string, state.lap).unitInterval();
     const swing = spread * draw;
@@ -615,7 +611,18 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   // build by the clock: a ship that spends most of a lap wide died every time,
   // which is a ban rather than a risk.
   const crossed = wide && !state.outside;
-  const outside = wide || Math.abs(offset) > PATH_HALF_WIDTH * EXCURSION_CLEAR;
+  // Hysteresis, and the direction matters. An excursion *starts* by being wide
+  // and ends by getting back inside `EXCURSION_CLEAR` of the half width, so the
+  // clear threshold may only hold an excursion open — never open one.
+  //
+  // It used to open one: `wide || |offset| > 5.4` made a ship "outside" at 5.4,
+  // which is short of the 9 that counts as wide. A ship drifting out crossed
+  // 5.4 first, so by the time it was wide it was already marked outside and
+  // `crossed` never fired. It went unnoticed because the old Charge threw ships
+  // past both thresholds inside one tick; a ship that drives its own line
+  // arrives gradually, and stopped taking excursion damage at all.
+  const outside =
+    wide || (state.outside && Math.abs(offset) > PATH_HALF_WIDTH * EXCURSION_CLEAR);
   const exposure = Math.min(1, Math.abs(state.swingTarget) / HAZARD_FULL_EXPOSURE);
   // 3c. And the road itself. Debris is danger **on** the path rather than
   // beside it, so it does not wait for an excursion — but it bites once, on the
@@ -1029,14 +1036,55 @@ function lookAhead(
   route: Route,
   along: number,
   routes: readonly number[] | undefined,
-): { bend: { radius: number }; gap: number } | undefined {
+): { bend: { radius: number; start: number }; gap: number; key: string } | undefined {
   const here = nextBendOn(route, along);
-  if (here !== undefined) return here;
+  if (here !== undefined) {
+    return { ...here, key: bendKeyOf(sector.index, routes?.[sector.index] ?? 0, here.bend) };
+  }
   const after = track.sectors[(sector.index + 1) % track.sectors.length] as Sector;
   const line = routeOf(after, routes?.[after.index] ?? 0);
   const next = nextBendOn(line, 0);
   if (next === undefined) return undefined;
-  return { bend: next.bend, gap: route.length - along + next.gap };
+  return {
+    bend: next.bend,
+    gap: route.length - along + next.gap,
+    key: bendKeyOf(after.index, routes?.[after.index] ?? 0, next.bend),
+  };
+}
+
+/** A bend's name. The same bend on two routes is not the same bend. */
+function bendKeyOf(sector: number, route: number, bend: { start: number }): string {
+  return `${sector}:${route}:${Math.round(bend.start)}`;
+}
+
+/**
+ * The fastest a bend can be entered without leaving the golden path.
+ *
+ * Not a table and not a guess — it falls out of the swing. A bend throws the
+ * ship `SWING_SPREAD * excess^SWING_EXPONENT` wide at the worst draw, and the
+ * path is `PATH_HALF_WIDTH` either side, so the excess that still fits is
+ * fixed by the tuning and nothing else. It is the same number for every ship,
+ * which is the point: the racing line is the racing line. What differs between
+ * ships is whether they can find it.
+ *
+ * Sight comes off it, because a bend you cannot see coming is one you are into
+ * before you are set — so in the dark the line is slower, for everybody.
+ */
+export function safeAim(effect: Effect): number {
+  const fits = Math.pow(PATH_HALF_WIDTH / SWING_SPREAD, 1 / SWING_EXPONENT);
+  return 1 + Math.max(0, fits - (1 - effect.sight) * SIGHT_EXCESS);
+}
+
+/**
+ * What a ship actually aims for: the line, blurred by how well it navigates.
+ *
+ * The blur is symmetric. A poor navigator is inconsistent rather than reckless
+ * — it brakes too early as often as too late — so a navigation system buys
+ * precision, and the time it saves comes from both sides.
+ */
+export function aimFor(effect: Effect, nav: number, draw: number): number {
+  const slip = Math.max(0, NAV_SLIP - Math.max(0, nav) * NAV_SLIP_PER_LEVEL);
+  return safeAim(effect) * (1 + (draw * 2 - 1) * slip);
 }
 
 /**

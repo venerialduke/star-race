@@ -55,7 +55,7 @@ const entrant = (id: string, build: readonly Fitted[]): Entrant => ({
 function heat(
   track: (typeof TRACKS)[number],
   entrants: readonly Entrant[],
-  orders: readonly Orders[] = entrants.map(() => ({ plan: 'carry', routes: [] })),
+  orders: readonly Orders[] = entrants.map(() => ({ routes: [] })),
   seed = 7,
 ) {
   const config = { track, laps: LAPS_PER_HEAT, seed };
@@ -87,7 +87,7 @@ describe('nothing lands on the tick it was fired', () => {
     const shooter = entrant('a', [fit('missile-rack', 3), fit('crew-engineers', 3, 2)]);
     const target = entrant('b', [fit('speed-engine', 1)]);
     const config = { track: MERIDIAN_RUN, laps: 1, seed: 3 };
-    let field = startField([shooter, target], [{ plan: 'carry', routes: [] }, 'carry']);
+    let field = startField([shooter, target], [{ routes: [] }, { routes: [] }]);
 
     let firedOn: number | undefined;
     let landedOn: number | undefined;
@@ -150,7 +150,6 @@ describe('a thing on the road bites once', () => {
         track,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [mine] },
@@ -172,7 +171,6 @@ describe('a thing on the road bites once', () => {
         track: KESTREL_LOOP,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [own] },
@@ -207,7 +205,6 @@ describe('what answers a weapon', () => {
         track: KESTREL_LOOP,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [fixture] },
@@ -230,7 +227,6 @@ describe('what answers a weapon', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
       incoming: [{ from: 'b', side: 1, power, scrub: 0 }],
@@ -274,7 +270,6 @@ describe('what answers a weapon', () => {
       track: KESTREL_LOOP,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
       incoming: [{ from: 'b', side: 1, power: 30, scrub: 0 }],
@@ -353,7 +348,6 @@ describe('the screen can say who did it to you', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
     });
@@ -364,7 +358,6 @@ describe('the screen can say who did it to you', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
       incoming: [{ from: 'rival-3', side: 1, power: 40, scrub: 0 }],
@@ -384,7 +377,6 @@ describe('the screen can say who did it to you', () => {
         track: KESTREL_LOOP,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [laid] },
@@ -398,7 +390,7 @@ describe('the screen can say who did it to you', () => {
     const shooter = entrant('a', [fit('missile-rack', 3), fit('crew-engineers', 3, 2)]);
     const target = entrant('b', [fit('speed-engine', 1)]);
     const config = { track: MERIDIAN_RUN, laps: 1, seed: 3 };
-    let field = startField([shooter, target], ['carry', 'carry']);
+    let field = startField([shooter, target], [{ routes: [] }, { routes: [] }]);
     let aimed: string | undefined;
     for (let i = 0; i < 6000 && field.phase === 'racing'; i += 1) {
       field = stepField(field, config);
@@ -421,7 +413,6 @@ describe('a black hole discriminates by build', () => {
         track: KESTREL_LOOP,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [hole] },
@@ -471,7 +462,6 @@ describe('charge, and what a ship spends it on', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
     });
@@ -487,7 +477,6 @@ describe('charge, and what a ship spends it on', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
     });
@@ -552,8 +541,8 @@ describe('a mine laid before the heat', () => {
   const armed = entrant('a', [fit('gravity-mine', 2), fit('balanced-engine', 2, 2)]);
   const other = entrant('b', [fit('balanced-engine', 2)]);
   const orders: Orders[] = [
-    { plan: 'carry', routes: [], place: 1 },
-    { plan: 'carry', routes: [] },
+    { routes: [], place: 1 },
+    { routes: [] },
   ];
 
   it('is on the track before a single tick is run', () => {
@@ -579,8 +568,8 @@ describe('a mine laid before the heat', () => {
     const field = startField(
       [other, other],
       [
-        { plan: 'carry', routes: [], place: 1 },
-        { plan: 'carry', routes: [], place: 2 },
+        { routes: [], place: 1 },
+        { routes: [], place: 2 },
       ],
       KESTREL_LOOP,
     );
@@ -603,7 +592,7 @@ describe('nothing pushes a ship somewhere it cannot come back from', () => {
         const field = heat(
           track,
           builds.map((build, i) => entrant(['a', 'b', 'c'][i] as string, build)),
-          builds.map(() => ({ plan: 'charge', routes: [] })),
+          builds.map(() => ({ routes: [] })),
           seed,
         );
         expect(field.phase).toBe('done');

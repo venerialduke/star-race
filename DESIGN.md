@@ -101,7 +101,7 @@ refitting it does not launder the damage off it.
 measurement half of **S7 — the shop**.
 Three ships fly one of three authored loops for two laps, with a pit stop
 between them. The player fits components into slots in the garage between laps,
-sets the corner plan and the route, and races; the rivals are bots that read the
+sets the route, and races; the rivals are bots that read the
 track and choose for themselves. The stats are no longer sliders — they are what
 a build adds up to. Each lap is resolved before it is played back, on its own
 screen. Sectors offer more than one way through them, and what the player may
@@ -241,12 +241,13 @@ numbers. What a stretch comes to is four numbers:
   wider. That is the bet the whole game rests on, applied to a place instead of
   to a build.
 - **Debris** scrapes. Cheap on the line, expensive at speed.
-- **Shadow** hides the bend until you are into it. It is spent the way Charge's
-  own penalty is — the swing is drawn from a worse place — rather than as a new
-  kind of loss. Which means **Lift is immune to it**: the plan that gives up all
-  its speed for certainty takes no swing at anything, so there is nothing for a
-  surprise to make worse. That is deliberate, and it is what Lift is paying for
-  everywhere else.
+- **Shadow** hides the bend until you are into it. It is spent as extra excess
+  on the swing, beside the ship's own, rather than as a new kind of loss — a
+  bend you could not see coming is one you are into before you are set. A ship
+  answers it by aiming lower: `safeAim` takes sight off the line, so what the
+  dark costs a well-navigated ship is time rather than width, and what it costs
+  a badly navigated one is both.
+
 
 Nothing here is a new thing for a player to learn. Every one of the four is
 spent in currency the game already had.
@@ -363,7 +364,8 @@ every bend of every track, against the simulation's own `turn`.
 sign of each bend — and nothing else: mirroring a track changes its picture and
 not one number in it, which was measured rather than assumed. Lap length, tick,
 speed, shields and every swing come back identical on all four tracks under all
-three corner plans; the only thing that moves is the sign of a lateral offset,
+three corner plans the game had then; the only thing that moves is the sign of a
+lateral offset,
 because left and right have swapped. They were all anticlockwise before, which
 nobody had chosen. A test now watches the winding on the map, because a track
 that turns the wrong way is still a perfectly plausible track.
@@ -395,9 +397,9 @@ everywhere. They do not:
 
 | Track | Length | Bends | What wins on it |
 | ---------------- | ------ | ------------------- | ------------------------------ |
-| **Kestrel Loop** | 1408 | mixed, tightest r42 | balanced build, Charge — 28.0s |
-| **Meridian Run** | 2370 | open, tightest r62 | reckless build, Carry — 39.3s |
-| **Cinder Coil** | 688 | tight, tightest r26 | nimble build, Charge — 16.9s |
+| **Kestrel Loop** | 1408 | mixed, tightest r42 | balanced build — 28.0s |
+| **Meridian Run** | 2370 | open, tightest r62 | reckless build — 39.3s |
+| **Cinder Coil** | 688 | tight, tightest r26 | nimble build — 16.9s |
 
 A fourth, **The Proving Ground** (1252 units, tightest r50), is not one of them,
 and **every season opens on it**. Its four stretches are matched in pairs — the
@@ -452,16 +454,49 @@ In S1 a ship has two stats, set directly rather than by components:
 | **Thrust**   | sets top speed on a straight, and how hard the ship accelerates toward it        |
 | **Handling** | sets the holding speed of every bend, and how fast a wide ship recovers the path |
 
-## The corner plan
+## The racing line, and who can find it
 
-Chosen before the run, applied at every bend. It decides what the ship does
-about the gap between its speed and the bend's holding speed.
+**There is no corner plan.** There used to be three — Lift, Carry, Charge —
+chosen before the run and applied at every bend. It was a decision with no
+information behind it, and measurement showed there was nothing to decide:
+always-Lift was 18% to 48% off the best way round, on every shape tried.
 
-| Plan       | At the bend                                                              |
-| ---------- | ------------------------------------------------------------------------ |
-| **Lift**   | brake to the holding speed before entry: no excess, and no swing         |
-| **Carry**  | enter at whatever speed it has, and take the swing that comes            |
-| **Charge** | keep accelerating through the bend: the most speed out, the widest swing |
+What a bend should be entered at is a fact, and it falls out of the swing
+rather than out of anybody's judgement. A bend throws a ship
+`SWING_SPREAD * excess^SWING_EXPONENT` wide at the worst draw, and the path is
+`PATH_HALF_WIDTH` either side, so the excess that still fits is fixed:
+
+```
+line = 1 + (PATH_HALF_WIDTH / SWING_SPREAD) ^ (1 / SWING_EXPONENT)
+```
+
+About **1.44 times the bend's holding speed**, as things are tuned. `safeAim`
+is that number, and it is the same for every ship — the racing line is the
+racing line. Sight comes off it, so in the dark the line is slower, for
+everybody.
+
+**Navigation decides how near a ship gets.** `aimFor` blurs the line by
+`NAV_SLIP`, less `NAV_SLIP_PER_LEVEL` for each level of nav, drawn per bend off
+the race seed. The blur is **symmetric**: a poor navigator brakes too early as
+often as too late. It is inconsistent, not reckless — a ship only ever wrong in
+the fast direction would be telling the same one-sided story the wide-penalty
+used to.
+
+The slip is derived, not chosen. The swing grows as `excess^SWING_EXPONENT`, so
+a small error in the aim is a large error in width: at 0.30 a ship with no
+navigation is thrown 31 units, the corridor is 26, and it spends the lap pinned
+to the wall — a ban rather than a risk. At 0.14 the worst draw reaches twice the
+path's half width and stays well inside the corridor.
+
+**This is what a navigation system is for**, and it is now the stat that decides
+how a race *looks*: a well-navigated ship is smooth and on the line, and a badly
+navigated one is visibly all over the road.
+
+`npm run optimal` is the instrument. It flies a grid of shapes and ships across
+the whole range of entry speeds and reports two optima: the quickest that keeps
+the ship on the golden path, and the quickest full stop. Where they agree the
+swing is priced right; where the second is higher, the game is paying a ship to
+be thrown wide.
 
 ## The swing
 
@@ -496,6 +531,22 @@ Clipping the edge barely costs anything; being thrown right out is expensive.
 A flat penalty was the first version, and it made Thrust strictly dominant —
 any speed was worth any swing, because the worst case cost the same as the
 mildest. Scaling it is what prices the gamble.
+
+**The scale was too gentle, and it was measured rather than argued.** Scoring a
+lap on time alone, "never lift off" came within 2% of the best way round in six
+cases out of six: the game was paying a ship to leave the path. `WIDE_SPEED_FLOOR`
+went 0.42 to 0.18 and `WIDE_SPEED_PER_UNIT` 0.028 to 0.12, which takes the
+cases where staying on the line *is* the quickest way round from 16 of 36 to 27,
+and the worst gap from 16.7% to 3.8%.
+
+What closes that gap is a ramp that bites **early**, not a deeper floor: a
+penalty spread evenly across the corridor only reaches 4 cases in 9, one that
+hits its floor within the first third reaches 8. `WIDE_SPEED_AT_EDGE` is
+untouched, so clipping the very edge still costs 6%.
+
+The swing itself was left alone. Making it wider or steeper moved almost
+nothing — it was never the swing that was mispriced, it was what happens once
+you are out there.
 
 The ship hauls itself back proportionally — fast at first, fighting the last
 few units — at a rate set by Handling.
@@ -658,13 +709,13 @@ flies it alone, and drifts wide at every bend". With no crew fitted, endurance
 is `BASE_ENDURANCE` — low, because nobody is flying it but the nav.
 
 Measuring acceleration alone was the first attempt and it read backwards: a
-Charge that holds top speed never accelerates, so it came out the gentlest plan
+ship holding top speed never accelerates, so it came out the gentlest way round
 in the game. Cornering load is what the crew actually feels, and it is why the
 tight track empties them and the open one does not.
 
-**Charge** adds `CHARGE_EXCESS_BONUS` to the excess before the draw, because it
-is still accelerating when the bend arrives. **Lift** brakes to the holding
-speed and draws nothing.
+Both halves of the load come out of the numbers now — the bend's own lateral
+load, and whatever the engine is adding. There is no longer a plan to special-
+case, which is one special case fewer than there was.
 
 ## What the player sees
 

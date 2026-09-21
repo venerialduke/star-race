@@ -91,7 +91,7 @@ function lapAt(
   for (const seed of seeds) {
     const stats = bareShip(thrust, handling);
     let state = startRace(stats, [], 0);
-    const config: RaceConfig = { track, stats, plan: 'carry', aim, seed };
+    const config: RaceConfig = { track, stats, aim, seed };
     let done = false;
     let seen = 0;
     for (let i = 0; i < 60000; i += 1) {

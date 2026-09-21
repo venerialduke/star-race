@@ -19,7 +19,6 @@ import {
   presenceOf,
   startRace,
   stepRace,
-  type CornerPlan,
   type RaceState,
   type ShipStats,
 } from './race';
@@ -49,7 +48,6 @@ export interface Entrant {
  * way to go at every fork. Both are fixed before the lap that consumes them.
  */
 export interface Orders {
-  readonly plan: CornerPlan;
   /** One route index per sector. Anything the ship's nav cannot read is ignored. */
   readonly routes: readonly number[];
   /**
@@ -61,22 +59,20 @@ export interface Orders {
 }
 
 /**
- * Orders may be given as a bare corner plan, which means the golden path at
+ * Orders may be given bare, which means the golden path at
  * every fork — the route a ship with no navigation and no opinion would fly.
  */
-export type Command = Orders | CornerPlan;
+export type Command = Orders;
 
 const asOrders = (command: Command | undefined): Orders =>
   command === undefined
-    ? { plan: 'carry', routes: [] }
+    ? { routes: [] }
     : typeof command === 'string'
-      ? { plan: command, routes: [] }
+      ? { routes: [] }
       : command;
 
 export interface ShipProgress {
   readonly entrant: Entrant;
-  /** The plan this ship is flying this lap. Chosen before the lap, never during. */
-  readonly plan: CornerPlan;
   /** The route it planned for this lap, already cut down to what its nav can read. */
   readonly routes: readonly number[];
   readonly state: RaceState;
@@ -129,7 +125,6 @@ export function startField(
     const routes = readable(track, entrant, asOrders(commands[i]).routes);
     return {
       entrant,
-      plan: asOrders(commands[i]).plan,
       routes,
       state: startRace(entrant.stats, entrant.build ?? [], routes[0] ?? 0),
       lapTicks: [],
@@ -289,7 +284,6 @@ export function stepField(state: FieldState, config: FieldConfig): FieldState {
       track: config.track,
       stats: ship.entrant.stats,
       build: ship.entrant.build,
-      plan: ship.plan,
       routes: ship.routes,
       seed: seedFor(config.seed, i, state.lap),
       id: ship.entrant.id,
@@ -342,7 +336,6 @@ export function leavePit(
           : ship.routes;
       return {
         ...ship,
-        plan: commands[i] === undefined ? ship.plan : asOrders(commands[i]).plan,
         routes,
         // Shields come back at the pit stop. Damage does not: the crew goes on
         // patching it as the ship flies, and the rest waits for the garage.

@@ -167,7 +167,6 @@ function ordersFor(lap: number): Command[] {
   return entrants.map((entrant) =>
     entrant.isPlayer
       ? {
-          plan: controls.settings.plan,
           routes: controls.settings.routes,
           place: controls.settings.place,
         }

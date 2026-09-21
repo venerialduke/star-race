@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { leavePit, startField, stepField, type Entrant } from '../../src/sim/field';
-import { chooseRoute, startRace, stepRace, type CornerPlan } from '../../src/sim/race';
+import { chooseRoute, startRace, stepRace } from '../../src/sim/race';
 import { seedFrom } from '../../src/sim/rng';
 import { bareShip, resolveBuild } from '../../src/sim/ship';
 import {
@@ -35,13 +35,11 @@ const lapTicks = (
   track: Track,
   routes: readonly number[],
   handling: number,
-  plan: CornerPlan = 'carry',
   seed = 'route',
 ): number => {
   const config = {
     track,
     stats: bareShip(1, handling),
-    plan,
     routes,
     seed: seedFrom(seed),
   };
@@ -159,14 +157,19 @@ describe('what a split is worth', () => {
     const seeds = Array.from({ length: 16 }, (_, i) => `worth${i}`);
     const over = (routes: readonly number[], handling: number): number =>
       seeds.reduce(
-        (sum, seed) => sum + lapTicks(KESTREL_LOOP, routes, handling, 'carry', seed),
+        (sum, seed) => sum + lapTicks(KESTREL_LOOP, routes, handling, seed),
         0,
       ) / seeds.length;
 
     const main = [0, 0, 0, 0];
     const needle = [0, 0, 0, 1];
+    // The claim, unchanged: the needle costs a ship that cannot hold it and
+    // pays one that can. Where it turns over has moved — it used to be 1.4 and
+    // it is nearer 1.8 now, because a ship that drives its own line brakes for
+    // the needle's tightness instead of being told to charge it. Measured: the
+    // needle is 139 ticks slower at 1.1, 19 slower at 1.4, and 28 faster at 1.8.
     expect(over(needle, 0.7)).toBeGreaterThan(over(main, 0.7));
-    expect(over(needle, 1.4)).toBeLessThan(over(main, 1.4));
+    expect(over(needle, 1.8)).toBeLessThan(over(main, 1.8));
   });
 
   it('puts the ship on a different road, not just on a different clock', () => {
@@ -228,7 +231,7 @@ describe('navigation, and what it lets you plan', () => {
     };
     const field = startField(
       [blind],
-      [{ plan: 'carry', routes: [1, 1, 1, 1] }],
+      [{ routes: [1, 1, 1, 1] }],
       KESTREL_LOOP,
     );
     const flown = (field.ships[0] as { routes: readonly number[] }).routes;

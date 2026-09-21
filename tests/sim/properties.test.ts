@@ -159,9 +159,9 @@ describe('bands', () => {
 const RACER: ShipStats = { ...bareShip(2.4, 0.8), shields: 60, shieldRegen: 1 };
 
 /** Fly a track and watch it: what it ended as, and what happened on the way. */
-function fly(track: Track, plan: RaceConfig['plan'], ticks = 3000) {
+function fly(track: Track, aim: RaceConfig['aim'], ticks = 3000) {
   let state = startRace(RACER, [], 0);
-  const config: RaceConfig = { track, stats: RACER, plan, seed: 99 };
+  const config: RaceConfig = { track, stats: RACER, aim, seed: 99 };
   let bitTicks = 0;
   let lost = 0;
   let inFirst = 0;
@@ -185,14 +185,14 @@ describe('grip', () => {
   it('throws the same ship wider through the same bend', () => {
     // The bet the whole game rests on, applied to a stretch instead of to a
     // build: same shape, same entry, less grip, more swing.
-    const clear = fly(loop(), 'carry');
-    const thick = fly(loop(half, { environment: 'nebula' }), 'carry');
+    const clear = fly(loop(), undefined);
+    const thick = fly(loop(half, { environment: 'nebula' }), undefined);
     expect(widest(thick.state)).toBeGreaterThan(widest(clear.state));
   });
 
   it('costs time, because a ship thrown wider is a ship going slower', () => {
-    const clear = fly(loop(), 'carry');
-    const thick = fly(loop(half, { environment: 'nebula' }), 'carry');
+    const clear = fly(loop(), undefined);
+    const thick = fly(loop(half, { environment: 'nebula' }), undefined);
     expect(thick.state.distance).toBeLessThan(clear.state.distance);
   });
 });
@@ -202,8 +202,13 @@ describe('sight', () => {
     // Shadow is not a new way to lose. It is the swing, reached by being into
     // the bend before you were set — which is the same currency as everything
     // else the track can do to you.
-    const clear = fly(loop(), 'carry');
-    const dark = fly(loop(half, { environment: 'shadow' }), 'carry');
+    //
+    // Both ships are held to the same entry speed on purpose. A ship left to
+    // drive itself *answers* the dark by aiming lower — `safeAim` takes sight
+    // off the line — so what the shadow costs a good driver is time, not width,
+    // and the width only shows when the entry is held fixed.
+    const clear = fly(loop(), 1.5);
+    const dark = fly(loop(half, { environment: 'shadow' }), 1.5);
     const excessOf = (s: RaceState): number =>
       s.swings.reduce((most, x) => Math.max(most, x.excess), 0);
     expect(excessOf(dark.state)).toBeGreaterThan(excessOf(clear.state));
@@ -214,8 +219,8 @@ describe('sight', () => {
     // Lift takes no swing at anything, so there is nothing for a surprise to
     // make worse. That is a deliberate property rather than a gap: the safe
     // plan is safe from this too, and it pays for that in time everywhere else.
-    const clear = fly(loop(), 'lift');
-    const dark = fly(loop(half, { environment: 'shadow' }), 'lift');
+    const clear = fly(loop(), 1.0);
+    const dark = fly(loop(half, { environment: 'shadow' }), 1.0);
     expect(dark.state.distance).toBeCloseTo(clear.state.distance, 6);
   });
 });
@@ -230,8 +235,8 @@ describe('hazard', () => {
     // ship spends the better part of a thousand ticks inside the debris field
     // and is bitten on two of them — once per crossing. Per tick would be the
     // whole thousand.
-    const clear = fly(loop(), 'lift');
-    const gritty = fly(loop(half, { environment: 'debris' }), 'lift');
+    const clear = fly(loop(), 1.0);
+    const gritty = fly(loop(half, { environment: 'debris' }), 1.0);
 
     expect(clear.bitTicks).toBe(0);
     expect(gritty.bitTicks).toBeGreaterThan(0);
@@ -242,28 +247,32 @@ describe('hazard', () => {
   it('costs more the faster it is met', () => {
     // The only scaling the game uses for damage, and the reason a debris field
     // on a straight is worse than one in a hairpin.
-    const slow = fly(loop(half, { environment: 'debris' }), 'lift');
-    const fast = fly(loop(half, { environment: 'debris' }), 'charge');
+    // Both stay on the path — the faster one is the one that carries the
+    // bend's own limit rather than braking under it. Asking for a ship that
+    // never lifts off would be slower at the bite, not faster, because being
+    // thrown wide now takes the speed straight back off it.
+    const slow = fly(loop(half, { environment: 'debris' }), 1.0);
+    const fast = fly(loop(half, { environment: 'debris' }), 1.44);
     expect(fast.lost / fast.bitTicks).toBeGreaterThan(slow.lost / slow.bitTicks);
   });
 
   it('does not touch a ship on a stretch that says nothing', () => {
-    expect(fly(loop(), 'lift').lost).toBe(0);
+    expect(fly(loop(), 1.0).lost).toBe(0);
   });
 });
 
 describe('pocket', () => {
   it('pays for the ground flown through it', () => {
-    expect(fly(loop(half, { pocket: 10 }), 'carry').state.salvage).toBeGreaterThan(0);
+    expect(fly(loop(half, { pocket: 10 }), undefined).state.salvage).toBeGreaterThan(0);
   });
 
   it('pays nothing on a road that holds none', () => {
-    expect(fly(loop(), 'carry').state.salvage).toBe(0);
+    expect(fly(loop(), undefined).state.salvage).toBe(0);
   });
 
   it('pays twice as much for twice the pocket', () => {
-    const thin = fly(loop(half, { pocket: 5 }), 'carry');
-    const rich = fly(loop(half, { pocket: 10 }), 'carry');
+    const thin = fly(loop(half, { pocket: 5 }), undefined);
+    const rich = fly(loop(half, { pocket: 10 }), undefined);
     expect(rich.state.salvage).toBeCloseTo(thin.state.salvage * 2, 6);
   });
 });
@@ -300,7 +309,7 @@ describe('what the author left on the road', () => {
   it('is on the track before anybody has raced on it', () => {
     const track = withMine();
     expect(track.fixtures).toHaveLength(1);
-    const state = startField([entrant('one')], ['carry'], track);
+    const state = startField([entrant('one')], [{ routes: [] }], track);
     const laid = state.fixtures.filter((f) => f.owner === TRACK_OWNER);
     expect(laid).toHaveLength(1);
     // Half way through sector 1, on the golden path, in canonical distance —
@@ -313,7 +322,7 @@ describe('what the author left on the road', () => {
     // A fixture never bites its owner. The track's own furniture has to have an
     // owner no entrant can be, or one ship would fly the track for free.
     const track = withMine();
-    let state = startField([entrant('one'), entrant('two')], ['carry', 'carry'], track);
+    let state = startField([entrant('one'), entrant('two')], [{ routes: [] }, { routes: [] }], track);
     for (let i = 0; i < 3000; i += 1) {
       state = stepField(state, { track, laps: 3, seed: 4 });
     }
@@ -321,7 +330,7 @@ describe('what the author left on the road', () => {
   });
 
   it('leaves a track with nothing on it with nothing on it', () => {
-    expect(startField([entrant('one')], ['carry'], loop()).fixtures).toEqual([]);
+    expect(startField([entrant('one')], [{ routes: [] }], loop()).fixtures).toEqual([]);
   });
 });
 
@@ -396,7 +405,7 @@ describe('the track that exists to be looked at', () => {
   });
 
   it('pays somebody who flies its scrapyard', () => {
-    const paid = fly(PROVING_GROUND, 'carry').state.salvage;
+    const paid = fly(PROVING_GROUND, undefined).state.salvage;
     expect(paid).toBeGreaterThan(0);
   });
 });

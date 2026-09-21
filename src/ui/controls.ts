@@ -1,7 +1,7 @@
 // The two screens, and everything around them.
 //
 // **Race** is playback: the track, and the tracking bar over it. **Garage** is
-// every decision: the track, the corner plan, the shop and the build. The bar
+// every decision: the track, the route, the shop and the build. The bar
 // is on both, so you can watch the lap while you shop. You can open the garage
 // while a segment plays — but what the segment shows was settled before you
 // opened it, so nothing you do there reaches the ship until the next decision
@@ -9,7 +9,6 @@
 
 import type { AbilityId } from '../sim/ability';
 import { standings, type FieldState } from '../sim/field';
-import type { CornerPlan } from '../sim/race';
 import { frameAt, orderAt, type Segment } from '../sim/segment';
 import { describeRoute, navFor, TRACKS, type Sector, type Track } from '../sim/track';
 import { NAV_FOR_REPLAN, TICK_HZ } from '../sim/tuning';
@@ -17,7 +16,6 @@ import { SHIP_COLOURS } from '../render/draw';
 
 export interface Settings {
   track: Track;
-  plan: CornerPlan;
   /** The way through each sector the player means to take, one index per sector. */
   routes: number[];
   /** The sector to lay a mine in before the heat, if the ship has a rack. */
@@ -68,12 +66,6 @@ export interface Controls {
   update(state: Update): void;
 }
 
-const PLANS: readonly { id: CornerPlan; label: string; hint: string }[] = [
-  { id: 'lift', label: 'Lift', hint: 'brake to the bend · no swing' },
-  { id: 'carry', label: 'Carry', hint: 'take the swing that comes' },
-  { id: 'charge', label: 'Charge', hint: 'keep burning · widest swing' },
-];
-
 const seconds = (ticks: number): string => `${(ticks / TICK_HZ).toFixed(2)}s`;
 
 /** What to say when an ability goes off. Held for a moment so it can be read. */
@@ -106,7 +98,6 @@ const FIRED: Record<AbilityId, (at: string | undefined) => string> = {
 export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
   const settings: Settings = {
     track: TRACKS[0] as Track,
-    plan: 'carry',
     routes: (TRACKS[0] as Track).sectors.map(() => 0),
     place: undefined,
     seed: 'kestrel',
@@ -128,12 +119,6 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
     <div id="r-state" class="state">on the path</div>
     <div id="garage-screen">
       <div id="season-slot"></div>
-      <div class="plans" role="group" aria-label="Corner plan">
-        ${PLANS.map(
-          (p) => `<button type="button" data-plan="${p.id}" class="plan">
-            <b>${p.label}</b><span>${p.hint}</span></button>`,
-        ).join('')}
-      </div>
       <h3 class="routes-head">The route</h3>
       <p id="route-note" class="hint"></p>
       <div id="routes" class="routes"></div>
@@ -196,13 +181,6 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
     );
   }
 
-  for (const button of element.querySelectorAll<HTMLButtonElement>('[data-plan]')) {
-    button.addEventListener('click', () => {
-      settings.plan = button.dataset['plan'] as CornerPlan;
-      paint('[data-plan]', (b) => b.dataset['plan'] === settings.plan);
-    });
-  }
-  paint('[data-plan]', (b) => b.dataset['plan'] === settings.plan);
 
   const seed = byId<HTMLInputElement>('s-seed');
   seed.addEventListener('change', () => {
@@ -356,7 +334,7 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
               : 'Season over.'
             : stage === 'pacing'
               ? 'One lap alone, against the track. Fit the ship, then go.'
-              : 'Fit the ship, set the plan and the route, then race.';
+              : 'Fit the ship, set the route, then race.';
         rState.className = 'state';
         return;
       }
@@ -462,7 +440,7 @@ export function mountControls(parent: HTMLElement, hooks: Hooks): Controls {
               : `P${mine.place} of ${final.length} — ${seconds(mine.ticks - (won?.ticks ?? 0))} off the win.`;
         rState.className = 'state done';
       } else if (settled) {
-        rState.textContent = `Pit stop — everyone restarts level, the clock keeps running. Change the plan, then Go.`;
+        rState.textContent = `Pit stop — everyone restarts level, the clock keeps running. Change the route, then Go.`;
         rState.className = 'state pit';
       } else if (recentlyFired !== undefined) {
         rState.textContent = `${FIRED[recentlyFired](firedAt)}${condition(frame)}`;

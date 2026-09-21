@@ -3,7 +3,7 @@
 // stop resets the line without resetting the clock.
 
 import { describe, expect, it } from 'vitest';
-import { botPlan, makeBot, tightness } from '../../src/sim/bot';
+import { makeBot, tightness } from '../../src/sim/bot';
 import {
   leavePit,
   standings,
@@ -12,8 +12,8 @@ import {
   type Entrant,
   type FieldConfig,
   type FieldState,
+  type Orders,
 } from '../../src/sim/field';
-import type { CornerPlan } from '../../src/sim/race';
 import { seedFrom } from '../../src/sim/rng';
 import { bareShip } from '../../src/sim/ship';
 import { CINDER_COIL, KESTREL_LOOP, MERIDIAN_RUN } from '../../src/sim/track';
@@ -21,11 +21,19 @@ import { LAPS_PER_HEAT } from '../../src/sim/tuning';
 
 const SEED = seedFrom('heat');
 
-const entrants = (): Entrant[] => [
-  { id: 'player', name: 'You', stats: bareShip(1, 1), isPlayer: true },
+const entrants = (thrust = 1, handling = 1): Entrant[] => [
+  { id: 'player', name: 'You', stats: bareShip(thrust, handling), isPlayer: true },
   makeBot(KESTREL_LOOP, SEED, 1),
   makeBot(KESTREL_LOOP, SEED, 2),
 ];
+
+/**
+ * Orders with nothing said: the golden path, no mine laid.
+ *
+ * A ship used to be handed a corner plan here. It works the bend out for itself
+ * now, so what is left to order is the route.
+ */
+const GO: Orders[] = [{ routes: [] }, { routes: [] }, { routes: [] }];
 
 const config = (): FieldConfig => ({
   track: KESTREL_LOOP,
@@ -42,27 +50,27 @@ function runLap(state: FieldState, cfg: FieldConfig): FieldState {
   return next;
 }
 
-/** A whole heat, answering the pit stop with the same plans. */
-function runHeat(plans: CornerPlan[]): FieldState {
+/** A whole heat, answering the pit stop with the same orders. */
+function runHeat(field = entrants()): FieldState {
   const cfg = config();
-  let state = startField(entrants(), plans);
+  let state = startField(field, GO);
   for (let lap = 0; lap < cfg.laps; lap += 1) {
     state = runLap(state, cfg);
-    if (state.phase === 'pit') state = leavePit(state, plans);
+    if (state.phase === 'pit') state = leavePit(state, GO);
   }
   return state;
 }
 
 describe('a heat', () => {
   it('runs two laps and finishes', () => {
-    const done = runHeat(['carry', 'carry', 'carry']);
+    const done = runHeat();
     expect(done.phase).toBe('done');
     expect(done.ships.every((s) => s.lapTicks.length === LAPS_PER_HEAT)).toBe(true);
   });
 
   it('pauses at the pit stop with everyone in', () => {
     const cfg = config();
-    const pit = runLap(startField(entrants(), ['carry', 'carry', 'carry']), cfg);
+    const pit = runLap(startField(entrants(), GO), cfg);
     expect(pit.phase).toBe('pit');
     expect(pit.ships.every((s) => s.waiting)).toBe(true);
     expect(pit.ships.every((s) => s.lapTicks.length === 1)).toBe(true);
@@ -70,9 +78,9 @@ describe('a heat', () => {
 
   it('resets the line at the pit stop but not the clock', () => {
     const cfg = config();
-    const pit = runLap(startField(entrants(), ['carry', 'carry', 'carry']), cfg);
+    const pit = runLap(startField(entrants(), GO), cfg);
     const carried = pit.ships.map((s) => s.totalTicks);
-    const out = leavePit(pit, ['carry', 'carry', 'carry']);
+    const out = leavePit(pit, GO);
     expect(out.ships.map((s) => s.state.distance)).toEqual([0, 0, 0]);
     expect(out.ships.map((s) => s.state.speed)).toEqual([0, 0, 0]);
     expect(out.ships.map((s) => s.totalTicks)).toEqual(carried);
@@ -81,7 +89,7 @@ describe('a heat', () => {
   });
 
   it('decides the heat on total time, not on who crossed last', () => {
-    const done = runHeat(['charge', 'carry', 'carry']);
+    const done = runHeat();
     const rows = standings(done);
     const times = rows.map((r) => r.ticks);
     expect([...times].sort((a, b) => a - b)).toEqual(times);
@@ -89,30 +97,28 @@ describe('a heat', () => {
   });
 
   it('replays identically from the same seed, and differs from another', () => {
-    const a = runHeat(['carry', 'carry', 'carry']);
-    const b = runHeat(['carry', 'carry', 'carry']);
+    const a = runHeat();
+    const b = runHeat();
     expect(a.ships.map((s) => s.totalTicks)).toEqual(b.ships.map((s) => s.totalTicks));
 
     const other = { ...config(), seed: seedFrom('another heat') };
-    let c = startField(entrants(), ['charge', 'charge', 'charge']);
+    let c = startField(entrants(), GO);
     c = runLap(c, other);
     const first = runLap(
-      startField(entrants(), ['charge', 'charge', 'charge']),
+      startField(entrants(), GO),
       config(),
     );
     expect(c.ships[0]?.totalTicks).not.toBe(first.ships[0]?.totalTicks);
   });
 
   it('gives each ship its own luck: one ship swinging does not move another', () => {
+    // The player used to be made to differ by handing it another corner plan.
+    // It drives the line for itself now, so what makes one ship swing where
+    // another does not is the ship: a thrusty one exceeds the bend and takes
+    // the swing, a grippy one never reaches the limit.
     const cfg = config();
-    const withWildPlayer = runLap(
-      startField(entrants(), ['charge', 'carry', 'carry']),
-      cfg,
-    );
-    const withCautiousPlayer = runLap(
-      startField(entrants(), ['lift', 'carry', 'carry']),
-      cfg,
-    );
+    const withWildPlayer = runLap(startField(entrants(1.6, 0.8), GO), cfg);
+    const withCautiousPlayer = runLap(startField(entrants(0.9, 1.5), GO), cfg);
     expect(withWildPlayer.ships[1]?.totalTicks).toBe(
       withCautiousPlayer.ships[1]?.totalTicks,
     );
@@ -146,10 +152,4 @@ describe('the bots', () => {
     expect(different.length).toBeGreaterThanOrEqual(pairs.length - 1);
   });
 
-  it('pick a plan deterministically, and change their minds between laps', () => {
-    const bot = makeBot(KESTREL_LOOP, SEED, 1);
-    expect(botPlan(bot, SEED, 0)).toBe(botPlan(bot, SEED, 0));
-    const laps = [0, 1, 2, 3, 4, 5].map((lap) => botPlan(bot, SEED, lap));
-    expect(new Set(laps).size).toBeGreaterThan(1);
-  });
 });

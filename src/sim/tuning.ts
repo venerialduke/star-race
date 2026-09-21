@@ -52,10 +52,10 @@ export const PATH_HALF_WIDTH = 9;
 export const WIDE_SPEED_AT_EDGE = 0.94;
 
 /** How much more it loses per track unit beyond the edge. */
-export const WIDE_SPEED_PER_UNIT = 0.028;
+export const WIDE_SPEED_PER_UNIT = 0.12;
 
 /** However far out it ends up, it keeps at least this much. */
-export const WIDE_SPEED_FLOOR = 0.42;
+export const WIDE_SPEED_FLOOR = 0.18;
 
 /** How fast the swing opens up through the bend, as a fraction closed per tick. */
 export const SWING_RISE = 0.09;
@@ -383,6 +383,28 @@ export const WALL_CLEAR = 0.9;
 export const BASE_NAV = 0;
 
 /** Nav needed to plan a split of each grade. A grade above your nav is unplannable. */
+/**
+ * How far off the racing line a ship with no navigation at all drives, as a
+ * fraction of the line either way, and how much each level of nav takes off.
+ *
+ * **Either way, on purpose.** A ship that was only ever wrong in the fast
+ * direction would be telling the same one-sided story the wide-penalty used to:
+ * send it, and mostly get away with it. A poor navigator brakes too early as
+ * often as too late — it is inconsistent, not reckless — so nav buys precision
+ * rather than nerve, and the time it saves comes from both sides.
+ */
+/*
+ * Derived, not chosen. The swing grows as `excess^SWING_EXPONENT`, so a small
+ * error in the aim is a large error in how wide the ship goes: at 0.30 a ship
+ * with no navigation is thrown 31 units, the corridor is 26, and it spends the
+ * whole lap pinned to the wall — which is a ban rather than a risk, and the
+ * same mistake the excursion rule already warns about. At 0.14 the worst draw
+ * reaches twice the path's half width and stays well inside the corridor: wide,
+ * visibly wrong, and recoverable.
+ */
+export const NAV_SLIP = 0.14;
+export const NAV_SLIP_PER_LEVEL = 0.035;
+
 export const NAV_FOR_DIM = 1;
 export const NAV_FOR_DARK = 2;
 

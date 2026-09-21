@@ -942,6 +942,68 @@ or is spending on nothing, reads exactly like a policy that is simply worse.**
 Any rule change that touches what a garage can do needs the harness read
 alongside it, not after it.
 
+### The racing line is a constant, and that is why navigation is not a stat
+
+The owner fitted a speed build with no navigation system, rarely left the path,
+and said it felt wrong. It is, and the cause is deeper than the tuning.
+
+**Measured: the optimum does not move.** Lap-time optimal entry speed, as a
+multiple of the bend's holding speed, over 18 shapes crossed with three ships —
+`npm run optimal` and the sweep behind it:
+
+| | grippy 1.0/1.5 | balanced 1.3/1.2 | fast 1.6/0.9 |
+| --- | --- | --- | --- |
+| r30, any sweep, any straight | 1.45 (+0%) | 1.45–1.55 | **1.45–1.50** |
+| r55, any sweep, any straight | 1.10 (+0%) | 1.45–1.50 | **1.45–1.50** |
+| r90, any sweep, any straight | 0.90 (+0%) | 1.25 (+0%) | **1.45–1.50** |
+
+The fast ship wants 1.45 to 1.50 in **all eighteen** cases. Radius does not move
+it, sweep does not move it, and the straight in front of the bend does not move
+it. The grippy and balanced rows that read lower are ties — `+0%` is the cost of
+being 0.3 off, and where it is zero the aim does not matter at all, because the
+ship cannot reach the bend's limit in the first place.
+
+So the closed form was not a simplification that lost the variation. **There is
+no variation.** The game has one right answer everywhere.
+
+**Why, structurally.** Three things, and none of them is a tuning number:
+
+- **Aim is a multiple of the holding speed**, and holding speed already contains
+  the radius and the handling. Expressing the target that way normalises away
+  exactly the two variables that should have moved it.
+- **The straight has no path into the swing at all.** Nothing in the swing
+  formula knows how far it is to the next bend, or how far it has been since the
+  last one.
+- **A bend forgives whatever came before it.** `swingTarget = -bend.turn * swing`
+  is an *absolute* target: a ship arriving twenty units wide has its offset
+  discarded and the bend starts it fresh from the centre. Arriving badly costs
+  nothing at the next bend.
+
+That third one is the load-bearing one. It is why a sequence of bends is not
+harder than one bend, and why a short straight is not harder than a long one.
+
+**What a navigation system is worth today**: 0% where the ship cannot reach the
+limit, up to 19% for a fast ship on a tight short shape. Real, but it is
+precision against a fixed number rather than judgement about a situation — and a
+fixed number is nothing to be good at.
+
+**Candidate fixes, in the order I would try them.** Each is a rule change:
+
+1. **Make the swing compound.** `swingTarget = offset - bend.turn * swing`,
+   clamped to the corridor. Arriving wide then makes the next bend worse, so a
+   short straight punishes over-driving and handling matters for the *optimum*
+   rather than only for the recovery. A run of bends becomes a compounding risk,
+   which is also the most watchable thing on this list.
+2. **Reward the exit.** Speed out of a bend scales with how near the path the
+   ship was through it, so carrying too much in costs the straight that follows.
+   This is the tradeoff real racing is built on and the sim has no version of it.
+3. **Let the approach matter.** Braking distance is already computed; a longer
+   straight could allow a later, harder brake and so a higher entry. Today the
+   ship simply hits its target whenever there is room.
+
+Until one of these lands, a computed plan is a computed constant, and a
+navigation system can only add noise around it.
+
 **And the S7 bar is not met.** "Two builds that spend the same credits
 differently both win seasons, and neither is buy engines": the top five are
 engine-spam, handling, dark, nav and engines. Every one of them is led by an

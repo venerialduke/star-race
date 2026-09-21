@@ -430,8 +430,15 @@ describe('a black hole discriminates by build', () => {
   it('is a corner to a ship that can, and pays it', () => {
     const read = through([fit('dark-matter-engine', 2), fit('collector-shield', 1, 2)]);
     expect(read.lastHit).toBe('through a black hole');
-    expect(Math.min(...read.condition.parts)).toBe(1);
     expect(read.darkMatter).toBeGreaterThan(0);
+    // Not "undamaged", which this used to assert: a ship with no navigation
+    // system goes wide on about a third of its bends and can be scuffed
+    // anywhere on the lap. What the hole did is the claim, so it is measured
+    // against the ship that could not read it rather than against perfection.
+    const hurt = through([fit('speed-engine', 2)]);
+    expect(Math.min(...read.condition.parts)).toBeGreaterThan(
+      Math.min(...hurt.condition.parts),
+    );
   });
 });
 

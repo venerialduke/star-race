@@ -394,16 +394,31 @@ export const BASE_NAV = 0;
  * rather than nerve, and the time it saves comes from both sides.
  */
 /*
- * Derived, not chosen. The swing grows as `excess^SWING_EXPONENT`, so a small
- * error in the aim is a large error in how wide the ship goes: at 0.30 a ship
- * with no navigation is thrown 31 units, the corridor is 26, and it spends the
- * whole lap pinned to the wall — which is a ban rather than a risk, and the
- * same mistake the excursion rule already warns about. At 0.14 the worst draw
- * reaches twice the path's half width and stays well inside the corridor: wide,
- * visibly wrong, and recoverable.
+ * Measured against what a player sees, which is the only thing this number is
+ * for: **how often does a bend throw me off the path?**
+ *
+ * The first version derived it from the swing's *spread* and came out at 0.14.
+ * That was wrong twice over. The realised swing is `spread * draw`, so a slip
+ * sized against the spread only reaches the path edge when the swing draw is
+ * also high; and the blur is centred on the line, so half of it brakes early
+ * and cannot go wide at all. The result was a ship with no navigation system
+ * leaving the path on 9% of the Meridian's bends — tidy, when it should have
+ * looked lost — and nav 3 taking that to 3%, which is not a stat.
+ *
+ * Of the bends a speed build actually meets, at 0.25:
+ *
+ *              nav 0   nav 1   nav 2   nav 3
+ *   Kestrel      31%     26%     20%      9%
+ *   Meridian     18%     10%      9%      2%
+ *   Cinder       32%     25%     24%     20%
+ *
+ * Wider than this buys little and costs a lot: a symmetric blur cannot push a
+ * bad driver past about a third of bends, because the slow half of it only
+ * ever brakes early — and past 0.25 the widest excursion reaches the corridor
+ * wall, which is a ban rather than a risk.
  */
-export const NAV_SLIP = 0.14;
-export const NAV_SLIP_PER_LEVEL = 0.035;
+export const NAV_SLIP = 0.25;
+export const NAV_SLIP_PER_LEVEL = 0.0625;
 
 export const NAV_FOR_DIM = 1;
 export const NAV_FOR_DARK = 2;

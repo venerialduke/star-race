@@ -482,11 +482,27 @@ often as too late. It is inconsistent, not reckless — a ship only ever wrong i
 the fast direction would be telling the same one-sided story the wide-penalty
 used to.
 
-The slip is derived, not chosen. The swing grows as `excess^SWING_EXPONENT`, so
-a small error in the aim is a large error in width: at 0.30 a ship with no
-navigation is thrown 31 units, the corridor is 26, and it spends the lap pinned
-to the wall — a ban rather than a risk. At 0.14 the worst draw reaches twice the
-path's half width and stays well inside the corridor.
+The slip is measured against the only thing it is for — **how often a bend
+throws you off the path** — and the first attempt got that wrong. Sizing it
+against the swing's *spread* gave 0.14, which left a ship with no navigation
+system leaving the path on 9% of the Meridian's bends: tidy, when it should have
+looked lost. Two reasons. The realised swing is `spread × draw`, so a slip sized
+against the spread only reaches the edge when the swing draw is high too; and
+the blur is centred on the line, so half of it brakes early and cannot go wide
+at all.
+
+Of the bends a speed build actually meets:
+
+| | nav 0 | nav 1 | nav 2 | nav 3 |
+| --- | --- | --- | --- | --- |
+| Kestrel Loop | 31% | 26% | 20% | 9% |
+| Meridian Run | 18% | 10% | 9% | 2% |
+| Cinder Coil | 32% | 25% | 24% | 20% |
+
+Wider than `NAV_SLIP` 0.25 buys little and costs a lot. A symmetric blur cannot
+push a bad driver much past a third of bends — the slow half of it only ever
+brakes early — and past 0.25 the widest excursion reaches the corridor wall,
+which is a ban rather than a risk.
 
 **This is what a navigation system is for**, and it is now the stat that decides
 how a race *looks*: a well-navigated ship is smooth and on the line, and a badly

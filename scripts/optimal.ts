@@ -20,6 +20,7 @@
 
 import { startRace, stepRace, type RaceConfig } from '../src/sim/race';
 import { bareShip } from '../src/sim/ship';
+import { PATH_HALF_WIDTH } from '../src/sim/tuning';
 import {
   B,
   S,
@@ -57,32 +58,75 @@ function shapeLoop(radius: number, straight: number, sweep: number): Track | und
   }
 }
 
-/** Ticks for one lap at an aim, averaged over seeds. The swing is a draw. */
+/**
+ * What one lap at one aim is worth, on both counts.
+ *
+ * **Two numbers, not one, and the order matters.** Scoring a lap on time alone
+ * makes the answer a function of whatever being thrown wide currently costs —
+ * so the "best" plan is an artifact of the penalty rather than a fact about
+ * driving, and re-pricing the penalty silently moves the target the ship is
+ * supposed to be aiming at. Driving well is *first* staying on the line, and
+ * *then* carrying as much speed as that allows. `off` is the primary and
+ * `ticks` breaks the tie.
+ */
+interface Lap {
+  /** Ticks spent off the golden path — beyond PATH_HALF_WIDTH of centre. */
+  readonly off: number;
+  /** The whole lap. */
+  readonly ticks: number;
+  /** Mean |offset| over the lap, which sees wandering the corridor too. */
+  readonly wander: number;
+}
+
 function lapAt(
   track: Track,
   thrust: number,
   handling: number,
   aim: number,
   seeds: readonly number[],
-): number {
-  let total = 0;
+): Lap {
+  let off = 0;
+  let ticks = 0;
+  let wander = 0;
   for (const seed of seeds) {
     const stats = bareShip(thrust, handling);
     let state = startRace(stats, [], 0);
     const config: RaceConfig = { track, stats, plan: 'carry', aim, seed };
-    let ticks = Number.NaN;
+    let done = false;
+    let seen = 0;
     for (let i = 0; i < 60000; i += 1) {
       state = stepRace(state, config);
+      const wide = Math.abs(state.offset);
+      wander += wide;
+      seen += 1;
+      if (wide > PATH_HALF_WIDTH) off += 1;
       if (state.distance >= track.length) {
-        ticks = state.tick;
+        ticks += state.tick;
+        done = true;
         break;
       }
     }
-    if (!Number.isFinite(ticks)) return Number.POSITIVE_INFINITY;
-    total += ticks;
+    if (!done || seen === 0) {
+      return { off: Number.POSITIVE_INFINITY, ticks: Number.POSITIVE_INFINITY, wander: Number.POSITIVE_INFINITY };
+    }
   }
-  return total / seeds.length;
+  const n = seeds.length;
+  return { off: off / n, ticks: ticks / n, wander: wander / (n * (ticks / n)) };
 }
+
+/**
+ * The aim a good driver would take: the quickest one that keeps the ship on the
+ * golden path, give or take a tick of slack for the fact that the swing is a
+ * draw and an unlucky one can put anybody out.
+ */
+function drivenWell(rows: readonly { aim: number; lap: Lap }[]): { aim: number; lap: Lap } {
+  const cleanest = Math.min(...rows.map((r) => r.lap.off));
+  const onLine = rows.filter((r) => r.lap.off <= cleanest + OFF_PATH_SLACK);
+  return onLine.reduce((a, b) => (b.lap.ticks < a.lap.ticks ? b : a));
+}
+
+/** How many ticks off the line count as "still on the line", per lap. */
+const OFF_PATH_SLACK = 2;
 
 const AIMS: number[] = [];
 for (let a = 0.95; a <= 3.2001; a += 0.05) AIMS.push(Number(a.toFixed(2)));
@@ -92,24 +136,28 @@ const SHIPS: readonly (readonly [string, number, number])[] = [
   ['balanced', 1.3, 1.2],
   ['fast', 1.6, 0.9],
 ];
-const RADII = [30, 55, 90];
-const STRAIGHTS = [80, 240];
-const SWEEPS = [90, 60];
+const RADII = has('quick') ? [30, 55, 90] : [30, 55, 90];
+const STRAIGHTS = has('quick') ? [240] : [80, 240];
+const SWEEPS = has('quick') ? [90] : [90, 60];
 
 const seedCount = Number(flag('seeds') ?? 5);
 const SEEDS = Array.from({ length: seedCount }, (_, i) => 1 + i * 8191);
 
-console.log(
-  `Optimal entry speed, as a multiple of the bend's holding speed.\n` +
-    `${SEEDS.length} seeds a point · 1.00 = brake to the limit · 3.20 = never lift off\n`,
+if (!has('brief')) console.log(
+  `What a good driver does, found by flying it. ${SEEDS.length} seeds a point.\n\n` +
+    `  ON LINE  the quickest aim that keeps the ship on the golden path — driving well\n` +
+    `  FASTEST  the quickest aim full stop, whatever it costs in being thrown wide\n`,
 );
-console.log(
-  'shape                ship       best   lap    too slow (1.00)   too fast (3.20)',
-);
-console.log('─'.repeat(82));
+if (!has('brief')) {
+  console.log(
+    'shape                ship       ON LINE          FASTEST          gap   cost of the gap',
+  );
+  console.log('─'.repeat(88));
+}
+const gaps: number[] = [];
 
-const bests: number[] = [];
-let twoSided = 0;
+const spans: number[] = [];
+let agree = 0;
 let cases = 0;
 
 for (const sweep of SWEEPS) {
@@ -119,28 +167,28 @@ for (const sweep of SWEEPS) {
       if (track === undefined) continue;
       for (const [name, thrust, handling] of SHIPS) {
         const rows = AIMS.map((aim) => ({ aim, lap: lapAt(track, thrust, handling, aim, SEEDS) }));
-        const best = rows.reduce((a, b) => (b.lap < a.lap ? b : a));
-        const at = (aim: number): number =>
-          rows.reduce((a, b) => (Math.abs(b.aim - aim) < Math.abs(a.aim - aim) ? b : a)).lap;
-        const under = ((at(1.0) - best.lap) / best.lap) * 100;
-        const over = ((at(3.2) - best.lap) / best.lap) * 100;
-        bests.push(best.aim);
+        const onLine = drivenWell(rows);
+        const fastest = rows.reduce((a, b) => (b.lap.ticks < a.lap.ticks ? b : a));
+        const cost = ((onLine.lap.ticks - fastest.lap.ticks) / fastest.lap.ticks) * 100;
+        spans.push(onLine.aim);
         cases += 1;
-        if (over > 6) twoSided += 1;
-        console.log(
+        if (Math.abs(onLine.aim - fastest.aim) < 0.075) agree += 1;
+        gaps.push(cost);
+        if (!has('brief')) console.log(
           `r${radius} S${straight} ${sweep}°`.padEnd(21),
           name.padEnd(10),
-          best.aim.toFixed(2).padStart(5),
-          best.lap.toFixed(0).padStart(6),
-          `+${under.toFixed(0)}%`.padStart(16),
-          `+${over.toFixed(0)}%`.padStart(17),
+          `${onLine.aim.toFixed(2)} (${onLine.lap.off.toFixed(0)} off)`.padEnd(16),
+          `${fastest.aim.toFixed(2)} (${fastest.lap.off.toFixed(0)} off)`.padEnd(16),
+          (fastest.aim - onLine.aim).toFixed(2).padStart(5),
+          `${cost >= 0 ? '+' : ''}${cost.toFixed(1)}%`.padStart(17),
         );
         if (has('curve')) {
-          const marks = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.4, 3.2];
+          const at = (aim: number) =>
+            rows.reduce((a, b) => (Math.abs(b.aim - aim) < Math.abs(a.aim - aim) ? b : a));
           console.log(
             '      ' +
-              marks
-                .map((m) => `${m.toFixed(1)}:+${(((at(m) - best.lap) / best.lap) * 100).toFixed(0)}%`)
+              [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.4, 3.2]
+                .map((m) => `${m.toFixed(1)}:${at(m).lap.off.toFixed(0)}off/${at(m).lap.ticks.toFixed(0)}t`)
                 .join('  '),
           );
         }
@@ -149,16 +197,27 @@ for (const sweep of SWEEPS) {
   }
 }
 
-const lo = Math.min(...bests);
-const hi = Math.max(...bests);
-console.log('─'.repeat(82));
-console.log(
-  `The optimum spans ${lo.toFixed(2)}–${hi.toFixed(2)}, and being too fast costs more than\n` +
-    `6% in ${twoSided} of ${cases} cases.\n\n` +
-    `Both numbers matter, and they pull against each other. A wide span means the\n` +
-    `best plan really does depend on the ship and the shape, which is what makes a\n` +
-    `computed plan worth computing. A high two-sided count means being wrong in the\n` +
-    `fast direction costs something, which is what makes a navigation system that\n` +
-    `gets closer to the answer worth a slot. A tuning that buys one by giving up the\n` +
-    `other has not solved this.`,
-);
+const lo = Math.min(...spans);
+const hi = Math.max(...spans);
+const meanGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+const worstGap = Math.max(...gaps);
+
+if (has('brief')) {
+  console.log(
+    `agree ${String(agree).padStart(2)}/${cases}` +
+      `   span ${lo.toFixed(2)}-${hi.toFixed(2)}` +
+      `   mean gap ${meanGap.toFixed(1)}%` +
+      `   worst gap ${worstGap.toFixed(1)}%`,
+  );
+} else {
+  console.log('─'.repeat(88));
+  console.log(
+    `The on-line aim spans ${lo.toFixed(2)}-${hi.toFixed(2)} across ${cases} cases, and it is also\n` +
+      `the fastest aim in ${agree} of them. Mean cost of the gap ${meanGap.toFixed(1)}%, worst ${worstGap.toFixed(1)}%.\n\n` +
+      `Where the two agree, staying on the line *is* the quick way round and the swing\n` +
+      `is priced right. Where FASTEST is higher, the game is paying a ship to be thrown\n` +
+      `wide - and the size of that gap is what a re-pricing has to close. The ON LINE\n` +
+      `column is the one a navigation system should steer toward, because it is a fact\n` +
+      `about driving rather than about what being wide currently costs.`,
+  );
+}

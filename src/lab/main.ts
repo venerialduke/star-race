@@ -36,10 +36,16 @@ import {
   type Ship,
 } from './flight';
 import { GRIP_PER_HANDLING, KEY_STEER_OFF, KEY_STEER_ON, SLIDING_YAW, TICK_HZ } from './knobs';
-import { bendEnd, bendStart, shapeLength, type Hand, type Shape } from './shape';
+import { bendEnd, bendStart, shapeLength, type Bump, type Hand, type Shape } from './shape';
 
 const YOU = '#7ee0ff';
 const GHOST = 'rgba(255, 209, 102, 0.75)';
+
+/** What a shove pushes with when you have not said. A firm but survivable shove. */
+const DEFAULT_PUSH = 0.3;
+
+/** How long the halo on a newly placed shove lasts, in frames. */
+const FLASH_FRAMES = 42;
 
 /** How much of the recent past the strip shows, in ticks. */
 const STRIP_TICKS = 380;
@@ -210,8 +216,9 @@ function wireControls(): void {
     if (lastView === undefined) return;
     const box = track.getBoundingClientRect();
     const at = alongAtScreen(lab.shape, lastView, event.clientX - box.left, event.clientY - box.top);
-    const push = lab.shape.bump?.push ?? 0.3;
+    const push = lab.shape.bump?.push ?? DEFAULT_PUSH;
     lab.shape = { ...lab.shape, bump: { at, push } };
+    shoveFlash = FLASH_FRAMES;
     restart(false);
     syncTray();
   });
@@ -395,10 +402,37 @@ function buildTray(): void {
   const shoveNote = document.createElement('p');
   shoveNote.className = 'note';
   shoveNote.innerHTML =
-    'Puts something on the road that knocks the ship sideways — debris, a rival, ' +
-    'a gust. <em>Tap the road</em> to move it. Both you and the ghost hit it, so it ' +
-    'is the way to see what a navigation system does about being thrown off.';
+    'Something on the road that knocks the ship sideways — debris, a rival, a gust. ' +
+    'Both you and the ghost hit it, so it is the way to see what a navigation system ' +
+    'does about being thrown off.';
   tray.append(shoveNote);
+
+  const shoveActs = document.createElement('div');
+  shoveActs.className = 'presets';
+  const put = document.createElement('button');
+  const setShove = (bump: Bump | undefined): void => {
+    lab.shape = { ...lab.shape, bump };
+    if (bump !== undefined) shoveFlash = FLASH_FRAMES;
+    restart(false);
+    syncTray();
+  };
+  put.addEventListener('click', () => {
+    setShove(
+      lab.shape.bump === undefined
+        ? { at: bendStart(lab.shape) - 60, push: DEFAULT_PUSH }
+        : undefined,
+    );
+  });
+  shoveActs.append(put);
+  tray.append(shoveActs);
+  const labelPut = (): void => {
+    put.textContent = lab.shape.bump === undefined ? 'Put one on the road' : 'Take it off';
+  };
+  // Run it now as well as on every later sync: a control that is only labelled
+  // once something else changes is a blank button when the tray first opens.
+  labelPut();
+  redraws.push(labelPut);
+
   slider({
     name: 'How hard',
     low: -0.6, high: 0.6, step: 0.05,
@@ -409,6 +443,7 @@ function buildTray(): void {
           ? { ...lab.shape, bump: undefined }
           : { ...lab.shape, bump: { at: lab.shape.bump?.at ?? bendStart(lab.shape) - 60, push: v } };
       restart(false);
+      syncTray();
     },
     show: (v) => (Math.abs(v) < 0.001 ? 'off' : `${v > 0 ? 'right' : 'left'} ${Math.abs(v).toFixed(2)}`),
   });
@@ -417,9 +452,14 @@ function buildTray(): void {
     low: 20, high: 2000, step: 10,
     read: () => lab.shape.bump?.at ?? bendStart(lab.shape) - 60,
     write: (v) => {
-      if (lab.shape.bump === undefined) return;
-      lab.shape = { ...lab.shape, bump: { ...lab.shape.bump, at: Math.min(v, shapeLength(lab.shape) - 10) } };
+      // Moving it puts one there if there is not one already. Returning early
+      // here instead made the slider do nothing at all until the other slider
+      // had been touched, which reads exactly like a broken control.
+      const at = Math.min(v, shapeLength(lab.shape) - 10);
+      lab.shape = { ...lab.shape, bump: { at, push: lab.shape.bump?.push ?? DEFAULT_PUSH } };
+      shoveFlash = FLASH_FRAMES;
       restart(false);
+      syncTray();
     },
     show: (v) => v.toFixed(0),
   });
@@ -683,6 +723,9 @@ function sizeFor(canvas: HTMLCanvasElement): { width: number; height: number } {
 /** The view the road was last drawn with, so a tap can be read back into it. */
 let lastView: View | undefined;
 
+/** Frames of halo left on the shove, so placing one is visibly acknowledged. */
+let shoveFlash = 0;
+
 function paint(): void {
   const track = document.getElementById('track') as HTMLCanvasElement;
   const ctx = track.getContext('2d') as CanvasRenderingContext2D;
@@ -698,7 +741,8 @@ function paint(): void {
 
   lastView = view;
   drawRoad(ctx, view, lab.shape);
-  drawBump(ctx, view, lab.shape);
+  drawBump(ctx, view, lab.shape, shoveFlash / FLASH_FRAMES);
+  if (shoveFlash > 0) shoveFlash -= 1;
   for (const old of lab.past) drawTrail(ctx, view, lab.shape, old, 'rgba(126,224,255,0.22)', true);
   if (lab.showGhost) {
     drawTrail(ctx, view, lab.shape, lab.ghostTrail, GHOST, true);

@@ -166,10 +166,24 @@ export function drawRoad(ctx: CanvasRenderingContext2D, view: View, shape: Shape
  * Deliberately loud. It is the one thing on the course you put there, and the
  * whole reason to put it there is to watch what happens just after it.
  */
-export function drawBump(ctx: CanvasRenderingContext2D, view: View, shape: Shape): void {
+export function drawBump(
+  ctx: CanvasRenderingContext2D,
+  view: View,
+  shape: Shape,
+  flash = 0,
+): void {
   const bump = shape.bump;
   if (bump === undefined) return;
   const half = shape.halfWidth;
+  // Just placed or just moved: a halo, so a tap is unmistakably a tap that did
+  // something rather than a tap that was ignored.
+  if (flash > 0) {
+    const at = screen(view, placeAt(shape, bump.at, 0));
+    ctx.fillStyle = `rgba(255, 122, 107, ${0.28 * flash})`;
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, 14 + 34 * (1 - flash), 0, Math.PI * 2);
+    ctx.fill();
+  }
   const a = screen(view, placeAt(shape, bump.at, -half - 4));
   const b = screen(view, placeAt(shape, bump.at, half + 4));
   ctx.strokeStyle = '#ff7a6b';

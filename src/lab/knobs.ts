@@ -121,3 +121,40 @@ export const GHOST_SOFT = 0.06;
  * corner is coming in time to do anything about it.
  */
 export const GHOST_LEAD = 1 / STEER_RATE;
+
+// ---------------------------------------------------------------------------
+// Navigation, 0 to 100.
+//
+// 100 is the ghost above: it anticipates a full steering lag and knows exactly
+// where the line and the limit are. 0 is a ship with no navigation at all.
+// What falls away in between is three things, and each is something a pilot
+// would plausibly be bad at rather than a number bolted onto the outcome:
+//
+//   - how far ahead it reads the road   (deterministic; the measured big lever)
+//   - where it thinks the line is       (a slow wander)
+//   - how fast it thinks it can go      (a slow wander)
+//
+// The wanders are slow on purpose. Fast jitter is filtered out by the ship's
+// own steering lag and changes almost nothing, and it looks like a twitch
+// rather than like misjudgement. Bad driving is being in the wrong place and
+// late to notice, not vibrating.
+// ---------------------------------------------------------------------------
+
+/**
+ * How quickly a wander forgets where it was, per tick. 0.02 is a time constant
+ * of fifty ticks, so a misjudgement lasts most of a second — long enough to
+ * put the ship somewhere it has to recover from.
+ */
+export const WANDER_SETTLE = 0.02;
+
+/**
+ * How far a ship with no navigation misjudges the line, as a multiple of the
+ * path's half-width.
+ */
+export const NAV_WANDER_LINE = 1.15;
+
+/**
+ * How badly a ship with no navigation misjudges its own speed ceiling, as a
+ * fraction of it. Sometimes it arrives too hot, sometimes it crawls.
+ */
+export const NAV_WANDER_PACE = 0.22;

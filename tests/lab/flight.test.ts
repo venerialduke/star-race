@@ -5,6 +5,7 @@ import {
   fly,
   ghostInput,
   holdingSpeed,
+  makePilot,
   step,
   steerToHold,
   type Flight,
@@ -223,5 +224,64 @@ describe('the feel', () => {
     // Hands off does not mean back on the line: the ship keeps its drift, and
     // getting back costs room and an input of its own.
     expect(state.offset).toBeGreaterThan(turning + 5);
+  });
+});
+
+describe('the navigation rating', () => {
+  const ship = shipWith(1.2);
+  const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+  const spread = (nav: number, seeds = 25): number[] =>
+    Array.from({ length: seeds }, (_, i) =>
+      fly(ship, SHAPE, makePilot(ship, SHAPE, nav, i * 7919 + 13), atRest(0.6)).worst,
+    );
+
+  it('is the reference line at 100, with no randomness left in it at all', () => {
+    const perfect = fly(ship, SHAPE, (s) => ghostInput(ship, SHAPE, s), atRest(0.6));
+    // Any seed, because at 100 the wanders are multiplied by zero.
+    for (const seed of [1, 2, 99999]) {
+      const rated = fly(ship, SHAPE, makePilot(ship, SHAPE, 100, seed), atRest(0.6));
+      expect(rated.ticks).toBe(perfect.ticks);
+      expect(rated.path.map((s) => s.offset)).toEqual(perfect.path.map((s) => s.offset));
+    }
+  });
+
+  it('replays a seed exactly, and draws differently on another', () => {
+    const once = fly(ship, SHAPE, makePilot(ship, SHAPE, 40, 7), atRest(0.6));
+    const twice = fly(ship, SHAPE, makePilot(ship, SHAPE, 40, 7), atRest(0.6));
+    expect(twice.path.map((s) => s.offset)).toEqual(once.path.map((s) => s.offset));
+    const other = fly(ship, SHAPE, makePilot(ship, SHAPE, 40, 8), atRest(0.6));
+    expect(other.path.map((s) => s.offset)).not.toEqual(once.path.map((s) => s.offset));
+  });
+
+  it('runs wider the lower it is, all the way down', () => {
+    const worsts = [100, 85, 70, 55, 40, 25, 10, 0].map((nav) => median(spread(nav)));
+    for (let i = 1; i < worsts.length; i += 1) {
+      expect(worsts[i]!).toBeGreaterThan(worsts[i - 1]!);
+    }
+  });
+
+  it('keeps a well-navigated ship on the path and puts a badly navigated one off it', () => {
+    const off = (nav: number): number =>
+      spread(nav).filter((worst) => worst > SHAPE.halfWidth).length;
+    expect(off(100)).toBe(0);
+    expect(off(85)).toBe(0);
+    expect(off(0)).toBeGreaterThan(spread(0).length * 0.6);
+  });
+
+  it('is inconsistent when it is bad, not merely worse', () => {
+    // The point of the wander: a low rating is a range of outcomes, not a
+    // reliably mediocre one. A high rating has almost no range at all.
+    const range = (nav: number): number => {
+      const xs = spread(nav);
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    expect(range(0)).toBeGreaterThan(range(100) + SHAPE.halfWidth * 3);
+  });
+
+  it('still gets a ship with no navigation round, slower and untidily', () => {
+    const bad = fly(ship, SHAPE, makePilot(ship, SHAPE, 0, 3), atRest(0.6));
+    const good = fly(ship, SHAPE, makePilot(ship, SHAPE, 100, 3), atRest(0.6));
+    expect(bad.finished).toBe(true);
+    expect(bad.ticks).toBeGreaterThan(good.ticks);
   });
 });

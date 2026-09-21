@@ -7,20 +7,22 @@
  * anything". Nothing here scores, penalises or spends money. Going wide is
  * free, on purpose: the lab is about what the ship does, not what it costs.
  *
- * The ghost beside you is the same ship driven perfectly. The gap between you
- * and it is, to the tick, what a navigation system is worth.
+ * The ghost beside you is the same ship driven by a navigation system you set
+ * from 0 to 100. The gap between you and it is, to the tick, what that
+ * navigation is worth.
  */
 
 import { drawRoad, drawShip, drawStrip, drawTrail, fit, type Reading, type View } from './draw';
 import {
   atRest,
   ceilingAhead,
-  ghostInput,
+  makePilot,
   holdingSpeed,
   steerToHold,
   step,
   type Flight,
   type Input,
+  type Pilot,
   type Ship,
 } from './flight';
 import { GRIP_PER_HANDLING, KEY_STEER_OFF, KEY_STEER_ON, SLIDING_YAW, TICK_HZ } from './knobs';
@@ -87,6 +89,11 @@ interface Lab {
   done: number | undefined;
   ghostDone: number | undefined;
   showGhost: boolean;
+  /** The ghost's navigation rating, 0 to 100. 100 is the reference line. */
+  nav: number;
+  /** Bumped every run, so each attempt draws its own misjudgements. */
+  runSeed: number;
+  pilot: Pilot;
 }
 
 const lab: Lab = {
@@ -103,6 +110,9 @@ const lab: Lab = {
   done: undefined,
   ghostDone: undefined,
   showGhost: true,
+  nav: 100,
+  runSeed: 1,
+  pilot: () => ({ throttle: 0, steer: 0 }),
 };
 
 function restart(keepPast = true): void {
@@ -112,6 +122,11 @@ function restart(keepPast = true): void {
   lab.you = atRest();
   lab.ghost = atRest();
   lab.asked = 0;
+  // The pilot carries its own wander, so a run is started by making a new one
+  // rather than by resetting the old one. A fresh seed each time, so you see
+  // the spread of what a rating means and not one lucky draw of it.
+  lab.runSeed += 1;
+  lab.pilot = makePilot(lab.ship, lab.shape, lab.nav, lab.runSeed);
   lab.trail = [lab.you];
   lab.ghostTrail = [lab.ghost];
   lab.history = [];
@@ -208,6 +223,7 @@ interface Knob {
 function shipKnobs(): Knob[] {
   const set = (patch: Partial<Ship>): void => {
     lab.ship = { ...lab.ship, ...patch };
+    restart(false);
   };
   return [
     {
@@ -342,6 +358,16 @@ function buildTray(): void {
   tray.append(flip);
 
   section('The ghost');
+  slider({
+    name: 'Navigation',
+    low: 0, high: 100, step: 5,
+    read: () => lab.nav,
+    write: (v) => {
+      lab.nav = v;
+      restart(false);
+    },
+    show: (v) => (v >= 100 ? 'perfect' : v.toFixed(0)),
+  });
   const toggle = document.createElement('label');
   toggle.className = 'toggle';
   const box = document.createElement('input');
@@ -351,16 +377,20 @@ function buildTray(): void {
     lab.showGhost = box.checked;
   });
   const words = document.createElement('span');
-  words.textContent = 'Race a perfectly navigated ship';
+  words.textContent = 'Show the ghost';
   toggle.append(box, words);
   tray.append(toggle);
 
   const note = document.createElement('p');
   note.className = 'note';
   note.innerHTML =
-    'The ghost is <em>your ship</em>, driven by a navigation system that knows the ' +
-    'corner is coming and turns in one steering-lag early. Nothing about it is faster ' +
-    'than you — it only knows sooner. The gap is what navigation is worth.';
+    'The ghost is <em>your ship</em>, driven by its navigation system. At ' +
+    '<em>100</em> it reads the road one steering-lag ahead and knows exactly where ' +
+    'the line and the limit are — nothing about it is faster than you, it only ' +
+    'knows sooner. Turn it down and it reads less of the road ahead, and drifts ' +
+    'slowly wrong about where the line is and how fast it may go. Every run draws ' +
+    'a fresh set of misjudgements, so press <em>R</em> a few times: a low rating is ' +
+    'not just worse, it is <em>inconsistent</em>.';
   tray.append(note);
 
   const acts = document.createElement('div');
@@ -422,12 +452,12 @@ function hudCells(): Cell[] {
     cells.push(
       lab.done !== undefined && lab.ghostDone !== undefined
         ? {
-            name: 'vs ghost',
+            name: `vs nav ${lab.nav}`,
             value: `${gap > 0 ? '+' : ''}${(gap / TICK_HZ).toFixed(2)}s`,
             tone: gap <= 0 ? 'ok' : 'hot',
           }
         : {
-            name: 'vs ghost',
+            name: `vs nav ${lab.nav}`,
             value: `${ahead > 0 ? '+' : ''}${ahead.toFixed(0)}`,
             tone: ahead >= 0 ? 'ok' : undefined,
           },
@@ -441,9 +471,10 @@ function verdict(): string {
   if (lab.done !== undefined) {
     const gap = lab.ghostDone === undefined ? undefined : lab.done - lab.ghostDone;
     if (gap === undefined) return 'Through. <em>R</em> to run it again.';
+    const them = lab.nav >= 100 ? 'a perfect line' : `navigation ${lab.nav}`;
     return gap <= 0
-      ? `Through, and <em>${(-gap / TICK_HZ).toFixed(2)}s up on a perfect line</em>. <em>R</em> to go again.`
-      : `Through, <em>${(gap / TICK_HZ).toFixed(2)}s</em> behind a perfect line. <em>R</em> to go again.`;
+      ? `Through, and <em>${(-gap / TICK_HZ).toFixed(2)}s up on ${them}</em>. <em>R</em> to go again.`
+      : `Through, <em>${(gap / TICK_HZ).toFixed(2)}s</em> behind ${them}. <em>R</em> to go again.`;
   }
   if (Math.abs(you.offset) > LOST) return 'Gone. <em>R</em> to run it again.';
   if (Math.abs(you.yaw) > SLIDING_YAW) {
@@ -557,7 +588,7 @@ function advance(): void {
     if (lab.you.along >= end) lab.done = lab.you.tick;
   }
   if (lab.ghostDone === undefined) {
-    lab.ghost = step(lab.ship, lab.shape, lab.ghost, ghostInput(lab.ship, lab.shape, lab.ghost));
+    lab.ghost = step(lab.ship, lab.shape, lab.ghost, lab.pilot(lab.ghost));
     lab.ghostTrail.push(lab.ghost);
     if (lab.ghost.along >= end) lab.ghostDone = lab.ghost.tick;
   }

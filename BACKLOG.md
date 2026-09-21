@@ -1155,6 +1155,45 @@ either. The fix is to keep the two apart — `STEER_RATE` is the ship's lag and
 keyboard feel better costs a perfect driver the line: best achievable goes from
 1.4 units off at 0.09 to 7.5 at 0.05 to 14.6 at 0.035, whatever it anticipates.
 
+### Navigation is a rating from 0 to 100, and it is a lever in the lab
+
+_Added 2026-09-21._ The ghost now has a **Navigation** slider. At 100 it is the
+reference line exactly, with no randomness in it at all; below that the *same
+driver* is worse informed in three ways, each something a pilot would plausibly
+be bad at rather than a number bolted onto the outcome:
+
+- **how far ahead it reads the road** — `GHOST_LEAD × skill`, deterministic,
+  and the measured big lever;
+- **where it thinks the line is** — a slow wander, `NAV_WANDER_LINE` half-widths;
+- **how fast it thinks it can go** — a slow wander, `NAV_WANDER_PACE` of its ceiling.
+
+Both wanders are slow on purpose (`WANDER_SETTLE` = 0.02, a time constant of
+fifty ticks). Fast jitter is filtered out by the ship's own steering lag and
+changes almost nothing, and it reads as a twitch rather than as misjudgement.
+Bad driving is being in the wrong place and late to notice.
+
+The filter is normalised to unit variance. Without that it shrinks its own input
+by about seventeen times at this settle rate, and every amplitude constant means
+something other than what it says.
+
+**Measured** (`npm run feel`, r55/90°, handling 1.2, 60 runs a row):
+
+| nav | worst off: median | 90th | ticks | left the path |
+| --- | --- | --- | --- | --- |
+| 0 | 13.1 | 30.5 | 896 | 87% |
+| 25 | 9.6 | 26.7 | 866 | 57% |
+| 55 | 5.5 | 17.3 | 835 | 15% |
+| 85 | 1.8 | 3.7 | 820 | 0% |
+| 100 | 0.6 | 0.6 | 817 | 0% |
+
+Smooth and monotone on both measures, and about 10% on the clock end to end.
+**The 90th column is the interesting one**: a low rating is not reliably
+mediocre, it is a *range*. Being badly navigated is mostly about the bad days,
+which is a much better thing to sell a component against than an average.
+
+Each run draws a fresh seed, so pressing `R` a few times shows the spread rather
+than one lucky attempt.
+
 ### Left open, deliberately
 
 - **No penalty of any kind.** Pricing an excursion is the next question, not
@@ -1162,6 +1201,14 @@ keyboard feel better costs a perfect driver the line: best achievable goes from
 - **Forward and sideways have separate budgets.** No friction circle: braking
   and cornering do not compete. Left out until it is clear the simpler thing is
   not already enough.
+- **The ghost holds the centre line, which is not the fastest line.** Measured
+  against an out-in-out line that stays legally inside the corridor, the ghost
+  gives away 0% to 2.3% — most on a tight bend with a grippy ship, where the
+  corridor is widest relative to the radius, and nothing at all on an open
+  sweeper where the corner was never the limit. So "navigation 100" means
+  *perfectly on the line*, not *fastest possible*. That ~2% is unclaimed
+  headroom: either the ghost learns the real racing line, or the gap is
+  deliberately where a higher tier of component, or player skill, lives.
 - **Nothing in `src/sim` has changed.** The lab is an experiment; the game's
   rules and `DESIGN.md` are untouched by it. If the model earns its way in,
   `src/lab/knobs.ts` folds into `tuning.ts` and `DESIGN.md` changes in that PR.

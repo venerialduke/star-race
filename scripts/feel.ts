@@ -13,6 +13,7 @@ import {
   fly,
   ghostInput,
   holdingSpeed,
+  makePilot,
   steerToHold,
   type Flight,
   type Ship,
@@ -104,6 +105,36 @@ function ghostTable(): void {
   console.log('  not the ship, not the speed, not the line it is aiming at.');
 }
 
+function navTable(): void {
+  const seeds = 60;
+  const ship = shipWith(1.2);
+  console.log('\n\nWHAT A NAVIGATION RATING BUYS. The same ship round the same bend');
+  console.log('(r55, 90°), driven by its own navigation from 0 to 100, ' + seeds + ' runs each.');
+  console.log('100 is the reference line and has no randomness in it at all.\n');
+  console.log('  nav |  worst off: median   90th  |  ticks  |  left the path');
+  console.log('  ' + '─'.repeat(62));
+  for (const nav of [0, 10, 25, 40, 55, 70, 85, 95, 100]) {
+    const worsts: number[] = [];
+    const times: number[] = [];
+    for (let seed = 0; seed < seeds; seed += 1) {
+      const run = fly(ship, SHAPE, makePilot(ship, SHAPE, nav, seed * 7919 + 13), atRest(0.6));
+      worsts.push(run.worst);
+      times.push(run.ticks);
+    }
+    worsts.sort((a, b) => a - b);
+    times.sort((a, b) => a - b);
+    const off = worsts.filter((w) => w > SHAPE.halfWidth).length;
+    console.log(
+      `  ${String(nav).padStart(3)} |        ${worsts[seeds >> 1]!.toFixed(1).padStart(6)} ` +
+        `${worsts[Math.floor(seeds * 0.9)]!.toFixed(1).padStart(6)}  |  ` +
+        `${String(times[seeds >> 1]!).padStart(5)}  |  ${((100 * off) / seeds).toFixed(0).padStart(3)}%`,
+    );
+  }
+  console.log('\n  The 90th column is the point: a low rating is not reliably mediocre,');
+  console.log('  it is a range. Being badly navigated is mostly about the bad days.');
+}
+
 widthTable();
 ghostTable();
+navTable();
 console.log('');

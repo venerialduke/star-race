@@ -20,6 +20,7 @@
  * inputs give the same lap, every time.
  */
 
+import { makeRng, type Rng } from '../sim/rng';
 import {
   DRAG,
   GHOST_DAMP,
@@ -30,9 +31,12 @@ import {
   GHOST_SOFT,
   MIN_ROLLING_SPEED,
   MOST_YAW,
+  NAV_WANDER_LINE,
+  NAV_WANDER_PACE,
   STEER_RATE,
   THROTTLE_RATE_DOWN,
   THROTTLE_RATE_UP,
+  WANDER_SETTLE,
 } from './knobs';
 import { curvatureAt, shapeLength, type Shape } from './shape';
 
@@ -190,6 +194,38 @@ export function ceilingAhead(ship: Ship, shape: Shape, along: number): number {
 }
 
 /**
+ * The one driver, told how far ahead it reads and what it is getting wrong.
+ *
+ * `lead` is how many ticks of road it looks past its own nose, `lineError` is
+ * how far off it thinks the line is in units, and `paceError` is how wrong it
+ * is about its own ceiling as a fraction. Perfect navigation is `GHOST_LEAD`
+ * and two zeroes; everything below that is the same driver, worse informed.
+ */
+function drive(
+  ship: Ship,
+  shape: Shape,
+  state: Flight,
+  lead: number,
+  lineError: number,
+  paceError: number,
+): Input {
+  const ceiling = ceilingAhead(ship, shape, state.along) * (1 + paceError);
+  const throttle = clamp((ceiling - state.speed) / GHOST_SOFT, -1, 1);
+
+  // Read `lead` ticks of road ahead, not underfoot: steering answers over
+  // `1 / STEER_RATE` ticks, and a ship that waits for the bend to arrive has
+  // already been thrown wide by the time the lock is on. At the limit there is
+  // no lock left over to correct with, so the moment is not recoverable —
+  // which is why this one line is worth nine units of road.
+  const curve = curvatureAt(shape, state.along + state.speed * lead);
+  const want =
+    curve * state.speed * state.speed -
+    (state.offset - lineError) * GHOST_PULL -
+    sideways(state) * GHOST_DAMP;
+  return { throttle, steer: clamp(want / ship.grip, -1, 1) };
+}
+
+/**
  * How a ship with a perfect navigation system drives: it knows the line, and
  * it knows what it can brake.
  *
@@ -198,23 +234,53 @@ export function ceilingAhead(ship: Ship, shape: Shape, along: number): number {
  * that has been impossible to see.
  */
 export function ghostInput(ship: Ship, shape: Shape, state: Flight): Input {
-  const ceiling = ceilingAhead(ship, shape, state.along);
-  const throttle = clamp((ceiling - state.speed) / GHOST_SOFT, -1, 1);
+  return drive(ship, shape, state, GHOST_LEAD, 0, 0);
+}
 
-  // The steering the bend needs, plus a correction for where the ship actually
-  // is and which way it is already going.
+/** Something that drives, and remembers what it is currently getting wrong. */
+export type Pilot = (state: Flight) => Input;
+
+/**
+ * A driver with a navigation rating from 0 to 100.
+ *
+ * At 100 this is `ghostInput` exactly, with no randomness at all — the two
+ * wanders are multiplied by zero, so the reference line stays the reference
+ * line. Below it, the ship reads less of the road ahead and is wrong, slowly,
+ * about where the line is and how fast it may go.
+ *
+ * It keeps state, so a run is replayed by making a fresh pilot on the same
+ * seed rather than by rewinding this one.
+ */
+export function makePilot(ship: Ship, shape: Shape, nav: number, seed: number): Pilot {
+  const skill = clamp(nav, 0, 100) / 100;
+  const lost = 1 - skill;
+  const line: Rng = makeRng(seed).fork(1);
+  const pace: Rng = makeRng(seed).fork(2);
+  let lineWander = 0;
+  let paceWander = 0;
+
+  // A first-order filter on white noise: slow, and it forgets where it was.
   //
-  // Read one steering lag ahead, not underfoot: steering answers over
-  // `1 / STEER_RATE` ticks, and a ship that waits for the bend to arrive has
-  // already been thrown wide by the time the lock is on. At the limit there is
-  // no lock left over to correct with, so the moment is not recoverable —
-  // which is why this one line is worth nine units of road.
-  const curve = curvatureAt(shape, state.along + state.speed * GHOST_LEAD);
-  const want =
-    curve * state.speed * state.speed -
-    state.offset * GHOST_PULL -
-    sideways(state) * GHOST_DAMP;
-  return { throttle, steer: clamp(want / ship.grip, -1, 1) };
+  // Normalised so the result has a standard deviation of one whatever
+  // WANDER_SETTLE is. Without this the filter quietly shrinks its own input by
+  // about seventeen times at the settle rate used here, and every amplitude
+  // constant below would mean something other than what it says.
+  const gain = Math.sqrt((3 * (2 - WANDER_SETTLE)) / WANDER_SETTLE);
+  const wander = (was: number, rng: Rng): number =>
+    was + ((rng.unitInterval() * 2 - 1) * gain - was) * WANDER_SETTLE;
+
+  return (state) => {
+    lineWander = wander(lineWander, line);
+    paceWander = wander(paceWander, pace);
+    return drive(
+      ship,
+      shape,
+      state,
+      GHOST_LEAD * skill,
+      lineWander * lost * NAV_WANDER_LINE * shape.halfWidth,
+      paceWander * lost * NAV_WANDER_PACE,
+    );
+  };
 }
 
 export interface Run {

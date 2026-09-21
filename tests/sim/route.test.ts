@@ -20,6 +20,7 @@ import {
   sampleOn,
   TRACKS,
   KESTREL_LOOP,
+  MERIDIAN_RUN,
   type Route,
   type Sector,
   type Track,
@@ -147,29 +148,33 @@ describe.each(TRACKS)('$name splits', (track: Track) => {
 
 describe('what a split is worth', () => {
   it('changes the lap, and which way depends on what the ship can hold', () => {
-    // The Kestrel's dark split is the sharpest case: a shorter, tighter line
-    // that a ship with handling to spare wins on and one without it loses on.
+    // The Meridian's inside line is now the sharpest case, and it is sharper
+    // than anything was before: 221 ticks *worse* for a ship with no handling
+    // to spare, 52 ticks *better* for one that has it. A 273-tick swing on the
+    // same piece of road.
+    //
+    // It used to be the Kestrel's needle. Putting the radius into the swing
+    // made every tight line harsher — a hairpin now throws a ship further than
+    // a sweeper for the same excess, which it did not before — and the
+    // Kestrel's three splits are all short tight ones, so all three went from
+    // "a choice" to "strictly worse". That is recorded in BACKLOG.md as
+    // splits needing a re-tune against the new geometry; they were authored
+    // against a swing that had none.
     //
     // Averaged over seeds, not measured on one. Taking a split changes which
     // seeded stream its bends draw from, so any single seed can flatter or damn
-    // a line by a swing it happened to get — worth about thirty ticks, which is
-    // more than the effect being measured here.
+    // a line by a swing it happened to get.
     const seeds = Array.from({ length: 16 }, (_, i) => `worth${i}`);
     const over = (routes: readonly number[], handling: number): number =>
       seeds.reduce(
-        (sum, seed) => sum + lapTicks(KESTREL_LOOP, routes, handling, seed),
+        (sum, seed) => sum + lapTicks(MERIDIAN_RUN, routes, handling, seed),
         0,
       ) / seeds.length;
 
     const main = [0, 0, 0, 0];
-    const needle = [0, 0, 0, 1];
-    // The claim, unchanged: the needle costs a ship that cannot hold it and
-    // pays one that can. Where it turns over has moved — it used to be 1.4 and
-    // it is nearer 1.8 now, because a ship that drives its own line brakes for
-    // the needle's tightness instead of being told to charge it. Measured: the
-    // needle is 139 ticks slower at 1.1, 19 slower at 1.4, and 28 faster at 1.8.
-    expect(over(needle, 0.7)).toBeGreaterThan(over(main, 0.7));
-    expect(over(needle, 1.8)).toBeLessThan(over(main, 1.8));
+    const inside = [0, 0, 1, 0];
+    expect(over(inside, 0.7)).toBeGreaterThan(over(main, 0.7));
+    expect(over(inside, 1.8)).toBeLessThan(over(main, 1.8));
   });
 
   it('puts the ship on a different road, not just on a different clock', () => {

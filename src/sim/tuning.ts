@@ -25,6 +25,24 @@ export const HOLD_GRIP = 0.0078;
 export const SWING_SPREAD = 40;
 
 /**
+ * The bend the spread above is quoted for, and how hard tightness bites.
+ *
+ * **The swing had no geometry in it at all.** A 30-radius hairpin and a
+ * 90-radius sweeper threw a ship exactly the same distance for the same
+ * relative excess, which is wrong on the face of it — carrying 40% too much
+ * speed through a hairpin asks far more of a ship than 40% through a sweeper.
+ *
+ * It is also why the racing line came out a constant. Entry speed is quoted as
+ * a multiple of the holding speed, and holding speed already contains the
+ * radius, so with no radius in the swing either there was nothing left for the
+ * shape of a bend to change. With it, a tight bend wants a lower entry and an
+ * open one a higher: measured, a fast ship wants 1.30–1.40 at r30 and
+ * 1.45–1.60 at r90.
+ */
+export const SWING_REFERENCE_RADIUS = 55;
+export const SWING_TIGHTNESS = 0.7;
+
+/**
  * How steeply the swing grows with excess speed. Above 1 means a ship slightly
  * too fast is usually fine and a ship much too fast is unpredictable — which
  * is the whole bet the game rests on.
@@ -417,6 +435,48 @@ export const BASE_NAV = 0;
  * ever brakes early — and past 0.25 the widest excursion reaches the corridor
  * wall, which is a ban rather than a risk.
  */
+/**
+ * How much of the offset a ship arrives on carries into the bend's swing.
+ *
+ * **A bend used to forgive whatever came before it.** The swing target was
+ * absolute — `-turn * swing` — so a ship arriving twenty units wide had its
+ * offset discarded and started the bend fresh from the centre. That is the
+ * single biggest reason the racing line came out a constant: a run of bends was
+ * no harder than one bend, and a short straight no harder than a long one,
+ * because nothing could carry between them.
+ *
+ * At 1 the swing is measured from where the ship actually is. Arriving wide on
+ * the **outside** compounds and can reach the wall; arriving wide on the
+ * **inside** is a good line into the bend and gives some of it back, which is
+ * the racing line falling out of the rule rather than being drawn on top.
+ */
+export const SWING_COMPOUND = 1;
+
+/**
+ * Speed handed back on leaving a bend, for having held the path through it.
+ *
+ * The tradeoff real racing is built on and this game had no version of: entry
+ * speed used to buy exit speed with nothing owed. Now carrying too much in
+ * throws the ship wide, and being wide through the bend costs the exit — so
+ * what a bend is worth depends on the straight that follows it, which is how
+ * "distance to the next curve" reaches the answer at all.
+ *
+ * Paid as a share of the bend's holding speed, scaled by how near the path the
+ * ship held: full at the centre line, nothing at the path's edge.
+ */
+export const EXIT_BONUS = 0.22;
+
+/**
+ * How much of the braking force Handling is worth, per point above 1.
+ *
+ * A ship used to brake at a flat rate and so always arrive at exactly the
+ * speed it aimed for, whatever the approach — which decoupled entry speed from
+ * everything, including the length of the straight it came down. A grippy ship
+ * now stops better, so a long straight is a harder braking problem than a short
+ * one and a low-handling ship can arrive hot without choosing to.
+ */
+export const BRAKE_PER_HANDLING = 0.55;
+
 export const NAV_SLIP = 0.25;
 export const NAV_SLIP_PER_LEVEL = 0.0625;
 

@@ -283,10 +283,19 @@ describe('damage that breaks things', () => {
   });
 
   it('spreads a bigger hit across more of the ship', () => {
-    // Every part of a four-part ship should be able to take a hit, given a
-    // race long enough to be thrown off the path a few times.
-    const four = [...kit, { uid: 'c', componentId: 'crew-androids', level: 1 }];
-    const state = heatOf(four, 3.0, 9000);
+    // Every part of a four-part ship should be able to take a hit, given a race
+    // long enough to be thrown off the path a few times.
+    //
+    // Flown with no shields and no engineer, which the shared kit has both of.
+    // With them the claim cannot be tested at all: an excursion hit is small
+    // enough that the shield pool soaks it and regenerates, and what does get
+    // through is patched by the crew faster than a lap can land the next one.
+    // That is worth knowing in itself — being thrown wide costs time now, and
+    // only reaches the ship at all on something with nothing to absorb it.
+    const exposed = ['speed-engine', 'nav-system', 'crew-androids', 'missile-rack'].map(
+      (componentId, i) => ({ uid: `x${i}`, componentId, level: 1 }),
+    );
+    const state = heatOf(exposed, 3.0, 9000);
     expect(state.condition.parts.filter((c) => c < 1).length).toBeGreaterThan(1);
   });
 });

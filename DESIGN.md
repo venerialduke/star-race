@@ -463,17 +463,25 @@ always-Lift was 18% to 48% off the best way round, on every shape tried.
 
 What a bend should be entered at is a fact, and it falls out of the swing
 rather than out of anybody's judgement. A bend throws a ship
-`SWING_SPREAD * excess^SWING_EXPONENT` wide at the worst draw, and the path is
-`PATH_HALF_WIDTH` either side, so the excess that still fits is fixed:
+`SWING_SPREAD * excess^SWING_EXPONENT * tightness` wide at the worst draw, and
+the path is `PATH_HALF_WIDTH` either side, so the excess that still fits is:
 
 ```
-line = 1 + (PATH_HALF_WIDTH / SWING_SPREAD) ^ (1 / SWING_EXPONENT)
+tightness = (SWING_REFERENCE_RADIUS / radius) ^ SWING_TIGHTNESS
+line      = 1 + (PATH_HALF_WIDTH / (SWING_SPREAD * tightness)) ^ (1 / SWING_EXPONENT)
 ```
 
-About **1.44 times the bend's holding speed**, as things are tuned. `safeAim`
-is that number, and it is the same for every ship — the racing line is the
-racing line. Sight comes off it, so in the dark the line is slower, for
-everybody.
+`safeAim` is that number. **It depends on the bend and not on the ship**: about
+1.33 at a 26-radius hairpin and 1.57 at a 110-radius sweeper. The racing line is
+the racing line — what differs between ships is whether they can find it, and
+whether they can reach it at all. Sight comes off it, so in the dark the line is
+slower, for everybody.
+
+`npm run table` is how that closed form is kept honest. It flies a grid of bends
+and ships across the whole range of entry speeds and prints what actually goes
+round quickest, so the formula can be checked against what flying rewards rather
+than trusted. The measured optimum spans **1.25 to 1.65** where a ship can reach
+the bend's limit at all, and being 0.3 out costs 6% to 19%.
 
 **Navigation decides how near a ship gets.** `aimFor` blurs the line by
 `NAV_SLIP`, less `NAV_SLIP_PER_LEVEL` for each level of nav, drawn per bend off
@@ -507,6 +515,35 @@ which is a ban rather than a risk.
 **This is what a navigation system is for**, and it is now the stat that decides
 how a race *looks*: a well-navigated ship is smooth and on the line, and a badly
 navigated one is visibly all over the road.
+
+### Four things make the answer depend on the situation
+
+Without them the racing line came out a **constant** — 1.44 everywhere, for
+every ship on every bend — and a constant is nothing to be good at. Measured
+over eighteen shapes crossed with three ships, the optimum did not move with
+radius, with sweep, or with the straight in front of the bend. Each of these is
+a route by which something about the situation reaches the answer:
+
+- **The swing knows how tight the bend is.** `SWING_TIGHTNESS` scales it by
+  `(SWING_REFERENCE_RADIUS / radius)`. It had no geometry at all before: a
+  hairpin and a sweeper threw a ship exactly the same distance for the same
+  relative excess. This is the one that matters most, because entry speed is
+  quoted as a multiple of the holding speed and holding speed already contains
+  the radius — so with no radius in the swing either, the shape of a bend had
+  nothing left to change.
+- **The swing compounds.** `SWING_COMPOUND` measures it from where the ship
+  actually is rather than from the centre line. A bend used to forgive whatever
+  came before it, which is why a run of bends was no harder than one bend.
+  Arriving wide on the outside now compounds; arriving wide on the inside is a
+  good line in and gives some of it back.
+- **Holding the line pays the exit.** `EXIT_BONUS` hands back speed for having
+  held the path through a bend, so carrying too much in costs the straight that
+  follows — the trade real racing is built on, which this game had no version
+  of. It is also how "distance to the next curve" reaches the answer.
+- **Braking is finite and Handling is most of it.** `BRAKE_PER_HANDLING`. A flat
+  rate meant every ship arrived at exactly what it aimed for whatever the
+  approach, which decoupled entry speed from everything including the length of
+  the straight it came down.
 
 `npm run optimal` is the instrument. It flies a grid of shapes and ships across
 the whole range of entry speeds and reports two optima: the quickest that keeps

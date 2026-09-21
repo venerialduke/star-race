@@ -58,12 +58,17 @@ import {
   NAV_SLIP,
   NAV_SLIP_PER_LEVEL,
   SIGHT_EXCESS,
+  SWING_COMPOUND,
+  EXIT_BONUS,
+  BRAKE_PER_HANDLING,
   SPEED_PER_THRUST,
   STAT_MAX,
   STAT_MIN,
   SWING_EXPONENT,
   SWING_RISE,
   SWING_SPREAD,
+  SWING_REFERENCE_RADIUS,
+  SWING_TIGHTNESS,
   WIDE_SPEED_AT_EDGE,
   WIDE_SPEED_FLOOR,
   WIDE_SPEED_PER_UNIT,
@@ -204,6 +209,8 @@ export interface RaceState {
   readonly bandKey: string | undefined;
   /** Where the current swing is pulling the ship. */
   readonly swingTarget: number;
+  /** How far off the path this bend has taken the ship, worst so far. */
+  readonly bendWorst: number;
   /** Recent positions, oldest first. Bounded, so a long race stays cheap. */
   readonly trail: readonly TrailPoint[];
 
@@ -310,6 +317,7 @@ export function startRace(
     bendKey: undefined,
     bandKey: undefined,
     swingTarget: 0,
+    bendWorst: 0,
     trail: [],
     charge: 0,
     boostLeft: 0,
@@ -332,9 +340,9 @@ export function startRace(
 const TRAIL_LENGTH = 60;
 
 /** How far it takes to slow from `from` to `to`. */
-function brakingDistance(from: number, to: number): number {
+function brakingDistance(from: number, to: number, brake = BRAKE_PER_TICK): number {
   if (from <= to) return 0;
-  return (from * from - to * to) / (2 * BRAKE_PER_TICK);
+  return (from * from - to * to) / (2 * brake);
 }
 
 /**
@@ -457,14 +465,20 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   //
   // `config.aim` overrides it, which is how `npm run optimal` sweeps the whole
   // range to check that what the ship aims for is in fact the best there is.
-  const onLine = (key: string): number =>
-    config.aim ?? aimFor(effect, stats.nav, drawFor(config.seed, `${key}:aim`, state.lap).unitInterval());
+  const onLine = (key: string, radius: number): number =>
+    config.aim ??
+    aimFor(
+      effect,
+      radius,
+      stats.nav,
+      drawFor(config.seed, `${key}:aim`, state.lap).unitInterval(),
+    );
 
   const nowBend = onBend ? bendOn(route, along) : undefined;
   const aim =
     nowBend === undefined
       ? undefined
-      : onLine(bendKeyOf(sector.index, state.route, nowBend));
+      : onLine(bendKeyOf(sector.index, state.route, nowBend), nowBend.radius);
 
   if (onBend) {
     const cap = holding * (aim ?? 1);
@@ -486,9 +500,18 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
       // The same aim the bend itself will use, drawn off the same key — or the
       // ship would brake for one target and then take the bend at another.
       const target =
-        holdingSpeed(ahead.bend.radius, handling) * effect.grip * onLine(ahead.key);
-      braking = ahead.gap <= brakingDistance(speed, target);
-      if (braking) speed = Math.max(target, speed - BRAKE_PER_TICK);
+        holdingSpeed(ahead.bend.radius, handling) *
+        effect.grip *
+        onLine(ahead.key, ahead.bend.radius);
+      // Braking is finite and Handling is most of it, so a ship cannot always
+      // arrive at exactly what it aimed for. That is what lets the length of
+      // the straight reach the answer: a long one arrives fast and is a real
+      // braking problem, a short one never got going. It used to be a flat
+      // rate, which meant every entry hit its target and nothing before the
+      // bend could matter.
+      const brake = BRAKE_PER_TICK * (1 + (handling - 1) * BRAKE_PER_HANDLING);
+      braking = ahead.gap <= brakingDistance(speed, target, brake);
+      if (braking) speed = Math.max(target, speed - brake);
     }
     if (!braking) speed = Math.min(topSpeed, speed + accel);
   }
@@ -550,11 +573,23 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     // Lift takes no swing at all, which makes it the plan shadow cannot touch —
     // giving up the speed is giving up the surprise.
     const excess = perfect ? 0 : rawExcess + (1 - effect.sight) * SIGHT_EXCESS;
-    const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT);
+    const tight = Math.pow(SWING_REFERENCE_RADIUS / bend.radius, SWING_TIGHTNESS);
+    const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT) * tight;
     const draw = drawFor(config.seed, key as string, state.lap).unitInterval();
     const swing = spread * draw;
     // The swing throws the ship outward: away from the way the bend turns.
-    swingTarget = -bend.turn * swing;
+    // **The swing is measured from where the ship is, not from the centre.**
+    // Arriving wide on the outside compounds; arriving wide on the inside is a
+    // good line into the bend and gives some of it back — the racing line
+    // falling out of the rule rather than drawn on top of it.
+    //
+    // Deliberately *not* clamped. The offset is held inside the corridor every
+    // tick, so a bad run cannot escape, but the target is what `exposure`
+    // charges the excursion on: clamping it would make a huge swing cost the
+    // same as one that merely reaches the wall, which is the opposite of the
+    // bet the game rests on. That clamp was here for one commit and a corridor
+    // test caught it.
+    swingTarget = state.offset * SWING_COMPOUND - bend.turn * swing;
     swings.push({
       tick: state.tick,
       sector: sector.index,
@@ -568,8 +603,21 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
       wentWide: swing > PATH_HALF_WIDTH,
     });
   }
+  // How near the path this bend has been held, worst point so far. It is what
+  // the exit is paid on, so it has to be watched all the way through.
+  let bendWorst = key !== undefined && key === state.bendKey ? state.bendWorst : 0;
+  if (onBend) bendWorst = Math.max(bendWorst, Math.abs(state.offset));
+
+  // Leaving a bend: speed back for having held the line through it. This is the
+  // trade the game had no version of — entry speed used to buy exit speed with
+  // nothing owed, so there was never a reason to give any up.
   if (!onBend) {
+    if (state.bendKey !== undefined) {
+      const held = Math.max(0, 1 - state.bendWorst / PATH_HALF_WIDTH);
+      speed = Math.min(topSpeed, speed + held * EXIT_BONUS * speed);
+    }
     bendKey = undefined;
+    bendWorst = 0;
     swingTarget = 0;
   }
 
@@ -705,6 +753,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     onWall,
     bendKey,
     swingTarget,
+    bendWorst,
     trail: [...state.trail, { distance, offset, route: nextRoute }].slice(-TRAIL_LENGTH),
     // A charge spent is a charge gone, whatever it bought.
     charge: fired === undefined ? charge : 0,
@@ -1061,17 +1110,21 @@ function bendKeyOf(sector: number, route: number, bend: { start: number }): stri
  * The fastest a bend can be entered without leaving the golden path.
  *
  * Not a table and not a guess — it falls out of the swing. A bend throws the
- * ship `SWING_SPREAD * excess^SWING_EXPONENT` wide at the worst draw, and the
- * path is `PATH_HALF_WIDTH` either side, so the excess that still fits is
- * fixed by the tuning and nothing else. It is the same number for every ship,
- * which is the point: the racing line is the racing line. What differs between
- * ships is whether they can find it.
+ * ship `SWING_SPREAD * excess^SWING_EXPONENT` wide at the worst draw, scaled by
+ * how tight the bend is, and the path is `PATH_HALF_WIDTH` either side — so the
+ * excess that still fits falls out of the tuning and the radius.
+ *
+ * **It depends on the bend and not on the ship.** A hairpin wants a lower entry
+ * than a sweeper, and that is the same answer for everybody: the racing line is
+ * the racing line. What differs between ships is whether they can find it, and
+ * whether they can reach it at all.
  *
  * Sight comes off it, because a bend you cannot see coming is one you are into
  * before you are set — so in the dark the line is slower, for everybody.
  */
-export function safeAim(effect: Effect): number {
-  const fits = Math.pow(PATH_HALF_WIDTH / SWING_SPREAD, 1 / SWING_EXPONENT);
+export function safeAim(effect: Effect, radius: number): number {
+  const tight = Math.pow(SWING_REFERENCE_RADIUS / Math.max(1, radius), SWING_TIGHTNESS);
+  const fits = Math.pow(PATH_HALF_WIDTH / (SWING_SPREAD * tight), 1 / SWING_EXPONENT);
   return 1 + Math.max(0, fits - (1 - effect.sight) * SIGHT_EXCESS);
 }
 
@@ -1082,9 +1135,14 @@ export function safeAim(effect: Effect): number {
  * — it brakes too early as often as too late — so a navigation system buys
  * precision, and the time it saves comes from both sides.
  */
-export function aimFor(effect: Effect, nav: number, draw: number): number {
+export function aimFor(
+  effect: Effect,
+  radius: number,
+  nav: number,
+  draw: number,
+): number {
   const slip = Math.max(0, NAV_SLIP - Math.max(0, nav) * NAV_SLIP_PER_LEVEL);
-  return safeAim(effect) * (1 + (draw * 2 - 1) * slip);
+  return safeAim(effect, radius) * (1 + (draw * 2 - 1) * slip);
 }
 
 /**

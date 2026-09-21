@@ -135,10 +135,11 @@ const SHIPS: readonly (readonly [string, number, number])[] = [
   ['grippy', 1.0, 1.5],
   ['balanced', 1.3, 1.2],
   ['fast', 1.6, 0.9],
+  ['reckless', 1.9, 0.7],
 ];
-const RADII = has('quick') ? [30, 55, 90] : [30, 55, 90];
-const STRAIGHTS = has('quick') ? [240] : [80, 240];
-const SWEEPS = has('quick') ? [90] : [90, 60];
+const RADII = has('quick') ? [30, 90] : [26, 45, 70, 110];
+const STRAIGHTS = has('quick') ? [240] : [60, 200, 400];
+const SWEEPS = has('quick') ? [90] : [60, 90, 120];
 
 const seedCount = Number(flag('seeds') ?? 5);
 const SEEDS = Array.from({ length: seedCount }, (_, i) => 1 + i * 8191);

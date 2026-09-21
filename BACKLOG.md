@@ -1010,6 +1010,62 @@ engine-spam, handling, dark, nav and engines. Every one of them is led by an
 engine. The non-engine ideas — weapons, collection, shields — are the whole
 bottom half.
 
+### The racing line is a shape now — four mechanisms, and a table
+
+_Resolved, 2026-09-21._ All three candidate fixes above landed, plus a fourth
+that turned out to be the load-bearing one. `npm run table` prints the result.
+
+**What shipped:**
+
+1. **The swing compounds.** `swingTarget = offset * SWING_COMPOUND - turn * swing`.
+   Arriving wide makes the next bend worse. Deliberately *not* clamped to the
+   corridor: clamping caps `exposure`, which reads `swingTarget`, and would make
+   a huge swing exactly as cheap as one that merely reaches the wall. The
+   per-tick offset clamp already stops it running away.
+2. **The exit is rewarded.** `EXIT_BONUS` — on leaving a bend, speed gains
+   `(1 - worst/PATH_HALF_WIDTH) * EXIT_BONUS` of itself. Carrying too much in
+   costs the straight that follows. Needs `bendWorst` on `RaceState`.
+3. **The approach matters.** `BRAKE_PER_HANDLING` — braking force scales with
+   handling, so a grippy ship brakes later and a long straight is worth more to
+   it than to a loose one.
+4. **The swing knows the geometry** (this one is beyond the three that were
+   asked for). `spread` was `SWING_SPREAD * excess^EXP` with *no radius in it* —
+   a hairpin and a sweeper threw a ship the same distance for the same relative
+   excess. Now `* (SWING_REFERENCE_RADIUS / radius)^SWING_TIGHTNESS`, and
+   `safeAim` inverts the same formula so the closed form still means what it says.
+
+**Measured: mechanisms 1–3 alone barely moved anything.** The optimum stayed in
+1.40–1.55, which is where it already was. Putting radius into the swing is what
+unlocked the variation — the table below is with all four.
+
+**The table** (`npm run table`, 5 seeds a point, 4 radii × 3 straights ×
+3 sweeps × 4 ships). Entry speed as a multiple of holding speed; `(+N%)` is the
+cost of being 0.3 out on the cheaper side; `+0%` means the ship cannot reach the
+bend's limit so the aim is moot.
+
+- **Radius is the dominant axis:** 1.30–1.35 at r26 rising to 1.50–1.65 at r110.
+- **The approach moves it:** r70/60°/fast reads 1.45 / 1.50 / 1.55 as the
+  straight in front goes 60 / 200 / 400.
+- **`safeAim` tracks it closely** — 1.33 / 1.40 / 1.48 / 1.57 against radius —
+  and sits a little under, on purpose: the table is the *fastest* line and the
+  fastest line accepts leaving the path sometimes.
+- **Where the aim matters at all, the optimum spans 1.25 to 1.65**, and being
+  0.3 out costs 6–19%.
+
+**Two consequences, both for the next session:**
+
+- **The Kestrel's three splits are now strictly worse than the golden path at
+  every handling.** They were tuned against a swing with no radius term and the
+  term made every one of them a losing line. Re-tune them against the new
+  geometry, or replace them.
+- **Only Meridian sector 2 still discriminates — and it discriminates harder
+  than anything before**: `[0,0,1,0]` is **+221 ticks for a low-handling ship
+  and −52 for a grippy one**, a 273-tick swing. `tests/sim/route.test.ts` moved
+  its split test here from the Kestrel needle for that reason.
+- **Every balance number in this file is stale.** The 72-season harness has not
+  run since the swing changed shape, and nav may now be over- or under-powered
+  in the shop. Re-run `npm run balance` before trusting any S7 conclusion above.
+
 ## Not scheduled
 
 **Real players.** The destination, and the reason for the third rule in

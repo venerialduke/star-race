@@ -150,10 +150,10 @@ describe('the simulation is untouched by any of it', () => {
     // side of the line, which is the widest this number can be and still be
     // deterministic.
     const expected: Record<string, number> = {
-      'Kestrel Loop': 1813,
-      'Meridian Run': 2916,
-      'Cinder Coil': 1707,
-      'The Proving Ground': 1627,
+      'Kestrel Loop': 1814,
+      'Meridian Run': 2914,
+      'Cinder Coil': 1379,
+      'The Proving Ground': 1624,
     };
     for (const track of TRACKS) {
       const config = { track, stats: bareShip(1, 1), seed: seedFrom('kestrel') };

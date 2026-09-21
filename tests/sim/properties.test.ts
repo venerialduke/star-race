@@ -215,13 +215,18 @@ describe('sight', () => {
     expect(dark.state.distance).toBeLessThan(clear.state.distance);
   });
 
-  it('cannot touch the plan that gives up its speed for certainty', () => {
-    // Lift takes no swing at anything, so there is nothing for a surprise to
-    // make worse. That is a deliberate property rather than a gap: the safe
-    // plan is safe from this too, and it pays for that in time everywhere else.
+  it('reaches every ship now, because none of them gives up all its speed', () => {
+    // This used to assert the opposite: Lift took no swing at anything, so
+    // there was nothing for a surprise to make worse, and buying certainty
+    // bought immunity to the dark along with it.
+    //
+    // There is no Lift to hide behind. Sight is spent as excess beside the
+    // ship's own, so a shadow costs something even to a ship braking under the
+    // bend's limit — it is a place that is worse for everybody, which is what a
+    // property of the road ought to be.
     const clear = fly(loop(), 1.0);
     const dark = fly(loop(half, { environment: 'shadow' }), 1.0);
-    expect(dark.state.distance).toBeCloseTo(clear.state.distance, 6);
+    expect(dark.state.distance).toBeLessThan(clear.state.distance);
   });
 });
 

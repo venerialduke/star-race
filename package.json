@@ -16,7 +16,8 @@
     "mechanics-page": "tsx scripts/mechanics-page.ts",
     "balance": "tsx scripts/balance.ts",
     "optimal": "tsx scripts/optimal.ts",
-    "table": "tsx scripts/table.ts"
+    "table": "tsx scripts/table.ts",
+    "feel": "tsx scripts/feel.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

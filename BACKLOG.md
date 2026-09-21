@@ -1066,6 +1066,110 @@ bend's limit so the aim is moot.
   run since the swing changed shape, and nav may now be over- or under-powered
   in the shop. Re-run `npm run balance` before trusting any S7 conclusion above.
 
+## The feel lab — driving as physics instead of a dice roll
+
+_Opened 2026-09-21, and this is where the next session should start._
+
+The owner's verdict on the four-mechanism swing: **"the feel is off"**. In
+particular: the penalty for going wide is too strong, navigation is invisible,
+a high-level balanced engine looks like it would not want navigation at all,
+and — the one that matters most —
+
+> the visual of racing. It seems like we're either going max speed or way slow.
+> No in between. We want a sense of acceleration, braking, etc. The same ship,
+> going the same speed into a curve, but with better handling should deviate
+> less.
+
+That last sentence is a specification, and the swing model cannot meet it. A
+swing is drawn once at the bend's entry from `SWING_SPREAD · excess^EXP ·
+tightness`; handling reaches it only through `holdingSpeed`, which the aim is
+quoted as a multiple of, so it cancels. **Nothing a ship does between turn-in
+and the exit changes where it ends up.** No amount of tuning fixes that.
+
+`lab.html` (`npm run dev`, or `/star-race/preview/<pr>/lab.html`) is the other
+route: one straight, one bend, one straight, and a ship you drive yourself with
+thrust, brake and steering. Nothing scores. **Going wide costs nothing at all**,
+on purpose — the lab is about what the ship does, not what it costs.
+
+### The model
+
+`src/lab/flight.ts`, pure and with no randomness at all, not even seeded. One
+relation carries it:
+
+```
+a bend of radius r throws a ship outward at  v² / r
+a ship answers with at most                  grip
+so flat out through the bend is              v = sqrt(grip · r)
+```
+
+which is the game's `holdingSpeed` exactly — the lab runs at the game's scale,
+so what is learned here transfers. What is new is `yaw`: how far the ship points
+away from where the road goes. The ship's nose turns at `lateral acceleration /
+speed`, the road's heading turns at `curvature × speed`, and yaw is the
+difference. A ship with yaw is going sideways and **keeps going sideways until
+something turns it back**, so correcting a line costs room and time.
+
+### What it already shows
+
+**1. Handling now does what the owner said it should.** Held at one speed
+through one bend (r55, 90°), driver steering exactly what the bend asks:
+
+| handling | holds at | 42/s | 48/s | 54/s | 60/s |
+| --- | --- | --- | --- | --- | --- |
+| 0.7 | 33/s | 97 | 264 | 278 | 285 |
+| 1.0 | 39/s | **8** | 75 | 225 | 267 |
+| 1.3 | 45/s | **8** | 10 | 79 | 209 |
+| 1.6 | 50/s | **8** | 10 | 12 | 95 |
+| 2.0 | 56/s | **8** | 10 | 11 | **14** |
+
+Units off the line; the path is 9 either side. Read a column: same bend, same
+speed, only handling changes, and it is the difference between on the road and
+twenty path-widths off it. `npm run feel` prints this.
+
+**2. Anticipation is what a navigation system buys.** The clearest finding in
+the lab. Two drivers, same ship, same speed, same target line — one reads the
+road one steering-lag ahead, the other reads it underfoot:
+
+| bend | anticipating | reacting |
+| --- | --- | --- |
+| r26 | 0.4 – 1.0 | 17.4 – 22.8 |
+| r45 | 0.5 – 0.8 | 14.5 – 16.9 |
+| r70 | 0.6 – 0.8 | 13.7 – 18.0 |
+| r110 | 0.5 – 0.7 | 14.3 – 22.0 |
+
+The anticipating one holds the line on every ship and every bend; the reacting
+one is off it on all sixteen. And the lead that does it is not fitted — it is
+`1 / STEER_RATE`, the steering's own time constant, and the measurement finds
+that value at every rate tried (11 ticks at rate 0.09, ~20 at 0.05, ~29 at
+0.035). **At the limit there is no lock left over to correct with**, so the
+moment is not recoverable afterwards. That is a reason for a component to exist
+that "precision against a fixed number" never was.
+
+**3. The bang-bang was two bugs, not one.** Speed was only ever flat out or
+crawling because acceleration was a flat rate; a taper (`accel · (1 - v/top)`)
+plus a throttle that eases rather than switches gives a real profile. Then the
+same fault turned up in the *steering*: a key is on or off, and a ship that
+goes from straight to full lock in half a second cannot be placed on a line
+either. The fix is to keep the two apart — `STEER_RATE` is the ship's lag and
+`KEY_STEER_ON` is the pilot's. Slowing the ship's own steering to make the
+keyboard feel better costs a perfect driver the line: best achievable goes from
+1.4 units off at 0.09 to 7.5 at 0.05 to 14.6 at 0.035, whatever it anticipates.
+
+### Left open, deliberately
+
+- **No penalty of any kind.** Pricing an excursion is the next question, not
+  this one, and the owner asked for it out of the way first.
+- **Forward and sideways have separate budgets.** No friction circle: braking
+  and cornering do not compete. Left out until it is clear the simpler thing is
+  not already enough.
+- **Nothing in `src/sim` has changed.** The lab is an experiment; the game's
+  rules and `DESIGN.md` are untouched by it. If the model earns its way in,
+  `src/lab/knobs.ts` folds into `tuning.ts` and `DESIGN.md` changes in that PR.
+- **The four-mechanism swing is still what the game runs.** It is not reverted,
+  because the lab has not yet replaced it — but if the lab holds up, most of it
+  becomes unnecessary rather than wrong: compounding, the exit bonus and the
+  radius term all fall out of the physics for free.
+
 ## Not scheduled
 
 **Real players.** The destination, and the reason for the third rule in

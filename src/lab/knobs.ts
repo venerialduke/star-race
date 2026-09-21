@@ -92,13 +92,45 @@ export const SLIDING_YAW = 0.22;
  * How hard the ghost pulls back toward the centre line, per unit off it, and
  * how hard it damps its own approach, per unit of sideways.
  *
- * Both are about ten times what they were, which is only safe because of the
- * two rules below. Measured against a shove at four places on the course and
- * three ships: back on the line in 142 ticks instead of 245, and a tighter
- * clean lap (0.63 off instead of 0.90), for 1.5% on the clock.
+ * The pull is *half* what it was and the damping is two and a half times it,
+ * because the thing that made recovery feel violent was not weakness, it was
+ * **overshoot**. A shove used to send the ship back across the centre and out
+ * the other side — 0, 8, 14, 16, 14, 9, 1, -4, -6, -7 — and then back again.
+ *
+ * An earlier tuning pass missed it because it scored "ticks until back within
+ * one unit of the line", which rewards a fast first crossing and says nothing
+ * at all about what happens after it. Scored on overshoot instead: past the
+ * centre by 9.7 units before, 0.1 now; mean yaw through the recovery 0.29
+ * before, 0.13 now; ticks pegged at the yaw clamp 95 before, 9 now. The return
+ * is monotone — 0, 8, 13, 9, 6, 5, 4, 3, 2 — for 0.6% on a clean lap.
  */
-export const GHOST_PULL = 0.006;
-export const GHOST_DAMP = 0.12;
+export const GHOST_PULL = 0.003;
+export const GHOST_DAMP = 0.3;
+
+// ---------------------------------------------------------------------------
+// The bumpers.
+//
+// A soft lateral push back toward the road once a ship is well off it. Not a
+// wall, not a penalty, and not the driver's doing — it is the road leaning on
+// the ship, so a deep excursion is bounded without anybody having to yank at
+// the steering. Containing it this way is what let the correction above be
+// halved: with the bumpers on, the worst a shove does falls from 22.6 units to
+// 14.0 even with the gentler gains.
+// ---------------------------------------------------------------------------
+
+/** Where they begin, as a multiple of the path's half-width. */
+export const BUMPER_FROM = 1;
+
+/** Units over which the push reaches full strength. Short, so it bites. */
+export const BUMPER_RAMP = 6;
+
+/**
+ * The lateral acceleration at full strength, in units per tick squared.
+ *
+ * Absolute rather than scaled by the ship, because it belongs to the road: a
+ * grippy ship should not be shoved back harder than a loose one.
+ */
+export const BUMPER_PUSH = 0.024;
 
 /**
  * The bend gets its steering first; the correction may only have the lock left
@@ -182,7 +214,7 @@ export const WANDER_SETTLE = 0.02;
  * How far a ship with no navigation misjudges the line, as a multiple of the
  * path's half-width.
  */
-export const NAV_WANDER_LINE = 0.9;
+export const NAV_WANDER_LINE = 1.6;
 
 /**
  * How badly a ship with no navigation misjudges its own speed ceiling, as a
@@ -206,10 +238,13 @@ export const NAV_WANDER_PACE = 0.35;
  *   rather than in degree — it does not wobble more, it arrives at corners
  *   hopelessly wrong and blows them.
  *
- * Measured over thirty runs a rating (r55/90°, handling 1.2): median units off
- * the line 22.4 / 16.4 / 8.7 / 3.4 / 0.4 at 0 / 25 / 50 / 75 / 100, and a lap
- * 48% / 30% / 25% / 14% / 0% longer than the reference.
+ * Re-fitted once the bumpers landed, because they change what the dial can
+ * mean: a bumper bounds how far *anybody* gets, so the separation between
+ * ratings moves off the ruler and onto the clock. Measured over thirty runs a
+ * rating (r55/90°, handling 1.2): median units off the line 12.5 / 11.0 / 6.4 /
+ * 2.7 / 0.4 at 0 / 25 / 50 / 75 / 100, and a lap 43% / 29% / 20% / 5% / 0%
+ * longer than the reference.
  */
-export const NAV_LEAD_CURVE = 0.6;
+export const NAV_LEAD_CURVE = 0.65;
 export const NAV_LINE_CURVE = 1.3;
-export const NAV_PACE_CURVE = 3.0;
+export const NAV_PACE_CURVE = 1.6;

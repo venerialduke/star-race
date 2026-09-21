@@ -1253,6 +1253,71 @@ What separates them is failing **differently**:
 
 0 against 50 is now 22.4 units against ~10, and 48% longer against 25%.
 
+### Bumpers, and the overshoot that was making recovery look violent
+
+_Added 2026-09-21._ The owner, on the recovery rebuilt an hour earlier: *"it
+seems pretty aggressive when we get off course. I'm envisioning something like
+invisible bumpers that kinda push us back toward the track."*
+
+**The diagnosis was not what the word suggested.** Tracing the offset through a
+recovery showed the ship was not being *forceful*, it was **oscillating**:
+
+```
+0 → 8 → 14 → 16 → 14 → 9 → 1 → -4 → -6 → -7   (and back again)
+```
+
+It swung clean past the centre and out the other side. The tuning pass that
+caused it scored *"ticks until back within one unit of the line"* — a metric
+that rewards a fast first crossing and says **nothing at all** about what
+happens after it. A controller can score perfectly on it while ringing like a
+bell. Scored on overshoot instead, the answer is the opposite of what the
+earlier pass concluded: **halve the pull and raise the damping**. The same
+shove now reads
+
+```
+0 → 8 → 13 → 9 → 6 → 5 → 4 → 3 → 2
+```
+
+| | before | after |
+| --- | --- | --- |
+| past the centre, the other way | 9.7 units | **0.1** |
+| mean yaw through the recovery | 0.29 | **0.13** |
+| ticks pinned at the yaw clamp | 95 | **9** |
+| worst offset after a shove | 22.6 | **14.0** |
+| clean lap | 2453t | 2506t (+0.6%) |
+
+**And the bumpers, which are what made the gentler gains affordable.**
+`Shape.bumpers` is a soft lateral push back toward the road once a ship is
+`from` units off centre, easing in over `ramp` and saturating after. It is not a
+wall, not a penalty, and not the pilot's doing — the road leans on the ship. The
+force is absolute rather than scaled by grip, because it belongs to the road: a
+grippy ship should not be shoved back harder than a loose one. With them on, the
+worst a shove does falls from 22.6 to 14.0 *despite* the halved correction.
+
+**They change what the navigation dial can mean, and that is worth knowing.** A
+bumper bounds how far *anybody* gets, so the separation between ratings moves
+off the ruler and onto the clock. Re-fitted (`NAV_WANDER_LINE` 0.9 → 1.6,
+`NAV_PACE_CURVE` 3.0 → 1.6), measured with bumpers on, which is what the lab
+now runs:
+
+| nav | median off | 90th | ticks | left the path |
+| --- | --- | --- | --- | --- |
+| 0 | 12.3 | 14.0 | 1171 | 100% |
+| 25 | 10.5 | 12.8 | 1067 | 78% |
+| 55 | 5.6 | 8.9 | 978 | 5% |
+| 85 | 1.3 | 2.0 | 843 | 0% |
+| 100 | 0.4 | 0.4 | 834 | 0% |
+
+The 90th-percentile tail is gone, which was previously the best argument for
+owning a navigation system ("it is mostly about the bad days"). That argument
+now has to be made on the clock and on the off-path rate instead — 43% longer
+and off the path every run at 0, against 17% and one run in twenty at 55.
+**Whether that is a better or worse thing to sell a component against is an
+open design question, not a settled one.**
+
+`scripts/feel.ts` now builds its shape from the same defaults the lab opens
+with, bumpers included, so its tables are the numbers you actually feel.
+
 ### Left open, deliberately
 
 - **No penalty of any kind.** Pricing an excursion is the next question, not

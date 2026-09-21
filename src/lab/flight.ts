@@ -45,7 +45,7 @@ import {
   THROTTLE_RATE_UP,
   WANDER_SETTLE,
 } from './knobs';
-import { crossedBump, curvatureAt, shapeLength, type Shape } from './shape';
+import { bumperPush, crossedBump, curvatureAt, shapeLength, type Shape } from './shape';
 
 export interface Ship {
   /** The fastest it will go, in units per tick. */
@@ -160,8 +160,11 @@ export function step(ship: Ship, shape: Shape, state: Flight, input: Input): Fli
   // road's own heading turns at (curvature × speed). Yaw is the difference.
   const rolling = Math.max(speed, MIN_ROLLING_SPEED);
   const curve = curvatureAt(shape, state.along);
+  // The bumpers push sideways exactly as the steering does, and the ship has no
+  // say in it — it is the road leaning on the ship, not the pilot.
+  const nudge = bumperPush(shape, state.offset);
   const yaw = clamp(
-    state.yaw - (steer * ship.grip) / rolling + curve * rolling,
+    state.yaw - ((steer * ship.grip) + nudge) / rolling + curve * rolling,
     -MOST_YAW,
     MOST_YAW,
   );

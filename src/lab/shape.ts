@@ -25,6 +25,26 @@ export interface Bump {
   readonly push: number;
 }
 
+/**
+ * Invisible bumpers outside the golden path.
+ *
+ * Not a wall and not a penalty: a soft lateral push back toward the road that
+ * starts once a ship is `from` units off the centre and eases in over `ramp`.
+ * It exists so that the *track* takes care of a deep excursion instead of the
+ * driver having to yank at it, which is what made recovery look violent.
+ *
+ * The force is absolute rather than scaled by the ship, because it belongs to
+ * the road: a grippy ship should not be shoved harder than a loose one.
+ */
+export interface Bumpers {
+  /** How far off the centre they begin, in units. */
+  readonly from: number;
+  /** Units over which the push reaches full strength. */
+  readonly ramp: number;
+  /** The lateral acceleration at full strength, in units per tick squared. */
+  readonly push: number;
+}
+
 export interface Shape {
   /** The approach straight, in units. */
   readonly entry: number;
@@ -38,6 +58,7 @@ export interface Shape {
   /** Half the width of the golden path. Nothing enforces it; it is a mark. */
   readonly halfWidth: number;
   readonly bump?: Bump | undefined;
+  readonly bumpers?: Bumpers | undefined;
 }
 
 export interface Point {
@@ -138,4 +159,18 @@ export function crossedBump(shape: Shape, was: number, now: number): Bump | unde
   const bump = shape.bump;
   if (bump === undefined) return undefined;
   return was < bump.at && now >= bump.at ? bump : undefined;
+}
+
+/**
+ * The lateral acceleration the bumpers apply at an offset, positive to the
+ * ship's right. Zero inside them, easing in over `ramp`, and capped after —
+ * a ship a long way out is pushed back steadily, not flung.
+ */
+export function bumperPush(shape: Shape, offset: number): number {
+  const bumpers = shape.bumpers;
+  if (bumpers === undefined || bumpers.push <= 0) return 0;
+  const past = Math.abs(offset) - bumpers.from;
+  if (past <= 0) return 0;
+  const strength = Math.min(1, past / Math.max(1, bumpers.ramp));
+  return -Math.sign(offset) * bumpers.push * strength;
 }

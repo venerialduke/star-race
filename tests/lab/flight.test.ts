@@ -11,10 +11,18 @@ import {
   type Flight,
   type Ship,
 } from '../../src/lab/flight';
-import { GRIP_PER_HANDLING, PATH_HALF_WIDTH } from '../../src/lab/knobs';
+import {
+  BUMPER_FROM,
+  BUMPER_PUSH,
+  BUMPER_RAMP,
+  GRIP_PER_HANDLING,
+  MOST_YAW,
+  PATH_HALF_WIDTH,
+} from '../../src/lab/knobs';
 import {
   bendEnd,
   bendStart,
+  bumperPush,
   centreAt,
   crossedBump,
   curvatureAt,
@@ -377,5 +385,88 @@ describe('a shove, and what navigation does about it', () => {
     const good = fly(ship, SHAPE, makePilot(ship, SHAPE, 100, 3), atRest(0.6));
     expect(bad.finished).toBe(true);
     expect(bad.ticks).toBeGreaterThan(good.ticks);
+  });
+});
+
+describe('the bumpers', () => {
+  const ship = shipWith(1.2);
+  const WALLED: Shape = {
+    ...SHAPE,
+    bumpers: { from: PATH_HALF_WIDTH * BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
+  };
+
+  it('does nothing on the path, pushes back off it, and saturates', () => {
+    expect(bumperPush(WALLED, 0)).toBe(0);
+    expect(bumperPush(WALLED, PATH_HALF_WIDTH)).toBe(0);
+    // Off to the right is pushed left, and the other way round.
+    expect(bumperPush(WALLED, PATH_HALF_WIDTH + 3)).toBeLessThan(0);
+    expect(bumperPush(WALLED, -(PATH_HALF_WIDTH + 3))).toBeGreaterThan(0);
+    // It eases in, then stops growing however far out the ship is.
+    const near = Math.abs(bumperPush(WALLED, PATH_HALF_WIDTH + 2));
+    const far = Math.abs(bumperPush(WALLED, PATH_HALF_WIDTH + BUMPER_RAMP));
+    expect(near).toBeLessThan(far);
+    expect(Math.abs(bumperPush(WALLED, 400))).toBeCloseTo(far, 10);
+  });
+
+  it('leaves a clean lap exactly as it was', () => {
+    const bare = fly(ship, SHAPE, makePilot(ship, SHAPE, 100, 5), atRest(0.6));
+    const walled = fly(ship, WALLED, makePilot(ship, WALLED, 100, 5), atRest(0.6));
+    expect(walled.ticks).toBe(bare.ticks);
+    expect(walled.path.map((s) => s.offset)).toEqual(bare.path.map((s) => s.offset));
+  });
+
+  it('bounds how far a shove can throw a ship', () => {
+    const at = bendStart(SHAPE) - 40;
+    const bump = { at, push: 0.45 };
+    const bare = fly(ship, { ...SHAPE, bump }, makePilot(ship, SHAPE, 100, 5), atRest(0.6));
+    const walled = fly(
+      ship,
+      { ...WALLED, bump },
+      makePilot(ship, WALLED, 100, 5),
+      atRest(0.6),
+    );
+    expect(walled.worst).toBeLessThan(bare.worst);
+  });
+
+  it('keeps the tail off a badly navigated ship', () => {
+    // The bumpers bound how far *anybody* gets, so what a low rating costs
+    // moves off the ruler and onto the clock. Both halves of that are checked.
+    const spread = (shape: Shape): number[] =>
+      Array.from({ length: 20 }, (_, i) =>
+        fly(ship, shape, makePilot(ship, shape, 20, i * 7919 + 13), atRest(0.6)).worst,
+      );
+    expect(Math.max(...spread(WALLED))).toBeLessThan(Math.max(...spread(SHAPE)));
+  });
+});
+
+describe('recovery is firm, not violent', () => {
+  const ship = shipWith(1.2);
+  const WALLED: Shape = {
+    ...SHAPE,
+    bumpers: { from: PATH_HALF_WIDTH * BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
+  };
+
+  // The regression that must not come back. A shove used to send the ship back
+  // across the centre and out the far side by nine units, then back again, and
+  // the tuning pass that caused it scored "ticks until back within one unit" —
+  // which rewards a fast first crossing and says nothing about what follows.
+  it('does not swing past the centre line and out the other side', () => {
+    for (const at of [180, bendStart(SHAPE) - 40, bendStart(SHAPE) + 43]) {
+      const shape: Shape = { ...WALLED, bump: { at, push: 0.45 } };
+      const run = fly(ship, shape, makePilot(ship, shape, 100, 5), atRest(0.6));
+      const after = run.path.filter((s) => s.along >= at);
+      // The shove pushes right, so the ship must not end up far to the left.
+      const past = Math.max(0, ...after.map((s) => -s.offset));
+      expect(past).toBeLessThan(PATH_HALF_WIDTH / 2);
+    }
+  });
+
+  it('spends almost none of a recovery pinned fully sideways', () => {
+    const at = bendStart(SHAPE) + 43;
+    const shape: Shape = { ...WALLED, bump: { at, push: 0.45 } };
+    const run = fly(ship, shape, makePilot(ship, shape, 100, 5), atRest(0.6));
+    const after = run.path.filter((s) => s.along >= at).slice(0, 260);
+    const pinned = after.filter((s) => Math.abs(s.yaw) > MOST_YAW - 0.01).length;
+    expect(pinned).toBeLessThan(15);
   });
 });

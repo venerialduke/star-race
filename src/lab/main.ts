@@ -35,7 +35,16 @@ import {
   type Pilot,
   type Ship,
 } from './flight';
-import { GRIP_PER_HANDLING, KEY_STEER_OFF, KEY_STEER_ON, SLIDING_YAW, TICK_HZ } from './knobs';
+import {
+  BUMPER_FROM,
+  BUMPER_PUSH,
+  BUMPER_RAMP,
+  GRIP_PER_HANDLING,
+  KEY_STEER_OFF,
+  KEY_STEER_ON,
+  SLIDING_YAW,
+  TICK_HZ,
+} from './knobs';
 import { bendEnd, bendStart, shapeLength, type Bump, type Hand, type Shape } from './shape';
 
 const YOU = '#7ee0ff';
@@ -114,7 +123,15 @@ interface Lab {
 
 const lab: Lab = {
   ship: PRESETS[0]!.ship,
-  shape: { entry: 320, radius: 55, sweep: Math.PI / 2, exit: 320, hand: 1, halfWidth: 9 },
+  shape: {
+    entry: 320,
+    radius: 55,
+    sweep: Math.PI / 2,
+    exit: 320,
+    hand: 1,
+    halfWidth: 9,
+    bumpers: { from: 9 * BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
+  },
   you: atRest(),
   ghost: atRest(),
   trail: [],
@@ -397,6 +414,49 @@ function buildTray(): void {
   });
   flip.append(hand);
   tray.append(flip);
+
+  section('The bumpers');
+  const bumperNote = document.createElement('p');
+  bumperNote.className = 'note';
+  bumperNote.innerHTML =
+    'A soft push back toward the road once a ship is well off it — not a wall and ' +
+    'not a penalty, and not the pilot doing it. It bounds a deep excursion so nobody ' +
+    'has to yank at the steering to get home. Faint dotted lines show where they start.';
+  tray.append(bumperNote);
+  slider({
+    name: 'How firm',
+    low: 0, high: 0.06, step: 0.002,
+    read: () => lab.shape.bumpers?.push ?? 0,
+    write: (v) => {
+      lab.shape = {
+        ...lab.shape,
+        bumpers: {
+          from: lab.shape.bumpers?.from ?? lab.shape.halfWidth * BUMPER_FROM,
+          ramp: lab.shape.bumpers?.ramp ?? BUMPER_RAMP,
+          push: v,
+        },
+      };
+      restart(false);
+    },
+    show: (v) => (v <= 0 ? 'off' : v.toFixed(3)),
+  });
+  slider({
+    name: 'Start at',
+    low: 4, high: 60, step: 1,
+    read: () => lab.shape.bumpers?.from ?? lab.shape.halfWidth * BUMPER_FROM,
+    write: (v) => {
+      lab.shape = {
+        ...lab.shape,
+        bumpers: {
+          from: v,
+          ramp: lab.shape.bumpers?.ramp ?? BUMPER_RAMP,
+          push: lab.shape.bumpers?.push ?? BUMPER_PUSH,
+        },
+      };
+      restart(false);
+    },
+    show: (v) => `${v.toFixed(0)} off`,
+  });
 
   section('A shove');
   const shoveNote = document.createElement('p');

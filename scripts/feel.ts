@@ -18,9 +18,17 @@ import {
   type Flight,
   type Ship,
 } from '../src/lab/flight';
-import { GRIP_PER_HANDLING, PATH_HALF_WIDTH } from '../src/lab/knobs';
+import {
+  BUMPER_FROM,
+  BUMPER_PUSH,
+  BUMPER_RAMP,
+  GRIP_PER_HANDLING,
+  PATH_HALF_WIDTH,
+} from '../src/lab/knobs';
 import { bendStart, curvatureAt, type Shape } from '../src/lab/shape';
 
+// The shape the lab itself opens with, bumpers and all, so these numbers are
+// the numbers you feel rather than a different course that happens to be near.
 const SHAPE: Shape = {
   entry: 320,
   radius: 55,
@@ -28,6 +36,7 @@ const SHAPE: Shape = {
   exit: 320,
   hand: 1,
   halfWidth: PATH_HALF_WIDTH,
+  bumpers: { from: PATH_HALF_WIDTH * BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
 };
 
 const HANDLINGS = [0.7, 1.0, 1.3, 1.6, 2.0];

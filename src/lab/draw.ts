@@ -129,6 +129,24 @@ export function drawRoad(ctx: CanvasRenderingContext2D, view: View, shape: Shape
   trace(ctx, view, right);
   ctx.stroke();
 
+  // Where the bumpers begin. Invisible in the game; drawn here, faintly,
+  // because you cannot judge a force you cannot locate.
+  const bumpers = shape.bumpers;
+  if (bumpers !== undefined && bumpers.push > 0) {
+    ctx.strokeStyle = 'rgba(126, 224, 255, 0.16)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 6]);
+    for (const side of [-1, 1]) {
+      trace(
+        ctx,
+        view,
+        marks.map((d) => placeAt(shape, d, side * bumpers.from)),
+      );
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
   ctx.strokeStyle = 'rgba(255, 209, 102, 0.45)';
   ctx.lineWidth = 1.2;
   ctx.setLineDash([7, 9]);

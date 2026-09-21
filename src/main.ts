@@ -382,6 +382,7 @@ function views(): readonly ShipView[] {
       distance: now?.distance ?? 0,
       route: now?.route ?? 0,
       offset: now?.offset ?? 0,
+      yaw: now?.yaw ?? 0,
       wide: now?.wide ?? false,
       isPlayer: entrants[ship]?.isPlayer ?? false,
       wake,

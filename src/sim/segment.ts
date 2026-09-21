@@ -23,6 +23,15 @@ export interface Frame {
   /** Which way through the current sector: the same distance is a different place. */
   readonly route: number;
   readonly offset: number;
+  /**
+   * How far the ship points away from where the road goes.
+   *
+   * On the screen's side of the wall because it is what a ship *looks* like:
+   * one sliding through a bend is visibly sideways, and drawing it pointing
+   * straight down the road while it slid across one was the giveaway that this
+   * was missing.
+   */
+  readonly yaw: number;
   readonly speed: number;
   readonly wide: boolean;
   /** The average condition of what is fitted, 0 to 1. */
@@ -64,6 +73,7 @@ const frameOf = (ship: FieldState['ships'][number], tick: number): Frame => ({
   distance: ship.state.distance,
   route: ship.state.route,
   offset: ship.state.offset,
+  yaw: ship.state.yaw,
   speed: ship.state.speed,
   wide: ship.state.wide,
   integrity:
@@ -154,6 +164,7 @@ export function frameBetween(
     ...here,
     distance: here.distance + (next.distance - here.distance) * t,
     offset: here.offset + (next.offset - here.offset) * t,
+    yaw: here.yaw + (next.yaw - here.yaw) * t,
     speed: here.speed + (next.speed - here.speed) * t,
   };
 }

@@ -988,6 +988,12 @@ function drawShip(
   // Which way it is pointing on screen, found by projecting a step along its
   // own heading rather than guessed from the camera: a rival crossing in front
   // of you through a bend is side-on, and should look it.
+  //
+  // Two probes, not one. This one runs along the *road*, and is what the lean
+  // below is measured against — the road is what a hill belongs to. The hull's
+  // own heading is the road's less its yaw, and gets a probe of its own; a
+  // ship crabbing across a bend used to be drawn pointing dead ahead while it
+  // slid, which is exactly the tell that yaw was not reaching the screen.
   const nose = toEye(
     lens,
     point.x + Math.cos(point.at.heading) * PROBE,
@@ -1002,7 +1008,18 @@ function drawShip(
   let rise = 1;
   if (nose.depth > 0) {
     const tip = toScreen(lens, nose);
-    facing = Math.atan2(tip.x - p.x, -(tip.y - p.y));
+    // Where the hull points: the road's heading turned by the ship's yaw.
+    // Positive yaw moves a ship toward *less* offset, and offset is measured
+    // to the left, so the hull's heading is the road's minus the yaw.
+    const aim = point.at.heading - ship.yaw;
+    const sliding = toEye(
+      lens,
+      point.x + Math.cos(aim) * PROBE,
+      point.y + Math.sin(aim) * PROBE,
+      ground + LIFT,
+    );
+    const hull = sliding.depth > 0 ? toScreen(lens, sliding) : tip;
+    facing = Math.atan2(hull.x - p.x, -(hull.y - p.y));
     const along = Math.hypot(tip.x - p.x, tip.y - p.y);
     const above = toScreen(
       lens,

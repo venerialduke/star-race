@@ -12,7 +12,17 @@
  * navigation is worth.
  */
 
-import { drawRoad, drawShip, drawStrip, drawTrail, fit, type Reading, type View } from './draw';
+import {
+  alongAtScreen,
+  drawBump,
+  drawRoad,
+  drawShip,
+  drawStrip,
+  drawTrail,
+  fit,
+  type Reading,
+  type View,
+} from './draw';
 import {
   atRest,
   ceilingAhead,
@@ -125,6 +135,13 @@ function restart(keepPast = true): void {
   // The pilot carries its own wander, so a run is started by making a new one
   // rather than by resetting the old one. A fresh seed each time, so you see
   // the spread of what a rating means and not one lucky draw of it.
+  // A shorter course can leave the shove past the end of it, where it would
+  // silently never fire.
+  const bump = lab.shape.bump;
+  const last = shapeLength(lab.shape) - 10;
+  if (bump !== undefined && bump.at > last) {
+    lab.shape = { ...lab.shape, bump: { ...bump, at: Math.max(10, last) } };
+  }
   lab.runSeed += 1;
   lab.pilot = makePilot(lab.ship, lab.shape, lab.nav, lab.runSeed);
   lab.trail = [lab.you];
@@ -185,6 +202,19 @@ function wireControls(): void {
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     pads.append(el);
   }
+
+  // Tapping the road puts the shove where you tapped, which is a great deal
+  // easier than finding a distance on a slider.
+  const track = document.getElementById('track') as HTMLCanvasElement;
+  track.addEventListener('pointerdown', (event) => {
+    if (lastView === undefined) return;
+    const box = track.getBoundingClientRect();
+    const at = alongAtScreen(lab.shape, lastView, event.clientX - box.left, event.clientY - box.top);
+    const push = lab.shape.bump?.push ?? 0.3;
+    lab.shape = { ...lab.shape, bump: { at, push } };
+    restart(false);
+    syncTray();
+  });
 
   window.addEventListener('keydown', (event) => {
     if (event.code === 'KeyR') return restart();
@@ -294,9 +324,13 @@ function shapeKnobs(): Knob[] {
   ];
 }
 
+/** Re-reads every slider from the state, for changes made outside the tray. */
+let syncTray: () => void = () => {};
+
 function buildTray(): void {
   const tray = document.getElementById('tray') as HTMLElement;
   const redraws: (() => void)[] = [];
+  syncTray = () => redraws.forEach((f) => f());
 
   const section = (title: string): void => {
     const h = document.createElement('h3');
@@ -356,6 +390,39 @@ function buildTray(): void {
   });
   flip.append(hand);
   tray.append(flip);
+
+  section('A shove');
+  const shoveNote = document.createElement('p');
+  shoveNote.className = 'note';
+  shoveNote.innerHTML =
+    'Puts something on the road that knocks the ship sideways — debris, a rival, ' +
+    'a gust. <em>Tap the road</em> to move it. Both you and the ghost hit it, so it ' +
+    'is the way to see what a navigation system does about being thrown off.';
+  tray.append(shoveNote);
+  slider({
+    name: 'How hard',
+    low: -0.6, high: 0.6, step: 0.05,
+    read: () => lab.shape.bump?.push ?? 0,
+    write: (v) => {
+      lab.shape =
+        Math.abs(v) < 0.001
+          ? { ...lab.shape, bump: undefined }
+          : { ...lab.shape, bump: { at: lab.shape.bump?.at ?? bendStart(lab.shape) - 60, push: v } };
+      restart(false);
+    },
+    show: (v) => (Math.abs(v) < 0.001 ? 'off' : `${v > 0 ? 'right' : 'left'} ${Math.abs(v).toFixed(2)}`),
+  });
+  slider({
+    name: 'Where',
+    low: 20, high: 2000, step: 10,
+    read: () => lab.shape.bump?.at ?? bendStart(lab.shape) - 60,
+    write: (v) => {
+      if (lab.shape.bump === undefined) return;
+      lab.shape = { ...lab.shape, bump: { ...lab.shape.bump, at: Math.min(v, shapeLength(lab.shape) - 10) } };
+      restart(false);
+    },
+    show: (v) => v.toFixed(0),
+  });
 
   section('The ghost');
   slider({
@@ -613,6 +680,9 @@ function sizeFor(canvas: HTMLCanvasElement): { width: number; height: number } {
   return { width, height };
 }
 
+/** The view the road was last drawn with, so a tap can be read back into it. */
+let lastView: View | undefined;
+
 function paint(): void {
   const track = document.getElementById('track') as HTMLCanvasElement;
   const ctx = track.getContext('2d') as CanvasRenderingContext2D;
@@ -626,7 +696,9 @@ function paint(): void {
   );
   const view: View = fit(lab.shape, width, height, Math.min(strayed, LOST));
 
+  lastView = view;
   drawRoad(ctx, view, lab.shape);
+  drawBump(ctx, view, lab.shape);
   for (const old of lab.past) drawTrail(ctx, view, lab.shape, old, 'rgba(126,224,255,0.22)', true);
   if (lab.showGhost) {
     drawTrail(ctx, view, lab.shape, lab.ghostTrail, GHOST, true);

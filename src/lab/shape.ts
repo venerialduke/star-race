@@ -11,6 +11,20 @@
 /** Which way the bend goes. `1` turns right, `-1` turns left. */
 export type Hand = 1 | -1;
 
+/**
+ * A shove sideways at a point on the road — debris, a rival, a gust.
+ *
+ * The one thing on the course that is not the course. It exists so that being
+ * thrown off the line can be *caused* rather than waited for, which is the only
+ * way to see what a navigation system does about it.
+ */
+export interface Bump {
+  /** How far along the centre line it sits. */
+  readonly at: number;
+  /** The sideways velocity it adds, in units per tick. Positive shoves right. */
+  readonly push: number;
+}
+
 export interface Shape {
   /** The approach straight, in units. */
   readonly entry: number;
@@ -23,6 +37,7 @@ export interface Shape {
   readonly hand: Hand;
   /** Half the width of the golden path. Nothing enforces it; it is a mark. */
   readonly halfWidth: number;
+  readonly bump?: Bump | undefined;
 }
 
 export interface Point {
@@ -111,4 +126,16 @@ export function placeAt(shape: Shape, along: number, offset: number): Point {
     x: centre.x + offset * Math.sin(heading),
     y: centre.y - offset * Math.cos(heading),
   };
+}
+
+/**
+ * Whether a tick that moved the ship from `was` to `now` crossed the bump.
+ *
+ * Checked as a crossing rather than a proximity, so a fast ship cannot step
+ * over it and a stopped one cannot sit in it being shoved every tick.
+ */
+export function crossedBump(shape: Shape, was: number, now: number): Bump | undefined {
+  const bump = shape.bump;
+  if (bump === undefined) return undefined;
+  return was < bump.at && now >= bump.at ? bump : undefined;
 }

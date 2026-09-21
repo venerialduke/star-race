@@ -88,11 +88,42 @@ export const SLIDING_YAW = 0.22;
 // worth. It is a PD controller on the offset plus the steering the bend needs.
 // ---------------------------------------------------------------------------
 
-/** How hard the ghost pulls back toward the centre line, per unit off it. */
-export const GHOST_PULL = 0.00055;
+/**
+ * How hard the ghost pulls back toward the centre line, per unit off it, and
+ * how hard it damps its own approach, per unit of sideways.
+ *
+ * Both are about ten times what they were, which is only safe because of the
+ * two rules below. Measured against a shove at four places on the course and
+ * three ships: back on the line in 142 ticks instead of 245, and a tighter
+ * clean lap (0.63 off instead of 0.90), for 1.5% on the clock.
+ */
+export const GHOST_PULL = 0.006;
+export const GHOST_DAMP = 0.12;
 
-/** How hard the ghost damps its own approach to the line, per unit of sideways. */
-export const GHOST_DAMP = 0.055;
+/**
+ * The bend gets its steering first; the correction may only have the lock left
+ * over, plus this much overdraw.
+ *
+ * Without it a stiff correction fights the feed-forward and the ship simply
+ * leaves the corner: shoved before turn-in, the same gains go from 6.8 units
+ * off with this rule to 60.7 without it.
+ */
+export const RECOVER_OVERDRAW = 0.5;
+
+/**
+ * And when there is no lock to spare, the answer is not to steer harder, it is
+ * to slow down: if getting back to the line needs `fix` of the lock, the bend
+ * may only have `1 - fix`, so the ship must be down to
+ * `sqrt(grip · (1 - fix) / curvature)`.
+ *
+ * This is the whole of why an excursion costs time. Nothing punishes going
+ * wide in the lab — being off the line is slower on its own, because getting
+ * back spends the grip the corner was using. A penalty that falls out of the
+ * physics beats one that is invented.
+ */
+export const RECOVER_DEADBAND = 0.25;
+export const RECOVER_LEAST = 0.15;
+export const RECOVER_MOST = 0.85;
 
 /** How far ahead the ghost reads the road, in units. */
 export const GHOST_SIGHT = 700;
@@ -151,10 +182,34 @@ export const WANDER_SETTLE = 0.02;
  * How far a ship with no navigation misjudges the line, as a multiple of the
  * path's half-width.
  */
-export const NAV_WANDER_LINE = 1.15;
+export const NAV_WANDER_LINE = 0.9;
 
 /**
  * How badly a ship with no navigation misjudges its own speed ceiling, as a
  * fraction of it. Sometimes it arrives too hot, sometimes it crawls.
  */
-export const NAV_WANDER_PACE = 0.22;
+export const NAV_WANDER_PACE = 0.35;
+
+/**
+ * How the rating maps onto the three things it is made of.
+ *
+ * A straight line through all three made 0 and 50 feel like the same ship, and
+ * simply making the bottom worse made 0 and 25 feel like the same ship instead.
+ * What separates them is failing *differently*, not failing more:
+ *
+ * - `NAV_LEAD_CURVE` below 1: anticipation comes back fast, so a rating of 50
+ *   already reads most of the road ahead and looks broadly competent.
+ * - `NAV_LINE_CURVE` near 1: the wobble in where it thinks the line is fades
+ *   about evenly across the dial, and its amplitude is *smaller* than it was.
+ * - `NAV_PACE_CURVE` well above 1: misjudging its own speed is concentrated at
+ *   the very bottom. That is what makes no-navigation look different in kind
+ *   rather than in degree — it does not wobble more, it arrives at corners
+ *   hopelessly wrong and blows them.
+ *
+ * Measured over thirty runs a rating (r55/90°, handling 1.2): median units off
+ * the line 22.4 / 16.4 / 8.7 / 3.4 / 0.4 at 0 / 25 / 50 / 75 / 100, and a lap
+ * 48% / 30% / 25% / 14% / 0% longer than the reference.
+ */
+export const NAV_LEAD_CURVE = 0.6;
+export const NAV_LINE_CURVE = 1.3;
+export const NAV_PACE_CURVE = 3.0;

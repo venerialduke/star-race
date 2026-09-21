@@ -134,7 +134,51 @@ function navTable(): void {
   console.log('  it is a range. Being badly navigated is mostly about the bad days.');
 }
 
+function shoveTable(): void {
+  const ship = shipWith(1.2);
+  console.log('\n\nBEING THROWN OFF, AND GETTING BACK. A shove of 0.3 sideways at four');
+  console.log('places on the course, for a ship with each navigation rating.\n');
+  console.log('  shove at          |  ' + [0, 40, 70, 100].map((n) => `nav ${String(n).padStart(3)}`).join('      '));
+  console.log('  ' + '─'.repeat(68));
+  const spots: [string, number][] = [
+    ['the straight', 180],
+    ['before turn-in', bendStart(SHAPE) - 40],
+    ['mid-bend', bendStart(SHAPE) + 43],
+    ['late in the bend', bendStart(SHAPE) + 75],
+  ];
+  for (const [name, at] of spots) {
+    const shape: Shape = { ...SHAPE, bump: { at, push: 0.3 } };
+    const cells = [0, 40, 70, 100].map((nav) => {
+      let worst = 0;
+      let back = 0;
+      const seeds = nav === 100 ? 1 : 12;
+      for (let seed = 0; seed < seeds; seed += 1) {
+        const run = fly(ship, shape, makePilot(ship, shape, nav, seed * 7919 + 13), atRest(0.6));
+        let hit = -1;
+        let left = false;
+        let mine = 0;
+        let got = -1;
+        for (const state of run.path) {
+          if (hit < 0 && state.along >= at) hit = state.tick;
+          if (hit < 0) continue;
+          mine = Math.max(mine, Math.abs(state.offset));
+          if (Math.abs(state.offset) > 3) left = true;
+          if (left && got < 0 && Math.abs(state.offset) < 1) got = state.tick - hit;
+        }
+        worst += mine / seeds;
+        back += (got < 0 ? run.ticks - hit : got) / seeds;
+      }
+      return `${worst.toFixed(1)}/${back.toFixed(0)}t`.padStart(11);
+    });
+    console.log(`  ${name.padEnd(17)} |${cells.join('')}`);
+  }
+  console.log('\n  Worst units off the line after the shove, then ticks to get back within');
+  console.log('  one of it. Nothing in the lab punishes an excursion — it is slow because');
+  console.log('  getting back spends the grip the corner was using.');
+}
+
 widthTable();
 ghostTable();
 navTable();
+shoveTable();
 console.log('');

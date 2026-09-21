@@ -16,6 +16,7 @@ import {
   bendEnd,
   bendStart,
   centreAt,
+  crossedBump,
   curvatureAt,
   headingAt,
   placeAt,
@@ -72,6 +73,16 @@ describe('the shape', () => {
     const outer = placeAt(SHAPE, mid, -5);
     expect(Math.hypot(inner.x - hub.x, inner.y - hub.y)).toBeLessThan(SHAPE.radius);
     expect(Math.hypot(outer.x - hub.x, outer.y - hub.y)).toBeGreaterThan(SHAPE.radius);
+  });
+});
+
+describe('the shove on the course', () => {
+  it('is crossed, not sat in', () => {
+    const shape: Shape = { ...SHAPE, bump: { at: 100, push: 0.3 } };
+    expect(crossedBump(shape, 98, 101)).toEqual({ at: 100, push: 0.3 });
+    expect(crossedBump(shape, 101, 104)).toBeUndefined();
+    expect(crossedBump(shape, 90, 99)).toBeUndefined();
+    expect(crossedBump(SHAPE, 98, 101)).toBeUndefined();
   });
 });
 
@@ -275,7 +286,90 @@ describe('the navigation rating', () => {
       const xs = spread(nav);
       return Math.max(...xs) - Math.min(...xs);
     };
-    expect(range(0)).toBeGreaterThan(range(100) + SHAPE.halfWidth * 3);
+    // Measured at about 22 units of spread at 0 against none at all at 100.
+    expect(range(100)).toBeLessThan(0.5);
+    expect(range(0)).toBeGreaterThan(SHAPE.halfWidth * 1.5);
+  });
+
+  it('puts real distance between no navigation and half of it', () => {
+    // The owner's complaint: 0 and 50 felt like the same ship. They are not
+    // allowed to be again. Both the line and the clock have to separate.
+    const none = median(spread(0));
+    const half = median(spread(50));
+    expect(none).toBeGreaterThan(half * 2);
+
+    const lap = (nav: number): number => {
+      const ticks = Array.from({ length: 25 }, (_, i) =>
+        fly(ship, SHAPE, makePilot(ship, SHAPE, nav, i * 7919 + 13), atRest(0.6)).ticks,
+      );
+      return median(ticks);
+    };
+    expect(lap(0)).toBeGreaterThan(lap(50) * 1.12);
+    expect(lap(50)).toBeGreaterThan(lap(100) * 1.12);
+  });
+});
+
+describe('a shove, and what navigation does about it', () => {
+  const ship = shipWith(1.2);
+  const SHOVE = 0.3;
+  const shoved = (at: number, nav = 100): { worst: number; back: number; ticks: number } => {
+    const shape: Shape = { ...SHAPE, bump: { at, push: SHOVE } };
+    const run = fly(ship, shape, makePilot(ship, shape, nav, 5), atRest(0.6));
+    let hit = -1;
+    let worst = 0;
+    let left = false;
+    let back = -1;
+    for (const state of run.path) {
+      if (hit < 0 && state.along >= at) hit = state.tick;
+      if (hit < 0) continue;
+      worst = Math.max(worst, Math.abs(state.offset));
+      if (Math.abs(state.offset) > 3) left = true;
+      if (left && back < 0 && Math.abs(state.offset) < 1) back = state.tick - hit;
+    }
+    return { worst, back, ticks: run.ticks };
+  };
+
+  it('does nothing at all until the ship reaches it, and then throws it off', () => {
+    const at = bendStart(SHAPE) - 120;
+    const shape: Shape = { ...SHAPE, bump: { at, push: SHOVE } };
+    const run = fly(ship, shape, makePilot(ship, shape, 100, 5), atRest(0.6));
+    const before = run.path.filter((s) => s.along < at);
+    expect(Math.max(...before.map((s) => Math.abs(s.offset)))).toBeLessThan(1);
+    expect(shoved(at).worst).toBeGreaterThan(4);
+  });
+
+  it('fires exactly once, however fast the ship is going over it', () => {
+    // A crossing, not a proximity: a quick ship cannot step over it and a slow
+    // one cannot sit in it being shoved every tick.
+    const at = 200;
+    const shape: Shape = { ...SHAPE, bump: { at, push: SHOVE } };
+    const run = fly(ship, shape, makePilot(ship, shape, 100, 5), atRest(0.6));
+    const jumps = run.path.filter((s, i) => {
+      const was = run.path[i - 1];
+      return was !== undefined && Math.abs(s.yaw - was.yaw) > 0.1;
+    });
+    expect(jumps.length).toBe(1);
+  });
+
+  it('gets a perfectly navigated ship back on the line wherever it is shoved', () => {
+    for (const at of [180, bendStart(SHAPE) - 40, bendStart(SHAPE) + 43, bendStart(SHAPE) + 75]) {
+      const run = shoved(at);
+      // Thrown off, but never further than a path-width and a half, and back.
+      expect(run.worst).toBeLessThan(SHAPE.halfWidth * 1.5);
+      expect(run.back).toBeGreaterThan(0);
+    }
+  });
+
+  it('costs time to be off the line, without anything punishing it for being off', () => {
+    // The only reason an excursion is slow: getting back spends the grip the
+    // corner was using, so the ship has to be slower through the corner.
+    const clean = fly(ship, SHAPE, makePilot(ship, SHAPE, 100, 5), atRest(0.6)).ticks;
+    expect(shoved(bendStart(SHAPE) - 40).ticks).toBeGreaterThan(clean);
+  });
+
+  it('recovers worse the less navigation it has', () => {
+    const at = bendStart(SHAPE) - 40;
+    expect(shoved(at, 0).worst).toBeGreaterThan(shoved(at, 100).worst);
   });
 
   it('still gets a ship with no navigation round, slower and untidily', () => {

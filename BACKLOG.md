@@ -1194,6 +1194,65 @@ which is a much better thing to sell a component against than an average.
 Each run draws a fresh seed, so pressing `R` a few times shows the spread rather
 than one lucky attempt.
 
+### A shove you place, and a recovery worth the name
+
+_Added 2026-09-21, after playtesting the rating._ Four things, all from the
+same session's feedback: 0 and 50 felt alike, correcting back to the line was
+too lazy, it was unclear whether perfect navigation could recover at all, and
+there was no way to make it try.
+
+**The shove.** `Shape.bump` is a sideways velocity applied at a point on the
+course — tap the road in the lab to place it, or use the sliders. It is a
+*crossing*, not a proximity, so a fast ship cannot step over it and a stopped
+one cannot sit in it. Both the player and the ghost hit it. It is what turned
+"can it recover?" from a guess into a measurement.
+
+**Recovery, rebuilt around two rules.** The gains are about ten times what they
+were, which is only safe because of these:
+
+1. **The bend is served first.** The correction may only have the lock the
+   feed-forward is not using, plus `RECOVER_OVERDRAW`. Without this rule a
+   stiff correction fights the feed-forward and the ship simply leaves the
+   corner: shoved before turn-in, the same gains give 6.8 units off with the
+   rule and **60.7 without it**.
+2. **When there is no lock spare, slow down.** If getting back needs `fix` of
+   the lock, the bend may only have `1 - fix`, so the ship must be down to
+   `sqrt(grip · (1 - fix) / curvature)`. This was the missing piece: with rule 1
+   alone, a shove mid-bend went from 5.6 units off to 19.9, because at the limit
+   there is nothing to allocate. Lifting fixes it (19.9 → 8.0).
+
+Net against the old controller: **back on the line in 142 ticks instead of
+245**, a tighter clean lap (0.63 units off instead of 0.90), the same width
+after a shove, for 1.5% on the clock.
+
+**And this is where the cost of an excursion comes from.** Nothing in the lab
+punishes going wide. It is slow anyway, because getting back spends the grip
+the corner was using. A penalty that falls out of the physics beats one that is
+invented, and it means the game may not need `WIDE_SPEED_FLOOR` and its
+friends at all.
+
+**The rating, reshaped.** A straight line through all three failings made 0 and
+50 feel alike; simply making the bottom worse made 0 and 25 feel alike instead.
+What separates them is failing **differently**:
+
+- anticipation comes back fast (`skill ^ 0.6`), so 50 already looks broadly
+  competent;
+- the wobble in where it thinks the line is fades about evenly (`^1.3`), and its
+  amplitude is now *smaller* than before;
+- misjudging its own pace is concentrated at the very bottom (`^3.0`), so a ship
+  with no navigation does not wobble more, it arrives at corners hopelessly
+  wrong and blows them.
+
+| nav | median off | 90th | ticks | left the path |
+| --- | --- | --- | --- | --- |
+| 0 | 22.4 | 33.5 | 1226 | 100% |
+| 25 | 16.1 | 28.2 | 1073 | 100% |
+| 55 | 8.7 | 10.6 | 1038 | 40% |
+| 85 | 1.6 | 2.1 | 861 | 0% |
+| 100 | 0.4 | 0.4 | 831 | 0% |
+
+0 against 50 is now 22.4 units against ~10, and 48% longer against 25%.
+
 ### Left open, deliberately
 
 - **No penalty of any kind.** Pricing an excursion is the next question, not

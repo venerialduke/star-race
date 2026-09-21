@@ -31,14 +31,21 @@ import {
   GHOST_SOFT,
   MIN_ROLLING_SPEED,
   MOST_YAW,
+  NAV_LEAD_CURVE,
+  NAV_LINE_CURVE,
+  NAV_PACE_CURVE,
   NAV_WANDER_LINE,
+  RECOVER_DEADBAND,
+  RECOVER_LEAST,
+  RECOVER_MOST,
+  RECOVER_OVERDRAW,
   NAV_WANDER_PACE,
   STEER_RATE,
   THROTTLE_RATE_DOWN,
   THROTTLE_RATE_UP,
   WANDER_SETTLE,
 } from './knobs';
-import { curvatureAt, shapeLength, type Shape } from './shape';
+import { crossedBump, curvatureAt, shapeLength, type Shape } from './shape';
 
 export interface Ship {
   /** The fastest it will go, in units per tick. */
@@ -162,11 +169,21 @@ export function step(ship: Ship, shape: Shape, state: Flight, input: Input): Fli
   // A ship pointing off the road goes off the road, and makes less progress
   // along it while doing so.
   const drift = -speed * Math.sin(yaw);
+  const along = state.along + speed * Math.cos(yaw);
+
+  // Anything on the road that shoves the ship sideways does it here, by adding
+  // to how fast it is already going sideways and re-deriving where it points.
+  const bump = crossedBump(shape, state.along, along);
+  const knocked =
+    bump === undefined
+      ? yaw
+      : -Math.asin(clamp((drift + bump.push) / Math.max(speed, MIN_ROLLING_SPEED), -1, 1));
+
   return {
-    along: state.along + speed * Math.cos(yaw),
+    along,
     offset: state.offset + drift,
     speed,
-    yaw,
+    yaw: clamp(knocked, -MOST_YAW, MOST_YAW),
     steer,
     throttle,
     tick: state.tick + 1,
@@ -209,20 +226,34 @@ function drive(
   lineError: number,
   paceError: number,
 ): Input {
-  const ceiling = ceilingAhead(ship, shape, state.along) * (1 + paceError);
-  const throttle = clamp((ceiling - state.speed) / GHOST_SOFT, -1, 1);
-
   // Read `lead` ticks of road ahead, not underfoot: steering answers over
   // `1 / STEER_RATE` ticks, and a ship that waits for the bend to arrive has
   // already been thrown wide by the time the lock is on. At the limit there is
   // no lock left over to correct with, so the moment is not recoverable —
   // which is why this one line is worth nine units of road.
   const curve = curvatureAt(shape, state.along + state.speed * lead);
-  const want =
-    curve * state.speed * state.speed -
-    (state.offset - lineError) * GHOST_PULL -
-    sideways(state) * GHOST_DAMP;
-  return { throttle, steer: clamp(want / ship.grip, -1, 1) };
+  const hold = (curve * state.speed * state.speed) / ship.grip;
+
+  // What getting back to the line would ask of the steering, in lock.
+  const fix =
+    (-(state.offset - lineError) * GHOST_PULL - sideways(state) * GHOST_DAMP) / ship.grip;
+
+  // If that asks for lock the bend is already using, the answer is not to steer
+  // harder — it is to be going slowly enough that the bend needs less.
+  let ceiling = ceilingAhead(ship, shape, state.along) * (1 + paceError);
+  const under = Math.abs(curvatureAt(shape, state.along));
+  if (under > 0) {
+    const asked = Math.max(0, Math.abs(fix) - RECOVER_DEADBAND);
+    const spare = Math.max(RECOVER_LEAST, 1 - Math.min(RECOVER_MOST, asked));
+    ceiling = Math.min(ceiling, Math.sqrt((ship.grip * spare) / under));
+  }
+
+  // The bend is served first; the correction gets what is left, plus a little.
+  const room = Math.max(0, 1 - Math.abs(hold)) + RECOVER_OVERDRAW;
+  return {
+    throttle: clamp((ceiling - state.speed) / GHOST_SOFT, -1, 1),
+    steer: clamp(hold + clamp(fix, -room, room), -1, 1),
+  };
 }
 
 /**
@@ -253,7 +284,12 @@ export type Pilot = (state: Flight) => Input;
  */
 export function makePilot(ship: Ship, shape: Shape, nav: number, seed: number): Pilot {
   const skill = clamp(nav, 0, 100) / 100;
-  const lost = 1 - skill;
+  // Anticipation comes back fast; the wobble fades evenly; misjudging its own
+  // pace is concentrated at the very bottom, which is what makes a ship with
+  // no navigation fail differently rather than just more.
+  const reads = Math.pow(skill, NAV_LEAD_CURVE);
+  const lostLine = Math.pow(1 - skill, NAV_LINE_CURVE);
+  const lostPace = Math.pow(1 - skill, NAV_PACE_CURVE);
   const line: Rng = makeRng(seed).fork(1);
   const pace: Rng = makeRng(seed).fork(2);
   let lineWander = 0;
@@ -276,9 +312,9 @@ export function makePilot(ship: Ship, shape: Shape, nav: number, seed: number): 
       ship,
       shape,
       state,
-      GHOST_LEAD * skill,
-      lineWander * lost * NAV_WANDER_LINE * shape.halfWidth,
-      paceWander * lost * NAV_WANDER_PACE,
+      GHOST_LEAD * reads,
+      lineWander * lostLine * NAV_WANDER_LINE * shape.halfWidth,
+      paceWander * lostPace * NAV_WANDER_PACE,
     );
   };
 }

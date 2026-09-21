@@ -161,6 +161,69 @@ export function drawRoad(ctx: CanvasRenderingContext2D, view: View, shape: Shape
 }
 
 /**
+ * The shove, drawn where it sits and pointing the way it pushes.
+ *
+ * Deliberately loud. It is the one thing on the course you put there, and the
+ * whole reason to put it there is to watch what happens just after it.
+ */
+export function drawBump(ctx: CanvasRenderingContext2D, view: View, shape: Shape): void {
+  const bump = shape.bump;
+  if (bump === undefined) return;
+  const half = shape.halfWidth;
+  const a = screen(view, placeAt(shape, bump.at, -half - 4));
+  const b = screen(view, placeAt(shape, bump.at, half + 4));
+  ctx.strokeStyle = '#ff7a6b';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // An arrow along the road's own right, so which way it shoves is unambiguous.
+  const from = screen(view, placeAt(shape, bump.at, 0));
+  const to = screen(view, placeAt(shape, bump.at, Math.sign(bump.push) * (half + 4)));
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  ctx.strokeStyle = '#ff7a6b';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+  ctx.fillStyle = '#ff7a6b';
+  ctx.beginPath();
+  ctx.moveTo(to.x, to.y);
+  ctx.lineTo(to.x - 7 * Math.cos(angle - 0.4), to.y - 7 * Math.sin(angle - 0.4));
+  ctx.lineTo(to.x - 7 * Math.cos(angle + 0.4), to.y - 7 * Math.sin(angle + 0.4));
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#ff9fb0';
+  ctx.font = '10px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('shove', from.x, Math.min(a.y, b.y) - 8);
+}
+
+/**
+ * The distance along the centre line nearest to a point on the canvas, so the
+ * shove can be put somewhere by pointing at it.
+ */
+export function alongAtScreen(shape: Shape, view: View, x: number, y: number): number {
+  let best = 0;
+  let near = Infinity;
+  for (const d of samples(shape, 3)) {
+    const p = screen(view, centreAt(shape, d));
+    const gap = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (gap < near) {
+      near = gap;
+      best = d;
+    }
+  }
+  return best;
+}
+
+/**
  * Where a ship has been. Off-path stretches are drawn hot — nothing punishes
  * them in the lab, but you should still be able to see them.
  */

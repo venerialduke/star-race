@@ -252,6 +252,16 @@ export interface RaceConfig {
   readonly build?: readonly Fitted[];
   readonly plan: CornerPlan;
   /**
+   * How fast to enter a bend, as a multiple of its holding speed — one number
+   * that replaces the corner plan when it is set.
+   *
+   * It subsumes all three: 0.97 is Lift, and anything high enough that the
+   * braking distance never reaches is Charge. The point of a continuous aim is
+   * that there is an *optimum* between them, which a ship can be more or less
+   * good at finding. Set, it overrides `plan` entirely.
+   */
+  readonly aim?: number;
+  /**
    * The way through each sector, decided before the lap that flies it — one
    * index per sector. A ship can still be thrown onto a different line at the
    * fork, but never choose one there.
@@ -444,12 +454,19 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     arrived.carry +
     (towLeft > 0 ? TRACTOR_TOW_PULL : 0);
   const chaining = state.perfectLeft > 0 || fired?.id === 'three-bends';
+  const aim = config.aim;
   if (onBend) {
     // What this plan is willing to take the bend at. Charge ignores it.
-    const cap = plan === 'lift' ? holding * LIFT_MARGIN : holding;
-    if (chaining || plan === 'charge') speed = Math.min(topSpeed, speed + accel);
-    else if (speed > cap) {
-      speed = plan === 'lift' ? cap : Math.max(cap, speed - CARRY_SCRUB);
+    const cap = aim !== undefined ? holding * aim : plan === 'lift' ? holding * LIFT_MARGIN : holding;
+    if (chaining || (aim === undefined && plan === 'charge')) {
+      speed = Math.min(topSpeed, speed + accel);
+    } else if (speed > cap) {
+      speed =
+        aim !== undefined
+          ? Math.max(cap, speed - CARRY_SCRUB)
+          : plan === 'lift'
+            ? cap
+            : Math.max(cap, speed - CARRY_SCRUB);
     } else {
       // Below what the bend allows, a ship still gets on with it. Without this
       // Lift and Carry did nothing at all on a bend they were already slow
@@ -460,8 +477,9 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   } else {
     const ahead = lookAhead(track, sector, route, along, config.routes);
     let braking = false;
-    if (plan === 'lift' && ahead !== undefined) {
-      const target = holdingSpeed(ahead.bend.radius, handling) * effect.grip * LIFT_MARGIN;
+    if ((aim !== undefined || plan === 'lift') && ahead !== undefined) {
+      const target =
+        holdingSpeed(ahead.bend.radius, handling) * effect.grip * (aim ?? LIFT_MARGIN);
       braking = ahead.gap <= brakingDistance(speed, target);
       if (braking) speed = Math.max(target, speed - BRAKE_PER_TICK);
     }
@@ -477,11 +495,11 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   // a Charge that holds top speed never "accelerates", so it read as the
   // gentlest plan in the game.
   const cornering = onBend ? (speed * speed) / here.radius : 0;
-  const pushing =
-    Math.max(0, speed - state.speed) + (onBend && plan === 'charge' ? accel : 0);
+  const charging = aim === undefined && plan === 'charge';
+  const pushing = Math.max(0, speed - state.speed) + (onBend && charging ? accel : 0);
   const load =
     (cornering * GRAVITY_PER_CORNER + pushing * GRAVITY_PER_ACCEL) *
-    (onBend && plan === 'charge' ? GRAVITY_CHARGE_MULTIPLIER : 1);
+    (onBend && charging ? GRAVITY_CHARGE_MULTIPLIER : 1);
   const endurance = Math.max(0.05, stats.endurance);
   // Coasting is what recovers a crew, so the two never cancel each other out.
   const worn = Math.min(
@@ -527,12 +545,15 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
     // the swing is drawn from a worse place rather than punished separately.
     // Lift takes no swing at all, which makes it the plan shadow cannot touch —
     // giving up the speed is giving up the surprise.
-    const excess =
-      perfect || plan === 'lift'
-        ? 0
-        : rawExcess +
-          (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0) +
-          (1 - effect.sight) * SIGHT_EXCESS;
+    const excess = perfect
+      ? 0
+      : aim !== undefined
+        ? rawExcess + (1 - effect.sight) * SIGHT_EXCESS
+        : plan === 'lift'
+          ? 0
+          : rawExcess +
+            (plan === 'charge' ? CHARGE_EXCESS_BONUS : 0) +
+            (1 - effect.sight) * SIGHT_EXCESS;
     const spread = SWING_SPREAD * Math.pow(excess, SWING_EXPONENT);
     const draw = drawFor(config.seed, key as string, state.lap).unitInterval();
     const swing = spread * draw;

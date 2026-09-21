@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "design-page": "tsx scripts/design-page.ts",
     "mechanics-page": "tsx scripts/mechanics-page.ts",
-    "balance": "tsx scripts/balance.ts"
+    "balance": "tsx scripts/balance.ts",
+    "optimal": "tsx scripts/optimal.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

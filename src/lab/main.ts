@@ -374,7 +374,10 @@ function buildTray(): void {
   acts.append(again, shut);
   tray.append(acts);
 
-  (document.getElementById('tune') as HTMLElement).addEventListener('click', () => {
+  const opener = document.getElementById('tune') as HTMLElement;
+  opener.addEventListener('click', () => {
+    // It only has to be noticed once.
+    opener.classList.remove('new');
     tray.classList.toggle('open');
   });
 }
@@ -461,7 +464,10 @@ function verdict(): string {
       : `Corner in <em>${gap.toFixed(0)}</em>. You have room.`;
   }
   if (you.along > bendEnd(shape)) return 'Out. Get back on the power.';
-  return 'Thrust to build speed. The corner is what you are building it for.';
+  return (
+    'Thrust to build speed — the corner is what you are building it for. ' +
+    '<em>Ship &amp; corner</em>, top right, changes the ship and the bend.'
+  );
 }
 
 function paintHud(): void {

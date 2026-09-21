@@ -31,7 +31,7 @@
       /* ---- the readouts, floating over the road ---- */
       #hud {
         position: absolute; top: 0; left: 0; right: 0;
-        padding: calc(8px + env(safe-area-inset-top)) 78px 8px 10px;
+        padding: calc(8px + env(safe-area-inset-top)) 128px 8px 10px;
         display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none;
       }
       .card {
@@ -88,11 +88,37 @@
       .pad.slow.on { background: #4a2a2a; border-color: var(--warn); }
 
       /* ---- the tuning tray ---- */
+      /* The way into every slider in the lab, so it is not a dark box in a
+         dark corner. It pulses until it has been opened once. */
       #tune {
         position: absolute; top: calc(8px + env(safe-area-inset-top)); right: 10px;
-        z-index: 4; background: rgba(11,20,40,0.82); color: var(--ink);
-        border: 1px solid var(--rule); border-radius: 8px; padding: 6px 10px;
-        font: inherit; font-size: 12px; cursor: pointer; pointer-events: auto;
+        z-index: 4; background: #2b3c6f; color: var(--ink);
+        border: 1px solid var(--cyan); border-radius: 8px; padding: 7px 12px;
+        font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+        pointer-events: auto; white-space: nowrap;
+        box-shadow: 0 0 0 0 rgba(126, 224, 255, 0.55);
+      }
+      /* On a phone the readouts must not eat the road: tighter cards, two
+         rows instead of three, and a smaller line for the running commentary. */
+      @media (max-width: 560px) {
+        #hud { padding-right: 116px; gap: 4px; }
+        .card { min-width: 0; padding: 3px 7px; border-radius: 7px; }
+        .card b { font-size: 8px; letter-spacing: 0.06em; }
+        .card span { font-size: 13px; }
+        #verdict { font-size: 11px; line-height: 1.35; }
+        #tune { padding: 6px 9px; font-size: 11.5px; }
+        #strip { height: 44px; }
+        .gauge b { font-size: 8px; }
+        .pad { padding: 11px 3px; }
+      }
+      #tune.new { animation: knock 2.1s ease-out 3; }
+      @keyframes knock {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(126, 224, 255, 0); }
+        18% { box-shadow: 0 0 0 7px rgba(126, 224, 255, 0.28); }
+        36% { box-shadow: 0 0 0 0 rgba(126, 224, 255, 0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #tune.new { animation: none; }
       }
       #tray {
         position: absolute; top: 0; right: 0; bottom: 0; width: min(330px, 88vw);
@@ -132,7 +158,7 @@
     <div id="app">
       <canvas id="track"></canvas>
       <div id="hud"></div>
-      <button id="tune">Tune</button>
+      <button id="tune" class="new">Ship &amp; corner</button>
       <div id="deck">
         <canvas id="strip"></canvas>
         <div class="gauges" id="gauges"></div>

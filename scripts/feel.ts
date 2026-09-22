@@ -36,7 +36,7 @@ const SHAPE: Shape = {
   exit: 320,
   hand: 1,
   halfWidth: PATH_HALF_WIDTH,
-  bumpers: { from: PATH_HALF_WIDTH * BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
+  bumpers: { from: BUMPER_FROM, ramp: BUMPER_RAMP, push: BUMPER_PUSH },
 };
 
 const HANDLINGS = [0.7, 1.0, 1.3, 1.6, 2.0];

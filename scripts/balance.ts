@@ -352,8 +352,27 @@ function playSeason(
     }
     if (up.kind === 'pacing') {
       shopPlayer(up.track);
-      // Six per cent over par: a competent lap, not a heroic one.
-      season = settlePacing(season, Math.round(up.track.par * 1.06), up.track.par);
+      // Flown, not assumed. It used to be `par * 1.06` — "a competent lap, not
+      // a heroic one" — which is always over par whatever par is, so every
+      // policy took `PACING_BASE` and nothing else, and what a policy had
+      // bought by the pacing lap could not pay it back. That is the same shape
+      // as the four lies this harness has told before: a policy that cannot
+      // earn reads exactly like a policy that is worse.
+      //
+      // A par is now the reference lap plus the whole pacing bonus, so this is
+      // worth up to `PACING_CAP` and the ships that earn it are the ones that
+      // bought an engine and a navigation system first.
+      const me = racerById(season, 'player');
+      const flown = resolveHeat([entrantFor(me as never)], {
+        track: up.track,
+        laps: 1,
+        seed: season.seed + season.phase * 7 + season.heat,
+      });
+      season = settlePacing(
+        season,
+        flown[0]?.ticks ?? up.track.par,
+        up.track.par,
+      );
       continue;
     }
     shopPlayer(up.track);

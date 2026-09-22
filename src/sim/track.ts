@@ -267,6 +267,12 @@ export interface Track {
    * The benchmark lap, in ticks — what the pacing lap is paid against. Level
    * data, measured: a ship that spends its opening budget well and carries
    * speed through the bends beats it, and one that does neither does not.
+   *
+   * It is **the reference lap plus the whole pacing bonus**, so spending the
+   * opening budget well takes all of it. `npm run pars` measures the reference
+   * lap on every track and prints what each par should be; run it after
+   * anything that changes how a ship flies, because a par authored against a
+   * different model is a number nobody can read.
    */
   readonly par: number;
   readonly samples: readonly Sample[];
@@ -569,7 +575,12 @@ const KESTREL_RING: readonly Section[] = [
 export const KESTREL_LOOP = assemblePlan({
   name: 'Kestrel Loop',
   shape: 'medium · mixed bends',
-  par: 2100,
+  // `npm run pars`. A par is the reference lap plus 393 ticks, which is the
+  // whole pacing bonus: a ship that spends its opening budget well takes all
+  // of it, and one that does not takes part of it or none. The reference is an
+  // engine and a navigation system, one level each — 60 of the 100 a season
+  // opens with.
+  par: 3796,
   ring: KESTREL_RING,
   splits: [
     {
@@ -622,7 +633,10 @@ const MERIDIAN_RING: readonly Section[] = [
 export const MERIDIAN_RUN = assemblePlan({
   name: 'Meridian Run',
   shape: 'long · open sweepers',
-  par: 3250,
+  // `npm run pars`, as above. The only track a ship with two speed engines and
+  // no navigation system beats — which is the track doing its job rather than
+  // the par being soft: it is the one that pays for top speed.
+  par: 5422,
   ring: MERIDIAN_RING,
   splits: [
     {
@@ -686,7 +700,8 @@ const CINDER_RING: readonly Section[] = [
 export const CINDER_COIL = assemblePlan({
   name: 'Cinder Coil',
   shape: 'short · tight and busy',
-  par: 1320,
+  // `npm run pars`, as above.
+  par: 2583,
   ring: CINDER_RING,
   splits: [
     {
@@ -790,12 +805,11 @@ const PROVING_RING: readonly Section[] = [
 export const PROVING_GROUND = assemblePlan({
   name: 'The Proving Ground',
   shape: 'crossed · every property there is',
-  // Measured, not scaled. A reference build flies this in 1476 ticks and par
-  // sits 1.27 times that, which is exactly where par sat on the old shape and
-  // within a hair of where the Cinder's sits. The lap is 16% longer than it
-  // was and two of its four bends are new, so scaling the old number would
-  // have been a guess dressed as arithmetic.
-  par: 1875,
+  // `npm run pars`, as above. This one already obeyed that rule under the old
+  // model — a reference build flew it in 1476 and par sat at 1875, which is
+  // the full bonus to the tick — and the rule is what carries across the
+  // change of model, not the number.
+  par: 3706,
   ring: PROVING_RING,
   splits: [
     {

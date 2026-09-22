@@ -691,7 +691,9 @@ mechanic they do not have.
 **S7 is done when:** two builds that spend the same credits differently both win
 seasons, and neither is "buy engines".
 
-- **S7.1 Measure in seasons, not ticks.** — **done**. `npm run balance`.
+- **S7.1 Measure in seasons, not ticks.** — **done**. `npm run balance`. Re-run
+  after the flight model, 2026-09-22: `nav` wins 69 seasons in 72. See the
+  bottom of this file.
 - **S7.2 The engine ladder.** — **half done**: the level curve and stacking are
   fixed, the cap is not. See below.
 - **S7.3 Give the tractor beam a job.** — **done, and it did not help much**.
@@ -894,6 +896,10 @@ bare `balanced3` holding 281 credits it cannot spend. Four tuning passes failed
 at this and one rule did it, because the problem was never the price: a balanced
 engine trades nothing, and no price bites on a part whose only cost is credits.
 A limit is not a price.
+
+_Superseded on 2026-09-22 — see "Navigation is the new engine-spam" below.
+Re-measured after the flight model, `nav` wins 69 of 72 and the spread in this
+table is gone. What survives it: `speed` and `handling` still win nothing._
 
 **And it created a new one.** `balanced3` now leads nine of the twelve builds,
 and every policy built on a specialist engine is at the bottom — `handling` and
@@ -1508,6 +1514,101 @@ the handling range the tighter line stops costing anything. Flown well it is
 still a cost at every grip (108 / 111 / 121), and _rises_ with grip, because
 the main line is being flown faster. That is the nearest thing to a split being
 worth taking that the game has, and `route.test.ts` now pins it.
+
+## Navigation is the new engine-spam: 69 seasons in 72
+
+_Measured 2026-09-22, on the first `npm run balance` since the flight model._
+
+The harness had not been run since ships started flying differently, so every
+number under S7 was from a different game. Re-run over 72 seasons a policy:
+
+| policy          | won        | survived | mean place |
+| --------------- | ---------- | -------- | ---------- |
+| **nav**         | **69 / 72**| 72 / 72  | **1.04**   |
+| tractor         | 4          | 38 / 72  | 3.50       |
+| engines         | 3          | 39 / 72  | 3.71       |
+| mines           | 3          | 27 / 72  | 4.35       |
+| shields         | 3          | 39 / 72  | 3.63       |
+| collector       | 2          | 38 / 72  | 3.65       |
+| bot             | 2          | 7 / 72   | 6.19       |
+| armed           | 1          | 15 / 72  | 5.15       |
+| engine-spam     | 0          | 5 / 72   | 6.33       |
+| speed           | 0          | **0 / 72** | 8.10     |
+| handling        | 0          | **0 / 72** | 7.67     |
+| dark            | 0          | 8 / 72   | 5.65       |
+
+Against the last table — engines 37, collector 37, shields 33, nav 18 — the
+spread is gone. **One monoculture was replaced by a sharper one**, and it is
+the same shape as engine-spam was: not a price that is wrong, but a part whose
+value does not trade against anything.
+
+### Ruled out first: this is not the pacing lap
+
+The pacing lap changed in the same session — the harness flies it now instead
+of assuming `par * 1.06`, and a policy that buys a navigation system first
+flies it best and banks up to `PACING_CAP` before heat one. That is a confound
+this session introduced, and this harness has reported a funding difference as
+a skill difference four times already.
+
+Control, 24 seasons with the pacing payout flattened to `PACING_BASE` for
+every policy, which is what it effectively was before: **nav still wins 21 of
+24**, mean place 1.21. The flight model owns this result. The pacing lap is
+worth a few points of it at most.
+
+### Why, in one table
+
+Kestrel Loop, mean lap over six seeds, from a bare hull:
+
+|              | no nav | nav 1 | nav 3    |
+| ------------ | ------ | ----- | -------- |
+| **engine 1** | 3843   | 3360  | **2581** |
+| **engine 3** | 2901   | 2670  | 2099     |
+
+Two more levels of engine — six copies of a component — buy **942 ticks**. A
+navigation system buys **1262**, and its first level costs 26 credits. The two
+are not additive either: with nav 3 fitted, the engine ladder is only worth
+482.
+
+"Anticipation is what a navigation system buys" was the right model. The
+trouble is that it is now worth more than what the ship is made of.
+
+### What this is really asking, and it is S7's question
+
+`nav` does two jobs: **what routes a ship may plan**, and **how well it is
+flown**. The second is worth more than any other part in the game. S7 asks for
+two builds that spend the same credits differently and both win, and today
+there is one build and the rest are hobbies.
+
+Three directions, none taken here because they are design decisions rather
+than tuning:
+
+- **Split the stat.** Route-reading and pilot skill were one number because the
+  flight model wanted a rating and this was the rating the game had. They are
+  not the same thing and nothing says they must be one component.
+- **Cap what it can close.** A navigation system could buy anticipation without
+  buying the whole gap — the pilot's three failings fade at different rates
+  already, and `NAV_LEAD_CURVE` is the one that matters.
+- **Reprice it.** Cheapest to try, least likely to work. Engine-spam took four
+  tuning passes and one rule; a part whose only cost is credits does not
+  respond to price.
+
+Also still true from the last table, and now measured twice: **`speed` and
+`handling` win 0 of 72 and survive 0 of 72.** A specialist engine flown alone
+is not a build. That is the Pit Wall's open question — should a specialist beat
+the generalist on its own stat, or be a track-specific answer that loses on
+average? — and S7 waits on the answer.
+
+### Two instruments were lying
+
+- **The harness faked the pacing lap** as `par * 1.06`, which is over par
+  whatever par is, so every policy took `PACING_BASE` and nothing else. Fixed:
+  it flies the lap. Five times now, and the shape never varies — a policy that
+  cannot earn reads exactly like a policy that is worse.
+- **`npm run feel` put the bumpers 81 units out** instead of 9. `BUMPER_FROM`
+  became an absolute distance when it moved into `tuning.ts` and this caller
+  kept multiplying by the half-width. Every table it printed after that was
+  measured on a course with no bumpers, under a comment promising "the numbers
+  you feel".
 
 ## Not scheduled
 

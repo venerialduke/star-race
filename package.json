@@ -15,7 +15,8 @@
     "design-page": "tsx scripts/design-page.ts",
     "mechanics-page": "tsx scripts/mechanics-page.ts",
     "balance": "tsx scripts/balance.ts",
-    "feel": "tsx scripts/feel.ts"
+    "feel": "tsx scripts/feel.ts",
+    "pars": "tsx scripts/pars.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

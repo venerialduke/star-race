@@ -281,12 +281,18 @@ describe('the navigation rating', () => {
     }
   });
 
-  it('keeps a well-navigated ship on the path and puts a badly navigated one off it', () => {
+  it('keeps a well-navigated ship on the path, and lets a badly navigated one off it', () => {
     const off = (nav: number): number =>
       spread(nav).filter((worst) => worst > SHAPE.halfWidth).length;
     expect(off(100)).toBe(0);
     expect(off(85)).toBe(0);
-    expect(off(0)).toBeGreaterThan(spread(0).length * 0.6);
+    // Measured at 5 laps in 25. It used to be most of them: a bad navigation
+    // system believed the line was up to 14 units out, when the path is 9
+    // wide, and sawed at the steering chasing it. Most of the misjudgement is
+    // spent on the pace now, so leaving the path is something that happens to
+    // an unguided ship on a bend it takes badly rather than on every bend.
+    expect(off(0)).toBeGreaterThan(spread(0).length * 0.1);
+    expect(median(spread(0))).toBeGreaterThan(median(spread(85)) * 4);
   });
 
   it('is inconsistent when it is bad, not merely worse', () => {
@@ -304,6 +310,15 @@ describe('the navigation rating', () => {
   it('puts real distance between no navigation and half of it', () => {
     // The owner's complaint: 0 and 50 felt like the same ship. They are not
     // allowed to be again. Both the line and the clock have to separate.
+    //
+    // Measured at 2.5× on the line and 11% on the clock over this one bend.
+    // The clock gap used to be wider: a pilot now believes at worst
+    // `PACE_LEAST` of its own ceiling, so it can no longer lose a bend by
+    // nearly stopping on it — which was most of what a low rating cost, and
+    // was exactly the thing that read as a ship going either flat out or
+    // nowhere. The separation that is left is a pilot that is late on the
+    // brakes, slow off them and further off the line, which is what it should
+    // have been.
     const none = median(spread(0));
     const half = median(spread(50));
     expect(none).toBeGreaterThan(half * 2);
@@ -314,7 +329,7 @@ describe('the navigation rating', () => {
       );
       return median(ticks);
     };
-    expect(lap(0)).toBeGreaterThan(lap(50) * 1.12);
+    expect(lap(0)).toBeGreaterThan(lap(50) * 1.08);
     expect(lap(50)).toBeGreaterThan(lap(100) * 1.12);
   });
 });

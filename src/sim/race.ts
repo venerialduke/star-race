@@ -34,6 +34,7 @@ import {
   alongStep,
   bumperPush,
   leadOf,
+  paceBelief,
   pilot,
   skillOf,
   wanderOn,
@@ -274,15 +275,6 @@ export interface RaceConfig {
   readonly stats: ShipStats;
   /** What it is built from, so damage knows what there is to break. */
   readonly build?: readonly Fitted[];
-  /**
-   * Force the entry speed, as a multiple of a bend's holding speed, instead of
-   * letting the ship work it out.
-   *
-   * Nothing in the game sets this. It exists so `npm run optimal` can sweep the
-   * whole range and check that what a ship aims for really is the best there
-   * is — a claim that would otherwise be untestable.
-   */
-  readonly aim?: number;
   /**
    * The way through each sector, decided before the lap that flies it — one
    * index per sector. A ship can still be thrown onto a different line at the
@@ -535,7 +527,7 @@ export function stepRace(state: RaceState, config: RaceConfig): RaceState {
   const seen: Sighted = {
     ahead: curvatureOn(along + leadOf(skill, entry.speed)),
     under: curvatureOn(along),
-    ceiling: ceiling * (1 + wanderPace * skill.pace),
+    ceiling: ceiling * paceBelief(wanderPace, skill.pace),
     linePlace: wanderLine * skill.line * PATH_HALF_WIDTH,
   };
   const control: Control = pilot(flier, entry, seen);

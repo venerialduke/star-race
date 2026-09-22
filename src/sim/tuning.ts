@@ -855,25 +855,53 @@ export const NAV_BEST = 3;
 export const GRIP_PER_HANDLING = HOLD_GRIP;
 
 /**
- * How quickly a misjudgement forgets where it was, per tick. 0.02 is a time
- * constant of fifty ticks, so one lasts most of a second — long enough to put
- * the ship somewhere it has to recover from.
+ * How quickly a misjudgement forgets where it was, per tick. 0.008 is a time
+ * constant of 125 ticks, so one lasts two seconds of race — long enough to put
+ * the ship somewhere it has to recover from, and slow enough to read as a
+ * misjudgement rather than as a twitch.
+ *
+ * It was 0.02, chosen when a race was watched at the speed it was flown. A
+ * race is now played back into thirty seconds, so the same wander arrived two
+ * to three times faster on screen and read as jitter. The wander is spent in
+ * race ticks, so the fix is here rather than in the projector.
  */
-export const WANDER_SETTLE = 0.02;
+export const WANDER_SETTLE = 0.008;
 
 /**
  * How far a ship with no navigation misjudges the line, as a multiple of the
  * path's half-width, and how badly it misjudges its own ceiling, as a fraction
  * of it. Sometimes it arrives too hot, sometimes it crawls.
+ *
+ * The line was 1.6 — a believed line 14 units out, when the path is 9 wide —
+ * and the ship sawed at the steering to chase it: a tenth of full lock put on
+ * or taken off *every tick*, twice what it uses in a bend. It read as a drunk
+ * rather than as a ship flown badly. Most of that misjudgement now goes into
+ * the pace instead, where being wrong shows as lifting and getting back on it.
+ *
+ * Measured over a lap with no navigation system, against 1.6 / 0.35:
+ *
+ * | | was | now |
+ * | --- | --- | --- |
+ * | off the line, rms / worst | 6.8 / 14 | 2.1 / 5 |
+ * | steering moved per tick | 0.051 | 0.029 |
+ * | ticks off the power | 23% | 29% |
+ * | speed varies by | 46% | 59% |
+ * | the lap it costs | 76.5s | 74.3s |
  */
-export const NAV_WANDER_LINE = 1.6;
-export const NAV_WANDER_PACE = 0.35;
+export const NAV_WANDER_LINE = 0.35;
+export const NAV_WANDER_PACE = 0.65;
 
 /**
  * How the rating maps onto the three things it is made of. See `skillOf` in
  * `flight.ts`: anticipation comes back fast, the wobble fades evenly, and
  * misjudging its own pace is concentrated at the very bottom.
  */
+/**
+ * The least a ship will believe of its own speed ceiling, as a multiple. Below
+ * this it is not flying badly, it is parked: see `paceBelief` in `flight.ts`.
+ */
+export const PACE_LEAST = 0.4;
+
 export const NAV_LEAD_CURVE = 0.65;
 export const NAV_LINE_CURVE = 1.3;
-export const NAV_PACE_CURVE = 1.6;
+export const NAV_PACE_CURVE = 0.7;

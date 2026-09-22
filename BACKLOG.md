@@ -1369,6 +1369,10 @@ reachable with a good navigation system. That is arguably correct — it makes
 the component matter, which was the whole point — but it is a balance decision
 nobody has taken.
 
+_Superseded on 2026-09-22 — see "The misjudgement moved from the line to the
+pace" below. The gap is about half as fast again rather than two to three
+times, and the steps between the ratings are even. Still nobody's par._
+
 **2. Excursion damage has become rare and mild.** A ship is held near the line
 by the bumpers and gets back without flailing, so a shield pool of 22 soaks
 every excursion of a nineteen-bend race and regenerates between them; a crew
@@ -1419,6 +1423,91 @@ Two things would get it back, neither taken here:
 - **Shorten the race rather than the watching.** 4096 ticks for one lap is the
   flight model's doing, and the pars say the tracks were authored for something
   a third of that.
+
+## The misjudgement moved from the line to the pace
+
+_Landed 2026-09-22._ The owner, on watching a race at the new playback speed:
+"the low nav jitters too much, too much random turning. Instead it could do a
+little of that, and a little random braking/acceleration. Still sub optimal,
+but not as jarring."
+
+It was measurable, and worse than it looked. A ship with no navigation system
+believed the line was up to **14 units** out when the path is 9 wide, and sawed
+at the steering chasing it: **0.051 of full lock put on or taken off every
+tick**, against 0.008 for a maxed system and about 0.025 to take an actual
+bend. Twice the steering of driving, spent on nothing.
+
+Four numbers moved, all in `tuning.ts`, plus one new rule in `flight.ts`:
+
+| | was | now |
+| --- | --- | --- |
+| `NAV_WANDER_LINE` | 1.6 | 0.35 |
+| `NAV_WANDER_PACE` | 0.35 | 0.65 |
+| `WANDER_SETTLE` | 0.02 | 0.008 |
+| `NAV_PACE_CURVE` | 1.6 | 0.7 |
+| `PACE_LEAST` | — | 0.5 |
+
+`WANDER_SETTLE` is a consequence of the projector: a misjudgement lasting fifty
+ticks was written when a race was watched at the speed it was flown, and a race
+is now played into thirty seconds, so the same wander arrived two to three
+times faster on screen. It is spent in race ticks, so it is fixed here.
+
+**`PACE_LEAST` is the new rule, and it is not a refinement.** Moving the
+misjudgement onto the pace with nothing under it had a ship with no navigation
+spending **a sixth of the lap under a quarter of its own average speed, once
+for nearly five seconds together** — the "either flat out or way slow, no in
+between" the owner complained about two rounds ago, arriving by another door. A
+pilot now believes at worst half of its own ceiling. Only the downside is
+floored: arriving too hot is the interesting half and bounds itself.
+
+`NAV_PACE_CURVE` is a consequence of the swap. With the pace concentrated at
+the very bottom (1.6) and the line no longer carrying the failing, nav 2 flew
+within 4% of nav 3 — the top of the stat bought nothing. The two curves swapped
+roles because the two failings did.
+
+What it measures out at, over a lap with no navigation system:
+
+| | was | now |
+| --- | --- | --- |
+| off the line, rms / worst | 6.8 / 14 | 2.1 / 5 |
+| steering moved per tick | 0.051 | 0.029 |
+| ticks off the power | 23% | 29% |
+| longest crawl under a quarter speed | 1.4s | 0.7s |
+| lap, Kestrel | 76.5s | 58.7s |
+
+And the ladder is even now — 58.7 / 52.8 / 47.5 / 40.4 on the Kestrel at nav
+0 / 1 / 2 / 3, against 76.5 / 66.4 / 56.5 / 40.4 before, where the whole gap
+sat between 2 and 3.
+
+### What this cost, and it is the thing to look at next
+
+**An unguided ship no longer leaves the golden path on its own.** Worst off the
+line is 5 units against a path of 9, so:
+
+- **Excursion damage is now a handling failure only.** A ship with a big engine
+  and no grip is still thrown past the edge on 12 laps in 20, and hurt on 11 in
+  20 — but a ship that is merely badly navigated is not. Four tests moved onto
+  a fast, loose build because of it, and the damage tests moved from the Cinder
+  Coil to the Kestrel: under flight a tight track is a _slow_ one, and what
+  damage costs scales with how fast the ship was going when it was thrown.
+- **The corridor is doing even less work** than item 3 above says. The wall is
+  at 26; nothing a stock ship does reaches 6.
+- **`FORK_PULL` is nearly unreachable at 11.** Being carried onto the wrong
+  side of a fork was something a big wander did; it now takes a genuine
+  excursion.
+
+None of that is tuned away here. If going wide should be a more common event,
+the lever is `BUMPER_FROM` — the bumpers start exactly at the path edge, so
+they catch a ship the moment it is off it.
+
+### One thing got better on its own
+
+A split is no longer always a cost. On the Meridian's inside line, an unguided
+ship pays 100 / 42 / **−7** ticks at handling 0.7 / 1.2 / 1.8 — at the top of
+the handling range the tighter line stops costing anything. Flown well it is
+still a cost at every grip (108 / 111 / 121), and _rises_ with grip, because
+the main line is being flown faster. That is the nearest thing to a split being
+worth taking that the game has, and `route.test.ts` now pins it.
 
 ## Not scheduled
 

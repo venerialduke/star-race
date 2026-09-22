@@ -19,6 +19,7 @@ import {
   bumperPush as pushFrom,
   leadOf,
   lockToHold,
+  paceBelief,
   pilot,
   sideways as sidewaysOf,
   skillOf,
@@ -161,7 +162,7 @@ export function makePilot(ship: Ship, shape: Shape, nav: number, seed: number): 
       under: curvatureAt(shape, state.along),
       ceiling:
         ceilingAhead(ship, shape, state.along, state.speed) *
-        (1 + paceWander * skill.pace),
+        paceBelief(paceWander, skill.pace),
       linePlace: lineWander * skill.line * shape.halfWidth,
     };
     return pilot(ship, state, seen);

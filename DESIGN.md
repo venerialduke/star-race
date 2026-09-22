@@ -77,8 +77,8 @@ cost is that a faster ship is played more slowly, so **going faster no longer
 looks faster** — it reads on the clock and in the standings rather than in the
 window. `src/ui/playback.ts` holds the one number.
 
-The cost is the thing the player feels: **you cannot affect a segment once it
-is running.** Every decision lands at a decision point, and the next segment is
+The other cost is the one the player feels: **you cannot affect a segment once
+it is running.** Every decision lands at a decision point, and the next segment is
 built from the garage as it stands at that moment. That is the honest version
 of the third rule rather than a new restriction — a mid-lap purchase was never
 going to be legal in a race resolved elsewhere.
@@ -578,17 +578,45 @@ Both wanders are slow on purpose. Fast jitter is filtered out by the ship's own
 steering lag and changes almost nothing; it reads as a twitch rather than as
 misjudgement, and flying badly is being in the wrong place and late to notice.
 
+**Most of the misjudgement is spent on the pace, not on the line.** That was
+the other way round first, and it was wrong to watch: a believed line up to
+fourteen units out, when the path is nine wide, had the ship sawing at the
+steering to chase it — a tenth of full lock on or off every single tick, twice
+what it uses to take a bend. It read as a drunk rather than as a ship being
+flown badly. Being late on the brakes and slow off them reads as a pilot; a
+twitching nose reads as a bug.
+
+There is a floor under how slowly a pilot will believe it can go, and there has
+to be. Without one a ship with no navigation spent a sixth of the lap under a
+quarter of its own average speed, once for nearly five seconds together, which
+is not bad flying — it is a ship that has stopped. Only the downside is
+bounded: believing the road allows _more_ than it does is the interesting half,
+because the ship arrives too hot and runs wide, and that bounds itself.
+
 They fade at **different rates**, and that is deliberate. A straight line
 through all three made no navigation and half of it feel like the same ship;
 making the bottom worse made none and a quarter feel alike instead. What
-separates them is failing _differently_ — anticipation comes back fast, the
-wobble fades evenly, and misjudging its own pace is concentrated at the very
-bottom, so a ship with no navigation does not wobble more, it arrives at bends
-hopelessly wrong and blows them.
+separates them is failing _differently_ — anticipation comes back fast and the
+wobble fades evenly, while misjudging its own pace fades slowly and is still
+costing a ship at rating 2. Since the pace is where most of the failing now
+lives, concentrating it at the very bottom left the top half of the stat doing
+almost nothing.
 
 Measured on the tracks that ship, a stock hull with no navigation system laps
-between two and three times slower than the same hull with a maxed one, and
-spends about a third of the lap off the golden path against none at all.
+about half as fast again as the same hull with a maxed one, in even steps:
+
+| track | nav 0 | nav 1 | nav 2 | nav 3 |
+| --- | --- | --- | --- | --- |
+| Kestrel Loop | 58.7s | 52.8s | 47.5s | 40.4s |
+| Meridian Run | 89.0s | 77.6s | 69.5s | 56.5s |
+| Cinder Coil | 39.7s | 35.5s | 32.5s | 26.1s |
+| Proving Ground | 53.4s | 49.3s | 43.0s | 35.6s |
+
+It no longer leaves the golden path to do it. Off the line by 2.1 units rms
+against 0.2 for a maxed system, and never past the path's own nine — **going
+wide is what speed against grip does**, not what a bad navigation system does.
+A ship with a big engine and no grip is still thrown past the edge on most of
+its laps.
 
 ## Sight is warning, measured in ticks
 

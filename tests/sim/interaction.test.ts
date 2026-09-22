@@ -533,7 +533,8 @@ describe('charge, and what a ship spends it on', () => {
     // what it is checked against is how much chain was left when it began.
     let inChain = 0;
     let afterChain = 0;
-    let swungAfter = false;
+    let heldInChain = 0;
+    let widestAfter = 0;
     const entered: number[] = [];
     let wasKey: string | undefined;
     for (let i = 0; i < 2000; i += 1) {
@@ -546,9 +547,10 @@ describe('charge, and what a ship spends it on', () => {
           // Flown by a pilot that can see: never off the golden path.
           expect(swing?.swing).toBeLessThan(PATH_HALF_WIDTH);
           inChain += 1;
+          heldInChain = Math.max(heldInChain, swing?.swing ?? 0);
         } else {
           afterChain += 1;
-          if ((swing?.swing ?? 0) > PATH_HALF_WIDTH) swungAfter = true;
+          widestAfter = Math.max(widestAfter, swing?.swing ?? 0);
         }
         entered.shift();
       }
@@ -561,9 +563,16 @@ describe('charge, and what a ship spends it on', () => {
     }
     expect(inChain).toBe(PERFECT_BENDS);
     expect(afterChain).toBeGreaterThan(0);
-    // And once it is over, the ship's own navigation is what it has: it leaves
-    // the path on a bend the chain would have held.
-    expect(swungAfter).toBe(true);
+    // And once it is over, the ship's own navigation is what it has: the bends
+    // it flies next are several times wider than the ones the chain held —
+    // measured at 0.3–0.5 units in the chain against 2.3–3.6 after it.
+    //
+    // It used to claim the ship left the *path* afterwards. That is no longer
+    // what flying blind does: most of a bad navigation system's misjudgement
+    // is spent on the pace rather than on the line, so an unguided ship is
+    // untidy and slow rather than wild. What the chain buys is still exactly
+    // as measurable, and this is the measure of it.
+    expect(widestAfter).toBeGreaterThan(heldInChain * 3);
   });
 });
 

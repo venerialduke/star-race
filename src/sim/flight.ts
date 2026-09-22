@@ -39,6 +39,7 @@ import {
   NAV_PACE_CURVE,
   NAV_WANDER_LINE,
   NAV_WANDER_PACE,
+  PACE_LEAST,
   PILOT_DAMP,
   PILOT_LEAD,
   PILOT_PULL,
@@ -250,6 +251,24 @@ export function skillOf(nav: number): Skill {
     line: Math.pow(lost, NAV_LINE_CURVE) * NAV_WANDER_LINE,
     pace: Math.pow(lost, NAV_PACE_CURVE) * NAV_WANDER_PACE,
   };
+}
+
+/**
+ * What a pilot believes its speed ceiling is, as a multiple of the real one.
+ *
+ * Floored, because there is a difference between a pilot who is being careful
+ * and one standing on the brakes in the middle of a straight. Unfloored, a
+ * ship with no navigation spent a sixth of the lap under a quarter of its own
+ * average speed, once for nearly five seconds together — which is not bad
+ * flying, it is a ship that has stopped.
+ *
+ * Only the downside is bounded. Believing the road allows more than it does is
+ * the interesting half — the ship arrives too hot and runs wide — and it
+ * bounds itself, because a bend a ship cannot hold throws it off the line
+ * whatever it believes.
+ */
+export function paceBelief(wander: number, pace: number): number {
+  return Math.max(PACE_LEAST, 1 + wander * pace);
 }
 
 /** How far ahead a ship reads the road, in units, at a speed. */

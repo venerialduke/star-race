@@ -555,7 +555,8 @@ function buildTray(): void {
     '<em>100</em> it reads the road one steering-lag ahead and knows exactly where ' +
     'the line and the limit are — nothing about it is faster than you, it only ' +
     'knows sooner. Turn it down and it reads less of the road ahead, and drifts ' +
-    'slowly wrong about where the line is and how fast it may go. Every run draws ' +
+    'slowly wrong about how fast it may go and, a little, about where the line ' +
+    'is — so it is late on the brakes and slow off them rather than twitchy. Every run draws ' +
     'a fresh set of misjudgements, so press <em>R</em> a few times: a low rating is ' +
     'not just worse, it is <em>inconsistent</em>.';
   tray.append(note);

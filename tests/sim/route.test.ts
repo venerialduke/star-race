@@ -37,10 +37,11 @@ const lapTicks = (
   routes: readonly number[],
   handling: number,
   seed = 'route',
+  nav?: number,
 ): number => {
   const config = {
     track,
-    stats: bareShip(1, handling),
+    stats: nav === undefined ? bareShip(1, handling) : { ...bareShip(1, handling), nav },
     routes,
     seed: seedFrom(seed),
   };
@@ -147,35 +148,44 @@ describe.each(TRACKS)('$name splits', (track: Track) => {
 });
 
 describe('what a split is worth', () => {
-  it('costs less the more grip a ship has, on a tighter line', () => {
-    // **No split that ships is currently a win.** Every one of them was
-    // authored against the swing, where a tighter line was worth taking if you
-    // could hold it; under the flight model a tighter line is simply a lower
-    // holding speed, and the ship slows for it. Measured on the Meridian's
-    // inside line over sixteen seeds it costs 159 / 74 / 32 ticks at handling
-    // 0.7 / 1.2 / 1.8 — always a cost, never a saving.
+  it('costs an unguided ship less the more grip it has, on a tighter line', () => {
+    // **No split that ships is a win for a ship that is flown well.** Every
+    // one of them was authored against the swing, where a tighter line was
+    // worth taking if you could hold it; under the flight model a tighter line
+    // is simply a lower holding speed, and the ship slows for it. Measured on
+    // the Meridian's inside line over sixteen seeds with a maxed navigation
+    // system it costs 108 / 111 / 121 ticks at handling 0.7 / 1.2 / 1.8 — and
+    // the better the ship, the more the detour costs, because the main line is
+    // being flown faster.
     //
     // That is a content job rather than an engineering one, and it is recorded
     // in BACKLOG.md: the splits need re-authoring against the road the ships
-    // now fly. What is still true, and worth pinning so a regression shows, is
-    // that the cost is a function of what the ship can hold — a grippy ship
-    // gives up a fifth of what a loose one does for the same piece of road.
+    // now fly.
+    //
+    // What is pinned here is the mechanism: for a ship with no navigation
+    // system the cost is a function of what it can hold, and falls away
+    // steeply with grip — 100 / 42 / −7 ticks at the same three handlings, so
+    // at the top of the range a loose line stops being a cost at all. That is
+    // the nearest thing to a split being worth taking that the game currently
+    // has, and it is worth knowing if it moves.
     //
     // Averaged over seeds, not measured on one: taking a split changes which
     // seeded stream its navigation draws from.
     const seeds = Array.from({ length: 16 }, (_, i) => `worth${i}`);
-    const over = (routes: readonly number[], handling: number): number =>
+    const over = (routes: readonly number[], handling: number, nav?: number): number =>
       seeds.reduce(
-        (sum, seed) => sum + lapTicks(MERIDIAN_RUN, routes, handling, seed),
+        (sum, seed) => sum + lapTicks(MERIDIAN_RUN, routes, handling, seed, nav),
         0,
       ) / seeds.length;
 
     const main = [0, 0, 0, 0];
     const inside = [0, 0, 1, 0];
-    const cost = (handling: number): number => over(inside, handling) - over(main, handling);
+    const cost = (handling: number, nav?: number): number =>
+      over(inside, handling, nav) - over(main, handling, nav);
     expect(cost(0.7)).toBeGreaterThan(0);
-    expect(cost(1.8)).toBeGreaterThan(0);
-    expect(cost(1.8)).toBeLessThan(cost(0.7) / 2);
+    expect(cost(1.8)).toBeLessThan(cost(0.7) / 4);
+    // Flown well, it is a cost at every grip there is.
+    expect(cost(1.8, 3)).toBeGreaterThan(0);
   });
 
   it('puts the ship on a different road, not just on a different clock', () => {

@@ -147,16 +147,19 @@ describe('the simulation is untouched by any of it', () => {
     // These moved a long way when the swing became flight. A `bareShip` has
     // `BASE_NAV`, which is no navigation system at all, and a ship that cannot
     // see where the line is now *flies* like one: it misjudges the line and
-    // its own pace, spends a third of the lap off the path, and gets home
-    // between two and three times slower than the same hull with a maxed
-    // navigation system. That gap is the point of the model, and it is what
-    // makes these numbers what they are. Nothing here is a target — the
-    // balance pass against them is still owed.
+    // its own pace, and gets home about half as fast again as the same hull
+    // with a maxed navigation system. That gap is the point of the model, and
+    // it is what makes these numbers what they are. Nothing here is a target —
+    // the balance pass against them is still owed.
+    //
+    // They moved again when the misjudgement was rebalanced: most of it is now
+    // spent on the pace rather than on the line, so an unguided ship saws at
+    // the steering far less, stays inside the path, and is quicker for it.
     const expected: Record<string, number> = {
-      'Kestrel Loop': 4661,
-      'Meridian Run': 6121,
-      'Cinder Coil': 3233,
-      'The Proving Ground': 4255,
+      'Kestrel Loop': 3675,
+      'Meridian Run': 5129,
+      'Cinder Coil': 2479,
+      'The Proving Ground': 3354,
     };
     for (const track of TRACKS) {
       const config = { track, stats: bareShip(1, 1), seed: seedFrom('kestrel') };

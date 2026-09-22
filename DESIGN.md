@@ -62,6 +62,21 @@ do. The result exists before the playback does, so the playback can be skipped,
 paused or replayed. And a heat could as easily be resolved somewhere else and
 watched here, which is the shape a networked race has to have.
 
+**A race takes 30 seconds to watch, however long it took to fly.** Because the
+film exists before the first frame of it is drawn, its length is known, so the
+cursor is moved at whatever rate fits the whole race into that: a heat of two
+laps gives each lap fifteen seconds of wall clock, and the pacing lap gets the
+thirty to itself. Nothing is ever played _slower_ than it was flown, so a race
+already shorter than its share keeps its own speed — thirty seconds is a
+ceiling as well as the usual answer.
+
+This is the projector and not the film. Every lap time, gap, par and standing
+is still counted in ticks, and the readouts still report the seconds the ship
+actually took; only the wall clock the player spends watching is fixed. The
+cost is that a faster ship is played more slowly, so **going faster no longer
+looks faster** — it reads on the clock and in the standings rather than in the
+window. `src/ui/playback.ts` holds the one number.
+
 The cost is the thing the player feels: **you cannot affect a segment once it
 is running.** Every decision lands at a decision point, and the next segment is
 built from the garage as it stands at that moment. That is the honest version
@@ -187,7 +202,7 @@ itself closed and produced a track of length zero — and canonical distance is 
 fraction of the lap, so every `distance % length` in the race divides by it. A
 single empty sector is the same mistake smaller: it contributes no length, so
 its checkpoint compares equal to the next one, `sectorAt` never returns it, and
-no ship is ever *in* it — a fixture placed there could never bite. Both are
+no ship is ever _in_ it — a fixture placed there could never bite. Both are
 refused at assembly. The builder makes empty sectors on purpose, because that is
 what inserting one does, so this is the line between editing a ring and racing
 on it. A fuzzer found both by deleting pieces until there were none left, which
@@ -206,7 +221,7 @@ S4: until they meant something, every split could only be balanced on the clock.
 
 The three tracks that ship are the same shape they always were, piece for
 piece — what moved is where their checkpoints sit. Two things follow from that
-and only one of them is luck. A bend's position *within its sector* is part of
+and only one of them is luck. A bend's position _within its sector_ is part of
 the key its swing is drawn from, so every draw re-rolled and Carry and Charge
 laps moved, a long way on a tight track and entirely inside the spread across
 seeds. And braking looks ahead past the end of the current sector into the next,
@@ -235,30 +250,29 @@ An environment is a **named bundle** of what it does, because an author picks
 that is a property of the game and it lives in `tuning.ts` with the other
 numbers. What a stretch comes to is four numbers:
 
-| Effect   | What it does                                                    |
-| -------- | --------------------------------------------------------------- |
-| `grip`   | multiplies the speed a bend there can be held at                 |
-| `sight`  | how many ticks of road ahead a bend can be seen coming            |
+| Effect   | What it does                                                       |
+| -------- | ------------------------------------------------------------------ |
+| `grip`   | multiplies the speed a bend there can be held at                   |
+| `sight`  | how many ticks of road ahead a bend can be seen coming             |
 | `hazard` | damage on entering the stretch, scaled by the speed you meet it at |
-| `pocket` | salvage for the ground flown through it                          |
+| `pocket` | salvage for the ground flown through it                            |
 
 - **Nebula** is thick: it lowers the grip, so the same bend throws the same
   ship further and a pilot that knows it answers by going slower. That is the
   bet the whole game rests on, applied to a place instead of to a build.
 - **Debris** scrapes. Cheap on the line, expensive at speed.
 - **Shadow** hides the bend until you are nearly into it. It is spent as
-  *warning*: how many ticks of road the ship reads ahead, cut by the stretch's
+  _warning_: how many ticks of road the ship reads ahead, cut by the stretch's
   sight. A bend it has not seen is one it has not started slowing for, and
   since the braking a bend needs grows with speed while the warning does not,
   the dark costs most to whoever is carrying the most into it.
-
 
 Nothing here is a new thing for a player to learn. Every one of the four is
 spent in currency the game already had.
 
 **All of it is drawn, from both views.** The map colours the stretch, because
 the map is where a route is chosen. The chase camera colours it too and floats
-the thing's name over it, because the chase camera is where a route is *flown* —
+the thing's name over it, because the chase camera is where a route is _flown_ —
 a player who cannot see the nebula coming has no way to connect being thrown
 wide with the reason for it. Fixtures stand up out of the road rather than lying
 flat on it, and say what they are: a ring on the ground is the thing's reach,
@@ -283,7 +297,7 @@ climbs and the other dips, so the two are never in the same place: a bridge.
 **It is a drawing and nothing else, and that is enforced rather than promised.**
 The height of the road is computed in `src/render/height.ts`, and `src/sim` is
 forbidden by ESLint from importing anything in `render/`. The simulation
-therefore *cannot* see elevation — not by discipline, by construction. No future
+therefore _cannot_ see elevation — not by discipline, by construction. No future
 change can quietly make a hill cost speed without first moving that file, which
 is a thing a reviewer would see.
 
@@ -291,7 +305,7 @@ Heights are **derived, never authored**, like checkpoint poses and for the same
 reason: two sources of truth about where the road is can disagree, and the
 disagreement is silent. Crossings are found by walking every road against every
 other — a split is a road in its own right and can cross the main line, another
-split, or a different sector entirely — so height is a function of *which road*
+split, or a different sector entirely — so height is a function of _which road_
 as well as how far along it. One number per lap could never tell a split from
 the golden path beneath it, since they span the same canonical distances.
 
@@ -309,7 +323,7 @@ not hidden — a crossing within a ramp of a checkpoint cannot be lifted clear, 
 it is measured and refused rather than drawn badly.
 
 The gap is set by what the approach needs, not by the crossing. The full height
-is only reached *at* the crossing; a little to either side the two roads are
+is only reached _at_ the crossing; a little to either side the two roads are
 still within a corridor while the ramp is still climbing, and that is the
 binding case. Measured on a figure-eight: 30 units at the crossing left 20.4
 where the roads pass a corridor apart, against the 19.4 a corridor needs —
@@ -317,21 +331,21 @@ passing by a unit, which is not margin. It is 38 now, which leaves 25.8.
 
 **A camera that is following something follows it.** The eye rides at a fixed
 height above the ship's own road and nowhere else, and what a hill does to the
-picture is a matter of where it *looks*: the pitch tilts up a climb and down the
+picture is a matter of where it _looks_: the pitch tilts up a climb and down the
 far side, which is what gives a hill a sense of direction. The tilt is clamped,
 and the clamp is set by measuring where the ship lands on screen rather than by
 taste — unclamped it reached 98% of the frame height, which is on screen by the
 arithmetic and off it in practice.
 
 Three earlier versions got this wrong, each in a way that read as the projection
-being broken. Taking the height from the road *behind* the camera is a different
+being broken. Taking the height from the road _behind_ the camera is a different
 point on a ramp, so the ship slid up and down the frame. Taking the highest road
 in sight lifted the eye the moment a bridge appeared — hundreds of units early,
 with the ship lost off the bottom. And a road is a filled surface with no
 thickness, so an eye that dips below one sees its underside, where a bend going
 right appears to go left; that one is gone because a bridge only ever goes up.
 
-Anything that sits *on* the road — the ship, its shadow, its wake, a shot
+Anything that sits _on_ the road — the ship, its shadow, its wake, a shot
 between two ships, the scuffs a swing leaves — is measured from the road rather
 than from the plane, or it carries straight on through a hill.
 
@@ -344,7 +358,7 @@ its tail is not what this is for. It is a drawing and nothing else: the pitch is
 read off the same relief the road is, which the simulation cannot see.
 
 The one number this needs that is not obvious is how much of the screen a unit
-of *height* is worth against a unit of *road ahead*. They are not the same and
+of _height_ is worth against a unit of _road ahead_. They are not the same and
 are not close — the road in front of the ship is foreshortened almost flat while
 the vertical barely is, about three to one under this camera — so the ratio is
 measured by projecting both and the lean carries it. Taking them as equal was
@@ -386,10 +400,10 @@ makes sense. It buys no rules, and needs none.
 
 A track is a closed **loop** walked out from an ordered list of **pieces**:
 
-| Piece      | What it is                                                        |
-| ---------- | ----------------------------------------------------------------- |
-| `straight` | a length, in track units                                          |
-| `bend`     | a radius and a signed sweep in degrees; positive turns left       |
+| Piece      | What it is                                                  |
+| ---------- | ----------------------------------------------------------- |
+| `straight` | a length, in track units                                    |
+| `bend`     | a radius and a signed sweep in degrees; positive turns left |
 
 Walking the pieces produces the **centreline** — the golden path — as a
 polyline, and fixes where every bend starts and ends. Geometry is level data,
@@ -399,11 +413,11 @@ full turn **negative**, so the lap runs clockwise.
 Three tracks are built, and they exist to ask whether one strategy wins
 everywhere. They do not:
 
-| Track | Length | Bends | What wins on it |
-| ---------------- | ------ | ------------------- | ------------------------------ |
-| **Kestrel Loop** | 1408 | mixed, tightest r42 | balanced build — 28.0s |
-| **Meridian Run** | 2370 | open, tightest r62 | reckless build — 39.3s |
-| **Cinder Coil** | 688 | tight, tightest r26 | nimble build — 16.9s |
+| Track            | Length | Bends               | What wins on it        |
+| ---------------- | ------ | ------------------- | ---------------------- |
+| **Kestrel Loop** | 1408   | mixed, tightest r42 | balanced build — 28.0s |
+| **Meridian Run** | 2370   | open, tightest r62  | reckless build — 39.3s |
+| **Cinder Coil**  | 688    | tight, tightest r26 | nimble build — 16.9s   |
 
 A fourth, **The Proving Ground** (1252 units, tightest r50), is not one of them,
 and **every season opens on it**. Its four stretches are matched in pairs — the
@@ -488,7 +502,7 @@ so flat out through the bend is               v = sqrt(grip · r)
 
 which is `holdingSpeed` exactly, unchanged. Grip is `HOLD_GRIP · handling`, and
 a stretch's own grip multiplies it — twice, because `effect.grip` was written
-to multiply the holding *speed*.
+to multiply the holding _speed_.
 
 ### Yaw, which is the whole difference
 
@@ -553,7 +567,7 @@ forth. It now returns monotonically.
 `nav` used to decide which grades of split a ship could plan, and blurred a
 number. It still plans routes, and it is now also **the only thing that decides
 how well a ship flies**. At `NAV_BEST` a ship flies the reference line exactly,
-with no randomness in it at all. Below that the *same pilot* is worse informed
+with no randomness in it at all. Below that the _same pilot_ is worse informed
 in three ways, each something a pilot would plausibly be bad at:
 
 - **how far ahead it reads the road** — deterministic, and the big lever;
@@ -567,7 +581,7 @@ misjudgement, and flying badly is being in the wrong place and late to notice.
 They fade at **different rates**, and that is deliberate. A straight line
 through all three made no navigation and half of it feel like the same ship;
 making the bottom worse made none and a quarter feel alike instead. What
-separates them is failing *differently* — anticipation comes back fast, the
+separates them is failing _differently_ — anticipation comes back fast, the
 wobble fades evenly, and misjudging its own pace is concentrated at the very
 bottom, so a ship with no navigation does not wobble more, it arrives at bends
 hopelessly wrong and blows them.
@@ -580,7 +594,7 @@ spends about a third of the lap off the golden path against none at all.
 
 A stretch that hides the road cuts how far ahead a ship reads a bend. The
 number is **in ticks**, not units, so the distance scales with speed and every
-ship gets the same amount of *time* to react.
+ship gets the same amount of _time_ to react.
 
 Written as a distance first, and that was wrong twice over. Long enough to be
 plausible, it could never bite at all: by the time a far bend constrains a
@@ -636,7 +650,7 @@ sees through it. The ladder is the framework's:
 | 3   | Re-plan the route at a pit stop. Takes a second slot.  |
 
 **And on top of all of it, the same stat now decides how well the ship is
-flown** — see *Navigation is how well a ship is flown* above. That is a large
+flown** — see _Navigation is how well a ship is flown_ above. That is a large
 amount of work for one number to do and it may want splitting later; it is one
 stat today because the flight model wanted a rating and this was the rating the
 game already had.
@@ -681,7 +695,7 @@ to settle by quietly changing a number.
 
 Hitting it, if anything ever does, costs speed scaled by how sideways the ship
 arrived — sliding into the wall costs more than drifting onto it. The old rule
-charged it on how far the swing *wanted* to throw the ship, which there is no
+charged it on how far the swing _wanted_ to throw the ship, which there is no
 longer any such thing as.
 
 **Later:** a ship carried out of its corridor and onto another split — as
@@ -862,7 +876,7 @@ they are all about naming the cause rather than showing the effect.
 - **A hit flashes where it landed**, a ring that opens out and fades over the
   ticks after it.
 - **The state line names the cause.** Firing says who it was fired at; being hit
-  says what hit you *and whose it was*. "A ship bounced" and "Thessa Kyre's
+  says what hit you _and whose it was_. "A ship bounced" and "Thessa Kyre's
   gravity mine bounced me" are different events, and only one of them tells the
   player their slot is doing something.
 
@@ -875,7 +889,7 @@ does not read them, and nothing about the race changes if they do.
 fitted. Laying none is a real choice: a placed mine is on the board before the
 start, so it tells the rest of the heat something about you.
 
-**The shop says what a part would do for *your* build**, not what it does in
+**The shop says what a part would do for _your_ build**, not what it does in
 the abstract. Every row carries the difference fitting it would make — `+0.25
 thrust · −0.08 handling`, `+22 shields`, `an ability`, `25% off upgrades` — read
 by resolving the build with the part and without it, so what is shown is the
@@ -907,7 +921,7 @@ lockstep. Ships never touch. Each carries its own race state and draws its swing
 from its own seeded stream, keyed by which ship it is and which lap this is, so
 **one ship's luck can never shift another's**.
 
-Since S6 a ship's *choices* can. That is the whole of "Interaction" below, and it
+Since S6 a ship's _choices_ can. That is the whole of "Interaction" below, and it
 does not weaken the rule above: what reaches you is never somebody else's dice,
 it is something they bought and something they aimed.
 
@@ -1023,7 +1037,7 @@ through the track — nothing is a collision, and the sim still has no way for t
 ships to occupy the same place.
 
 **The rule that makes it safe: nothing lands on the tick it was fired.** Every
-ship reads a world built from the state *before* the tick, and whatever it sends
+ship reads a world built from the state _before_ the tick, and whatever it sends
 out is resolved into impulses that arrive on the tick after. So no ship's move
 can depend on where another one got to this tick, and the order the ships happen
 to sit in the array cannot change the race. It is the same rule the whole sim
@@ -1034,7 +1048,7 @@ on one machine and watched on three.
 ### Charge
 
 A ship gathers **charge** on the golden path and nowhere else, at a rate its crew
-improves — Engineers make shields *and* abilities recharge faster, which is one
+improves — Engineers make shields _and_ abilities recharge faster, which is one
 number doing both. Off the path it gathers nothing. So a lap spent being thrown
 wide arrives at the last bend with nothing to spend, which is the second reason to
 hold the line after speed itself.
@@ -1047,14 +1061,14 @@ made in the garage, when they fitted the part. Nothing asks the player anything
 mid-race, which is what keeps the third rule true when the rival is one day a
 person rather than a bot.
 
-| Ability | From | Fires when |
-| --- | --- | --- |
-| **Boost** | speed engine L3 | a straight with `BOOST_WANTS_CLEAR` of clear road on it |
-| **Boost, dark** | dark matter engine L2 | the same — and it leaves a black hole where it fired |
-| **Three perfect bends** | handling engine L3 | `PERFECT_WANTS_BENDS` bends lie close together ahead |
-| **Missile** | missile rack | a rival is within reach up the road |
-| **Tractor beam** | tractor beam | the same — and a tether pulls both ways, so it tows you too |
-| **Mine** | gravity mines | somebody is close behind — the one ability aimed backwards |
+| Ability                 | From                  | Fires when                                                  |
+| ----------------------- | --------------------- | ----------------------------------------------------------- |
+| **Boost**               | speed engine L3       | a straight with `BOOST_WANTS_CLEAR` of clear road on it     |
+| **Boost, dark**         | dark matter engine L2 | the same — and it leaves a black hole where it fired        |
+| **Three perfect bends** | handling engine L3    | `PERFECT_WANTS_BENDS` bends lie close together ahead        |
+| **Missile**             | missile rack          | a rival is within reach up the road                         |
+| **Tractor beam**        | tractor beam          | the same — and a tether pulls both ways, so it tows you too |
+| **Mine**                | gravity mines         | somebody is close behind — the one ability aimed backwards  |
 
 The order they are offered in is fixed, so two ships with the same build in the
 same moment always do the same thing. A ship fires one ability per charge.
@@ -1102,7 +1116,7 @@ it doubled a lap time. It never bites the ship that laid it.
   ship with a dark matter engine reads the hole as a corner — through it faster,
   unharmed, and gathering what it sheds — and everybody else meets a hazard.
 
-- **The track's own** are level data: a mine or a hole the *author* put there,
+- **The track's own** are level data: a mine or a hole the _author_ put there,
   before anybody has raced on it. They belong to nobody — an owner no entrant
   can have — which is what makes them bite the whole field rather than
   everybody-but-one, and they are there for the whole heat because they are part
@@ -1121,7 +1135,7 @@ not: the lap restarts and the road is clear again.
 full shields it keeps the weapon **whole** — it never lands at all — and sells it
 when the race ends. Below that it keeps a piece of every weapon that does land,
 more of it the deeper the collector. That is the part's job at every level: it
-turns being shot at into money. Needing level 3 *and* full shields to collect
+turns being shot at into money. Needing level 3 _and_ full shields to collect
 anything left the first two levels doing nothing, which is a part nobody buys
 twice.
 
@@ -1151,8 +1165,8 @@ Nothing priced that difference, because **slots arrive free** — one for every
 race finished, so thirteen by the end of a season. A build with nothing to spend
 credits on could bolt on another engine at no cost but the credits, and twelve
 cheap engines put both thrust and handling on their caps. The whole shop
-collapsed into one move, and every question about *which* part was drowned out
-by *how many*.
+collapsed into one move, and every question about _which_ part was drowned out
+by _how many_.
 
 Three things fix it, and the third is the one that worked — see "A ship carries
 one engine" below. The two that came first:
@@ -1167,7 +1181,7 @@ one engine" below. The two that came first:
 
 The falloff is deliberately **per component, not per category**. The framework
 is explicit that two shields is a build rather than a mistake, and that a
-collector's storage scales with the ship's *total* shielding — so two different
+collector's storage scales with the ship's _total_ shielding — so two different
 shields each count in full. What is stopped is the same part twelve times over,
 not variety within a category.
 
@@ -1199,7 +1213,7 @@ the thing every build has. Paying for it in copies makes them a question of what
 the shop has been offering and of whether you are willing to spend a window on
 something you already own — which is a decision, and the other was a threshold.
 
-It is also what a duplicate is *for*. Selling a spare back returns `SELL_RETURN`
+It is also what a duplicate is _for_. Selling a spare back returns `SELL_RETURN`
 of its cost; breaking it down is the only way anything gets better. A window
 that offers you the same engine twice is a good window.
 
@@ -1225,7 +1239,7 @@ price, and this wanted a limit.**
 
 Shields stay uncapped on purpose. The framework is explicit that two shields is
 a build rather than a mistake, and a collector's storage scales with the ship's
-*total* shielding — so the falloff, not a limit, is what governs them.
+_total_ shielding — so the falloff, not a limit, is what governs them.
 
 The engine is still a real choice, and more of one now: swapping it is the
 decision the cap exists to make interesting.
@@ -1252,7 +1266,7 @@ of spending against each other rather than against a bot.
 **The window is the player's alone, for now**, and that is a known gap rather
 than a design. Rivals still shop the whole catalogue through `botShop`, so the
 balance harness measures policies that can buy anything against a player who
-cannot. The slot economy *is* measured, because `finishRace` applies to
+cannot. The slot economy _is_ measured, because `finishRace` applies to
 everyone; the draw and the reroll are not measured at all. Moving rivals onto a
 window of their own is the obvious next step and is under "Later".
 
@@ -1306,4 +1320,4 @@ about what would have to change first:
   player who cannot. Until that closes, no shop measurement is a measurement of
   the shop the player is actually using. It is also the first change with a real
   chance of denting engine-spam, which has survived four tuning passes: a policy
-  that must be *offered* a cheap engine cannot buy one every heat.
+  that must be _offered_ a cheap engine cannot buy one every heat.

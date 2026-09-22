@@ -8,6 +8,11 @@
 // result exists before the playback does, and that a heat could as easily be
 // resolved somewhere else and watched here.
 //
+// Knowing the film's length up front is also what fixes how long it takes to
+// watch: the cursor moves at whatever rate fits a whole race into thirty
+// seconds (`src/ui/playback.ts`), so the wall clock the player spends is the
+// same whatever the ship did with its ticks.
+//
 // Two screens: the **race**, which is playback, and the **garage**, which is
 // every decision. You can open the garage while a segment plays, but nothing
 // you buy or fit reaches the ship until the next decision point — the segment
@@ -67,6 +72,7 @@ import { carryCondition, resolveBuild, type Fitted } from './sim/ship';
 import { TICK_HZ } from './sim/tuning';
 import { mountBoard } from './ui/board';
 import { mountControls } from './ui/controls';
+import { msPerTick, REAL_MS_PER_TICK } from './ui/playback';
 import { mountSeason } from './ui/season';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -150,7 +156,8 @@ function setGarage(next: Garage): void {
 /** How deep a mine rack the player has fitted, or 0 for none. */
 function rackLevel(fitted: readonly Fitted[]): number {
   return fitted.reduce(
-    (best, item) => (item.componentId === 'gravity-mine' ? Math.max(best, item.level) : best),
+    (best, item) =>
+      item.componentId === 'gravity-mine' ? Math.max(best, item.level) : best,
     0,
   );
 }
@@ -225,9 +232,7 @@ function startNext(): void {
   // One heat's races all share a seed, so every group meets the same bends.
   const seed = season.seed + season.phase * 9973 + season.heat * 131;
   pacing = up.kind === 'pacing';
-  config = pacing
-    ? { track: up.track, laps: 1, seed }
-    : heatConfig(up.track, seed);
+  config = pacing ? { track: up.track, laps: 1, seed } : heatConfig(up.track, seed);
   entrants =
     up.kind === 'heat'
       ? (up.groups[0] ?? []).map((id) => entrantOfId(id))
@@ -272,9 +277,7 @@ function settleWatched(): void {
     const up = nextUp(season);
     const others =
       up.kind === 'heat'
-        ? up.groups
-            .slice(1)
-            .map((ids) => resolveHeat(ids.map(entrantOfId), config))
+        ? up.groups.slice(1).map((ids) => resolveHeat(ids.map(entrantOfId), config))
         : [];
     const watched: readonly Finish[] = finishesOf(film.end);
     season = settleHeat(season, [watched, ...others]);
@@ -353,9 +356,12 @@ function resize(width: number, height: number): void {
   sized = { width, height };
 }
 
-const MS_PER_TICK = 1000 / TICK_HZ;
-/** Never advance more than this in one frame: a backgrounded tab must not lurch. */
-const MAX_TICKS_PER_FRAME = 8;
+/**
+ * Never advance more than this much wall clock in one frame: a backgrounded
+ * tab must not come back and lurch. A duration rather than a count of ticks,
+ * because how many ticks it is depends on how fast the film is playing.
+ */
+const MOST_MS_PER_FRAME = 8 * REAL_MS_PER_TICK;
 
 let previousTime = performance.now();
 let accumulator = 0;
@@ -415,21 +421,28 @@ function frame(now: number): void {
   accumulator += elapsed;
   previousTime = now;
 
-  const playing = segment !== undefined && cursor < segment.ticks - 1;
+  // The segment has played out: its end is the decision point.
+  const film = segment;
+  // Not a sixtieth of a second: the film is played at whatever rate fits the
+  // race into one viewing length, and the length of this one is known because
+  // it was flown before it was shown.
+  const perTick =
+    film === undefined ? REAL_MS_PER_TICK : msPerTick(film.ticks, config.laps);
+  const most = Math.max(1, Math.floor(MOST_MS_PER_FRAME / perTick));
+
+  const playing = film !== undefined && cursor < film.ticks - 1;
   if (playing) {
     let ticks = 0;
-    while (accumulator >= MS_PER_TICK && ticks < MAX_TICKS_PER_FRAME) {
+    while (accumulator >= perTick && ticks < most) {
       cursor += 1;
-      accumulator -= MS_PER_TICK;
+      accumulator -= perTick;
       ticks += 1;
     }
   }
-  if (accumulator > MS_PER_TICK * MAX_TICKS_PER_FRAME) accumulator = 0;
+  if (accumulator > perTick * most) accumulator = 0;
   // Whatever is left over is where between two ticks the ship actually is.
-  blend = playing ? Math.min(1, accumulator / MS_PER_TICK) : 0;
+  blend = playing ? Math.min(1, accumulator / perTick) : 0;
 
-  // The segment has played out: its end is the decision point.
-  const film = segment;
   const atRest = film !== undefined && cursor >= film.ticks - 1;
   if (atRest && film.end.phase === 'done' && !paid) {
     paid = true;
@@ -445,9 +458,11 @@ function frame(now: number): void {
     { planned: controls.settings.routes, nav: resolveBuild(garageOf().fitted).nav },
     fixtureViews(),
     scene,
-    // Clamped: a backgrounded tab comes back with a huge gap, and the camera
-    // must ease in from where it was rather than teleport.
-    Math.min(0.1, elapsed / 1000),
+    // In film seconds, not wall-clock ones: the camera lags the ship by a
+    // time, so at double speed it has to catch up twice as fast to hold the
+    // same shot. Clamped either way, because a backgrounded tab comes back
+    // with a huge gap and the camera must ease in rather than teleport.
+    Math.min(0.1, ((elapsed / 1000) * REAL_MS_PER_TICK) / perTick),
     rect.width,
     rect.height,
   );

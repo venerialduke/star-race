@@ -43,11 +43,11 @@ lapped 23.95s against 28.63s.
 finding's real answer. A ship slow enough for every bend has no corner
 decision, so the fix was a track whose bends are tight enough to ask one:
 
-| Track | Length | Best build and plan | Lap |
-| --- | --- | --- | --- |
-| Kestrel Loop | 1408 | balanced, Charge | 28.0s |
-| Meridian Run | 2370 | reckless, Carry | 39.3s |
-| Cinder Coil | 688 | nimble, Charge | 16.9s |
+| Track        | Length | Best build and plan | Lap   |
+| ------------ | ------ | ------------------- | ----- |
+| Kestrel Loop | 1408   | balanced, Charge    | 28.0s |
+| Meridian Run | 2370   | reckless, Carry     | 39.3s |
+| Cinder Coil  | 688    | nimble, Charge      | 16.9s |
 
 30 seeded laps per cell. Balance is close enough for now, not settled: the
 nimble build is still inert on the Kestrel Loop, where nothing it meets is
@@ -87,11 +87,11 @@ at a glance whether you are winning. All four items are merged.
 **What the numbers say.** 40 seeded heats per cell, player at Thrust 1 /
 Handling 1 against two bots:
 
-| Track | Lift | Carry | Charge |
-| --- | --- | --- | --- |
-| Kestrel Loop | 0% | 13% | 45% |
-| Meridian Run | 0% | 0% | 0% |
-| Cinder Coil | 0% | 33% | 33% |
+| Track        | Lift | Carry | Charge |
+| ------------ | ---- | ----- | ------ |
+| Kestrel Loop | 0%   | 13%   | 45%    |
+| Meridian Run | 0%   | 0%    | 0%     |
+| Cinder Coil  | 0%   | 33%   | 33%    |
 
 The Meridian column is the interesting one, and it is not a dead track: the
 bots build for Thrust there because that is what the track rewards, and a
@@ -129,11 +129,11 @@ S6 give the other categories something to do.
 **What the numbers say.** 30 seeded heats per build, best corner plan, against
 two bots that build for the track:
 
-| Build (affordable at the start) | Kestrel | Meridian | Cinder |
-| --- | --- | --- | --- |
-| 2× balanced — 1.08/1.00 | **77%** | 7% | 33% |
-| 2× speed + balanced — 1.43/0.69 | 30% | **73%** | 27% |
-| 2× handling + balanced — 0.85/1.35 | 0% | 0% | **67%** |
+| Build (affordable at the start)    | Kestrel | Meridian | Cinder  |
+| ---------------------------------- | ------- | -------- | ------- |
+| 2× balanced — 1.08/1.00            | **77%** | 7%       | 33%     |
+| 2× speed + balanced — 1.43/0.69    | 30%     | **73%**  | 27%     |
+| 2× handling + balanced — 0.85/1.35 | 0%      | 0%       | **67%** |
 
 Three tracks, three different right answers, none of them dominant. The first
 pass had handling builds losing everywhere, because the base ship was slow
@@ -189,11 +189,11 @@ spreads its damage instead of taking it all in one place.
 
 **It does the balancing job it was asked to do.** 24 seeded heats a cell:
 
-| Meridian Run, a speed build | Carry | Charge |
-| --- | --- | --- |
-| three engines, no crew | 58% | 50% |
-| two engines + nanites | **75%** | 58% |
-| two engines + shields | **75%** | 54% |
+| Meridian Run, a speed build | Carry   | Charge |
+| --------------------------- | ------- | ------ |
+| three engines, no crew      | 58%     | 50%    |
+| two engines + nanites       | **75%** | 58%    |
+| two engines + shields       | **75%** | 54%    |
 
 Giving up an engine for a crew or a shield is now worth about seventeen points
 of win rate on the track a speed build belongs on. On the Cinder Coil a crew is
@@ -218,12 +218,12 @@ ends with three ships across the line. Three concepts became one.
 because every hit now lands on a part rather than sometimes on a frame that
 shrugged most of it off. 24 seeded heats a cell:
 
-| | Kestrel | Meridian | Cinder |
-| --- | --- | --- | --- |
-| speed ×3, no crew — ship left | 52% | 96% | **30%** |
-| speed ×2 + nanites — ship left | 97% | 98% | 80% |
-| Meridian win rate, no crew → nanites | | 63% → **75%** | |
-| Cinder win rate, balanced → + nanites | | | 25% → **42/50%** |
+|                                       | Kestrel | Meridian      | Cinder           |
+| ------------------------------------- | ------- | ------------- | ---------------- |
+| speed ×3, no crew — ship left         | 52%     | 96%           | **30%**          |
+| speed ×2 + nanites — ship left        | 97%     | 98%           | 80%              |
+| Meridian win rate, no crew → nanites  |         | 63% → **75%** |                  |
+| Cinder win rate, balanced → + nanites |         |               | 25% → **42/50%** |
 
 **A ship with nothing fitted cannot be damaged**, since there is nothing to
 break. That is a degenerate case rather than a strategy: an empty ship is far
@@ -279,10 +279,10 @@ know which way anyone went; a short line simply buys canonical distance faster.
 **What the route is worth**, best readable line against the golden path, 24
 seeds, tuned on 8 others so the check is honest:
 
-| | Kestrel | Meridian | Cinder |
-| --- | --- | --- | --- |
-| handling 0.7 — Nav 0 → 2 | −9 → **−9** | −17 → **−51** | −0 → **+71** |
-| handling 1.0 — Nav 0 → 2 | −4 → **−48** | −8 → **−38** | −12 → **−12** |
+|                          | Kestrel      | Meridian      | Cinder        |
+| ------------------------ | ------------ | ------------- | ------------- |
+| handling 0.7 — Nav 0 → 2 | −9 → **−9**  | −17 → **−51** | −0 → **+71**  |
+| handling 1.0 — Nav 0 → 2 | −4 → **−48** | −8 → **−38**  | −12 → **−12** |
 | handling 1.4 — Nav 0 → 2 | −3 → **−47** | −16 → **−52** | −18 → **−30** |
 
 Ticks a lap; minus is faster. **Navigation is worth 0.6–0.9s a lap, and only to
@@ -394,10 +394,10 @@ Cinder Coil still turned 0.119 rad in a tick where its tightest bend allows
 **Measured, before and after**, as the per-frame change in one scanline of the
 canvas — how much the drawn scene jumps between frames:
 
-| | median | 90th | worst |
-| --- | --- | --- | --- |
-| before | 1.59 | 3.75 | 11.81 |
-| after | **0.17** | **0.28** | **2.66** |
+|        | median   | 90th     | worst    |
+| ------ | -------- | -------- | -------- |
+| before | 1.59     | 3.75     | 11.81    |
+| after  | **0.17** | **0.28** | **2.66** |
 
 The camera's easing is also a time now rather than a share per frame, which it
 should have been from the start: a share per frame gives a 120Hz screen a
@@ -439,23 +439,23 @@ tracks, three plans and twelve seeds, handling 1.5 finds it 0.0–0.3 times a la
 while handling 0.6 finds it up to 4.5.
 
 The position is capped and the cost is not: damage was already charged on how
-far the swing *wanted* to go, and the wall scrubs speed the same way. **Once per
+far the swing _wanted_ to go, and the wall scrubs speed the same way. **Once per
 contact, not per tick** — per tick was a death spiral that could not finish a
 lap, which is the same lesson damage learned in S3.6.
 
 **A latent bug the new geometry exposed.** On a bend, Carry and Lift never
-accelerated: they only ever scrubbed speed *down* toward the limit. It never
+accelerated: they only ever scrubbed speed _down_ toward the limit. It never
 showed because every route began on a straight. The moment a split's fan-out
 counted as a bend at distance 0, a ship sat at a standstill forever.
 
 **What the splits are worth now**, best readable route against the golden path,
 24 fresh seeds, tuned on 8 others:
 
-| | Kestrel | Meridian | Cinder |
-| --- | --- | --- | --- |
-| handling 0.7 — Nav 0 → 2 | 0 → **0** | −10 → **−151** | 0 → **−132** |
-| handling 1.0 — Nav 0 → 2 | 0 → **−25** | 0 → **−115** | 0 → **−80** |
-| handling 1.4 — Nav 0 → 2 | 0 → **−25** | −2 → **−119** | 0 → **−51** |
+|                          | Kestrel     | Meridian       | Cinder       |
+| ------------------------ | ----------- | -------------- | ------------ |
+| handling 0.7 — Nav 0 → 2 | 0 → **0**   | −10 → **−151** | 0 → **−132** |
+| handling 1.0 — Nav 0 → 2 | 0 → **−25** | 0 → **−115**   | 0 → **−80**  |
+| handling 1.4 — Nav 0 → 2 | 0 → **−25** | −2 → **−119**  | 0 → **−51**  |
 
 Each track now has its own answer to what the route is for. **The Kestrel gates
 on handling**: its splits are shorter, tighter lines that cost a weak ship a
@@ -501,16 +501,16 @@ the difficulty be measured at all: the same functions run the season headless.
 **How hard it is.** A player who shops exactly as well as a rival and paces 6%
 over par, 24 seeds:
 
-| | |
-| --- | --- |
+|                    |             |
+| ------------------ | ----------- |
 | survived both cuts | **13 / 24** |
-| won the season | **5 / 24** |
+| won the season     | **5 / 24**  |
 
 Winning one season in five off bot-quality shopping is about right for a floor —
 it leaves the player room to be better without needing to be good.
 
 **But the two cuts are not the same cut.** Every elimination in those 24 seeds
-happened at the *second* phase; the player survived the first in **24 of 24**,
+happened at the _second_ phase; the player survived the first in **24 of 24**,
 going into it ranked between 1st and 6th of 9 and never once in the bottom
 three. So the first cut is theatre and the second is the whole filter. The
 likely reason is the pacing lap: it pays the player credits no rival gets, one
@@ -579,7 +579,7 @@ time it costs:
 
 - **`clearAhead` read a hairpin as clear road.** The samples are 3 units apart,
   so a ship one sample into a bend still reads `radius 0`; and `nextBendOn` only
-  returns bends that *start* at or after the ship, so the bend it is standing in
+  returns bends that _start_ at or after the ship, so the bend it is standing in
   was skipped. A ship 20 units into a 94-unit hairpin was told it had 174 units
   of straight and boosted into the corner. On the Cinder Coil — longest straight
   80 units, against a `BOOST_WANTS_CLEAR` of 150 — that was **every boost it ever
@@ -650,7 +650,7 @@ speed for the whole race. Those are not the same size of thing and no constant i
 So this is not really an S6 number. **Thrust has dominated since S3**, and
 interaction is the first system measured against it and so the first to show it.
 One thing to check before anything is repriced: weapons only ever target the ship
-*ahead*, so they are a rubber band, and an earlier round of this measurement had
+_ahead_, so they are a rubber band, and an earlier round of this measurement had
 them raising win rate while costing clock. That did not survive the retune — they
 now cost both — but the season pays by place and the cut is on points, so the
 measurement that decides this is seasons won, not ticks gained, and it has still
@@ -661,7 +661,7 @@ whole layer read as nothing: ships were bounced by nobody in particular, and
 there was no sign a charge existed, let alone that it was being spent. The sim
 was right and the screen said none of it. What fixed it was naming the cause — a
 charge meter, a shot drawn going somewhere, a flash where it lands, and a state
-line that says *whose* mine that was. Worth remembering before the next system
+line that says _whose_ mine that was. Worth remembering before the next system
 lands: a mechanic the player cannot attribute to a decision they made is a
 mechanic they do not have.
 
@@ -731,14 +731,14 @@ component is worth 60% of the last. `DESIGN.md` has the rule.
 **Not fixed: bolting on cheap engines is still the best build in the game.**
 Over 72 seasons with every policy racing the others:
 
-| policy | seasons won | | policy | seasons won |
-| --- | --- | --- | --- | --- |
-| **engine-spam** | **25 / 72** | | speed | 6 |
-| handling | 17 | | collector | 6 |
-| nav | 15 | | shields | 6 |
-| engines | 8 | | dark | 3 |
-| bot | 7 | | mines | 1 |
-| | | | armed · tractor | 0 |
+| policy          | seasons won |     | policy          | seasons won |
+| --------------- | ----------- | --- | --------------- | ----------- |
+| **engine-spam** | **25 / 72** |     | speed           | 6           |
+| handling        | 17          |     | collector       | 6           |
+| nav             | 15          |     | shields         | 6           |
+| engines         | 8           |     | dark            | 3           |
+| bot             | 7           |     | mines           | 1           |
+|                 |             |     | armed · tractor | 0           |
 
 An even share of twelve policies is 6. So spam is four times its share, and two
 of the top three are engine builds — the bar S7 set is not met.
@@ -768,7 +768,7 @@ the game feels rather than what a part costs:
    at its own stat. It also makes every ship faster and every bend quicker, and
    the tracks were authored against the current range.
 2. **Make fitting a part cost something.** Mass is the obvious candidate and the
-   framework gestures at it — gravity "acts on the crew *and* on the ship" — but
+   framework gestures at it — gravity "acts on the crew _and_ on the ship" — but
    it is a new rule, not a number, and it is not in `DESIGN.md`.
 3. **Fall off per category rather than per component**, for engines only. Cheap
    to try and it needs no new rule, but it contradicts "a category may be fitted
@@ -781,7 +781,7 @@ The owner chose to leave it and take S7.3 and S7.4 instead.
 
 Both had the same thing wrong: nothing to do. A tractor beam took speed off the
 ship ahead, which is not a reason to fit one over a missile. A collector shield
-needed level 3 *and* full shields to keep anything, so its first two levels
+needed level 3 _and_ full shields to keep anything, so its first two levels
 collected nothing and were strictly worse than plain shielding.
 
 Both are fixed as designs. **A tether pulls both ways**, so holding the ship
@@ -793,21 +793,21 @@ reserved for level 3 at full shields.
 Neither made its build competitive, and the numbers say so plainly. Seventy-two
 seasons, every policy racing the others, before and after:
 
-| policy | before | after | | policy | before | after |
-| --- | --- | --- | --- | --- | --- | --- |
-| engine-spam | 25 | **21** | | shields | 6 | 8 |
-| handling | 17 | **21** | | speed | 6 | 7 |
-| **dark** | 3 | **16** | | collector | 6 | **7** |
-| nav | 15 | 12 | | bot | 7 | 7 |
-| engines | 8 | 9 | | **tractor** | 0 | **2** |
-| | | | | armed · mines | 0 · 1 | **0 · 0** |
+| policy      | before | after  |     | policy        | before | after     |
+| ----------- | ------ | ------ | --- | ------------- | ------ | --------- |
+| engine-spam | 25     | **21** |     | shields       | 6      | 8         |
+| handling    | 17     | **21** |     | speed         | 6      | 7         |
+| **dark**    | 3      | **16** |     | collector     | 6      | **7**     |
+| nav         | 15     | 12     |     | bot           | 7      | 7         |
+| engines     | 8      | 9      |     | **tractor**   | 0      | **2**     |
+|             |        |        |     | armed · mines | 0 · 1  | **0 · 0** |
 
 - **The tether moved the tractor beam from 0 to 2 of 72.** That is about one
   standard error. It is a better part and it is still near the bottom.
 - **Collecting at every level moved the collector from 6 to 7.** That is nothing.
   The income is real and it does not buy enough to change a season.
 - **The thing that actually moved was neither.** `dark` went from 3 to 16, and
-  that was the *level curve* — the dark matter engine was added in S6 and never
+  that was the _level curve_ — the dark matter engine was added in S6 and never
   repriced, so it still had the old diminishing ladder. The shop test caught it;
   no one would have found it by playing. Repricing one mediocre part was worth
   five times what redesigning two parts was.
@@ -833,14 +833,14 @@ seasons a policy, **same seeds on both sides** — `scripts/balance.ts` seeds
 seasons 0..n, so `main` and the branch raced identical seasons and the only
 variable was the change. Standard error on a win count at 72 is about 2.3.
 
-| policy | before | after | | policy | before | after |
-| --- | --- | --- | --- | --- | --- | --- |
-| **handling** | 21 | **31** | | collector | 12 | 10 |
-| **dark** | 23 | **14** | | speed | 5 | 6 |
-| engine-spam | 23 | 23 | | tractor | 5 | 5 |
-| engines | 14 | 18 | | armed | 3 | 4 |
-| shields | 9 | 12 | | mines | 2 | 2 |
-| nav | 11 | 8 | | bot | 5 | 10 |
+| policy       | before | after  |     | policy    | before | after |
+| ------------ | ------ | ------ | --- | --------- | ------ | ----- |
+| **handling** | 21     | **31** |     | collector | 12     | 10    |
+| **dark**     | 23     | **14** |     | speed     | 5      | 6     |
+| engine-spam  | 23     | 23     |     | tractor   | 5      | 5     |
+| engines      | 14     | 18     |     | armed     | 3      | 4     |
+| shields      | 9      | 12     |     | mines     | 2      | 2     |
+| nav          | 11     | 8      |     | bot       | 5      | 10    |
 
 Handling +10 and dark −9 are both about four standard errors. They are real, and
 they survived being found at 24 seasons first — where BACKLOG's own note says a
@@ -854,10 +854,10 @@ Proving Ground heats a season; one pinned plus eight drawn is 3.
 
 What moved is how much of that track is bend:
 
-| | old | new |
-| --- | --- | --- |
-| lap | 1081 | 1252 |
-| of it bend | 33% | **43%** |
+|                                                   | old   | new       |
+| ------------------------------------------------- | ----- | --------- |
+| lap                                               | 1081  | 1252      |
+| of it bend                                        | 33%   | **43%**   |
 | a thrust build's pace advantage over a grip build | 22.0% | **17.7%** |
 
 So the one track every season is guaranteed to race got substantially kinder to
@@ -879,14 +879,14 @@ more than it did.
 One engine per ship, levels bought in copies, slots bought in progress.
 Seventy-two seasons a policy, harness fixed twice along the way (see below).
 
-| policy | before | after | | policy | before | after |
-| --- | --- | --- | --- | --- | --- | --- |
-| engines | 18 | **37** | | mines | 7 | 5 |
-| collector | 16 | **37** | | dark | 24 | **2** |
-| shields | 18 | 33 | | armed | 2 | 1 |
-| nav | 9 | 18 | | **speed** | 6 | **0** |
-| tractor | 5 | 9 | | **handling** | 37 | **0** |
-| **engine-spam** | 22 | **7** | | bot | 7 | 0 |
+| policy          | before | after  |     | policy       | before | after |
+| --------------- | ------ | ------ | --- | ------------ | ------ | ----- |
+| engines         | 18     | **37** |     | mines        | 7      | 5     |
+| collector       | 16     | **37** |     | dark         | 24     | **2** |
+| shields         | 18     | 33     |     | armed        | 2      | 1     |
+| nav             | 9      | 18     |     | **speed**    | 6      | **0** |
+| tractor         | 5      | 9      |     | **handling** | 37     | **0** |
+| **engine-spam** | 22     | **7**  |     | bot          | 7      | 0     |
 
 **The degenerate build is finished.** Engine-spam fell from 22 to 7 of 72,
 survives 18 seasons in 72 against 63 for the leaders, and ends a season as a
@@ -900,22 +900,22 @@ and every policy built on a specialist engine is at the bottom — `handling` an
 `speed` won 0 of 72 each. Measured directly, one maxed engine plus a maxed crew
 and shield, mean lap over four tracks and three corner plans:
 
-| the one engine | thrust | handling | mean lap |
-| --- | --- | --- | --- |
-| **balanced** | 1.30 | 1.22 | **1624** |
-| dark matter | 1.48 | 0.78 | 1803 (+11%) |
-| speed | 1.58 | 0.58 | 1967 (+21%) |
-| handling | 0.76 | 1.52 | 2343 (+44%) |
+| the one engine | thrust | handling | mean lap    |
+| -------------- | ------ | -------- | ----------- |
+| **balanced**   | 1.30   | 1.22     | **1624**    |
+| dark matter    | 1.48   | 0.78     | 1803 (+11%) |
+| speed          | 1.58   | 0.58     | 1967 (+21%) |
+| handling       | 0.76   | 1.52     | 2343 (+44%) |
 
 The specialists were never balanced to be flown alone. They were balanced as
-*one half of a pair*: `handling3 + balanced3` reached thrust 1.28 and handling
+_one half of a pair_: `handling3 + balanced3` reached thrust 1.28 and handling
 1.60, which is what made a grip build viable, and that ship is illegal now. A
 handling engine on its own leaves a ship at thrust 0.76 — **below the 0.78 it
 would have with no engine at all**.
 
 So this is the same root cause BACKLOG already named, wearing a new symptom. "A
-balanced engine costs only credits" used to mean *stack them*; now it means
-*fit the only one that does not cost you something*.
+balanced engine costs only credits" used to mean _stack them_; now it means
+_fit the only one that does not cost you something_.
 
 **What would fix it is a tuning pass, not another rule**, and it is the owner's
 call because it changes what a specialist is for:
@@ -951,11 +951,11 @@ and said it felt wrong. It is, and the cause is deeper than the tuning.
 multiple of the bend's holding speed, over 18 shapes crossed with three ships —
 `npm run optimal` and the sweep behind it:
 
-| | grippy 1.0/1.5 | balanced 1.3/1.2 | fast 1.6/0.9 |
-| --- | --- | --- | --- |
-| r30, any sweep, any straight | 1.45 (+0%) | 1.45–1.55 | **1.45–1.50** |
-| r55, any sweep, any straight | 1.10 (+0%) | 1.45–1.50 | **1.45–1.50** |
-| r90, any sweep, any straight | 0.90 (+0%) | 1.25 (+0%) | **1.45–1.50** |
+|                              | grippy 1.0/1.5 | balanced 1.3/1.2 | fast 1.6/0.9  |
+| ---------------------------- | -------------- | ---------------- | ------------- |
+| r30, any sweep, any straight | 1.45 (+0%)     | 1.45–1.55        | **1.45–1.50** |
+| r55, any sweep, any straight | 1.10 (+0%)     | 1.45–1.50        | **1.45–1.50** |
+| r90, any sweep, any straight | 0.90 (+0%)     | 1.25 (+0%)       | **1.45–1.50** |
 
 The fast ship wants 1.45 to 1.50 in **all eighteen** cases. Radius does not move
 it, sweep does not move it, and the straight in front of the bend does not move
@@ -975,7 +975,7 @@ no variation.** The game has one right answer everywhere.
   formula knows how far it is to the next bend, or how far it has been since the
   last one.
 - **A bend forgives whatever came before it.** `swingTarget = -bend.turn * swing`
-  is an *absolute* target: a ship arriving twenty units wide has its offset
+  is an _absolute_ target: a ship arriving twenty units wide has its offset
   discarded and the bend starts it fresh from the centre. Arriving badly costs
   nothing at the next bend.
 
@@ -991,7 +991,7 @@ fixed number is nothing to be good at.
 
 1. **Make the swing compound.** `swingTarget = offset - bend.turn * swing`,
    clamped to the corridor. Arriving wide then makes the next bend worse, so a
-   short straight punishes over-driving and handling matters for the *optimum*
+   short straight punishes over-driving and handling matters for the _optimum_
    rather than only for the recovery. A run of bends becomes a compounding risk,
    which is also the most watchable thing on this list.
 2. **Reward the exit.** Speed out of a bend scales with how near the path the
@@ -1018,7 +1018,7 @@ that turned out to be the load-bearing one. `npm run table` prints the result.
 **What shipped:**
 
 1. **The swing compounds.** `swingTarget = offset * SWING_COMPOUND - turn * swing`.
-   Arriving wide makes the next bend worse. Deliberately *not* clamped to the
+   Arriving wide makes the next bend worse. Deliberately _not_ clamped to the
    corridor: clamping caps `exposure`, which reads `swingTarget`, and would make
    a huge swing exactly as cheap as one that merely reaches the wall. The
    per-tick offset clamp already stops it running away.
@@ -1029,7 +1029,7 @@ that turned out to be the load-bearing one. `npm run table` prints the result.
    handling, so a grippy ship brakes later and a long straight is worth more to
    it than to a loose one.
 4. **The swing knows the geometry** (this one is beyond the three that were
-   asked for). `spread` was `SWING_SPREAD * excess^EXP` with *no radius in it* —
+   asked for). `spread` was `SWING_SPREAD * excess^EXP` with _no radius in it_ —
    a hairpin and a sweeper threw a ship the same distance for the same relative
    excess. Now `* (SWING_REFERENCE_RADIUS / radius)^SWING_TIGHTNESS`, and
    `safeAim` inverts the same formula so the closed form still means what it says.
@@ -1047,7 +1047,7 @@ bend's limit so the aim is moot.
 - **The approach moves it:** r70/60°/fast reads 1.45 / 1.50 / 1.55 as the
   straight in front goes 60 / 200 / 400.
 - **`safeAim` tracks it closely** — 1.33 / 1.40 / 1.48 / 1.57 against radius —
-  and sits a little under, on purpose: the table is the *fastest* line and the
+  and sits a little under, on purpose: the table is the _fastest_ line and the
   fastest line accepts leaving the path sometimes.
 - **Where the aim matters at all, the optimum spans 1.25 to 1.65**, and being
   0.3 out costs 6–19%.
@@ -1114,13 +1114,13 @@ something turns it back**, so correcting a line costs room and time.
 **1. Handling now does what the owner said it should.** Held at one speed
 through one bend (r55, 90°), driver steering exactly what the bend asks:
 
-| handling | holds at | 42/s | 48/s | 54/s | 60/s |
-| --- | --- | --- | --- | --- | --- |
-| 0.7 | 33/s | 97 | 264 | 278 | 285 |
-| 1.0 | 39/s | **8** | 75 | 225 | 267 |
-| 1.3 | 45/s | **8** | 10 | 79 | 209 |
-| 1.6 | 50/s | **8** | 10 | 12 | 95 |
-| 2.0 | 56/s | **8** | 10 | 11 | **14** |
+| handling | holds at | 42/s  | 48/s | 54/s | 60/s   |
+| -------- | -------- | ----- | ---- | ---- | ------ |
+| 0.7      | 33/s     | 97    | 264  | 278  | 285    |
+| 1.0      | 39/s     | **8** | 75   | 225  | 267    |
+| 1.3      | 45/s     | **8** | 10   | 79   | 209    |
+| 1.6      | 50/s     | **8** | 10   | 12   | 95     |
+| 2.0      | 56/s     | **8** | 10   | 11   | **14** |
 
 Units off the line; the path is 9 either side. Read a column: same bend, same
 speed, only handling changes, and it is the difference between on the road and
@@ -1130,12 +1130,12 @@ twenty path-widths off it. `npm run feel` prints this.
 the lab. Two drivers, same ship, same speed, same target line — one reads the
 road one steering-lag ahead, the other reads it underfoot:
 
-| bend | anticipating | reacting |
-| --- | --- | --- |
-| r26 | 0.4 – 1.0 | 17.4 – 22.8 |
-| r45 | 0.5 – 0.8 | 14.5 – 16.9 |
-| r70 | 0.6 – 0.8 | 13.7 – 18.0 |
-| r110 | 0.5 – 0.7 | 14.3 – 22.0 |
+| bend | anticipating | reacting    |
+| ---- | ------------ | ----------- |
+| r26  | 0.4 – 1.0    | 17.4 – 22.8 |
+| r45  | 0.5 – 0.8    | 14.5 – 16.9 |
+| r70  | 0.6 – 0.8    | 13.7 – 18.0 |
+| r110 | 0.5 – 0.7    | 14.3 – 22.0 |
 
 The anticipating one holds the line on every ship and every bend; the reacting
 one is off it on all sixteen. And the lead that does it is not fitted — it is
@@ -1148,7 +1148,7 @@ that "precision against a fixed number" never was.
 **3. The bang-bang was two bugs, not one.** Speed was only ever flat out or
 crawling because acceleration was a flat rate; a taper (`accel · (1 - v/top)`)
 plus a throttle that eases rather than switches gives a real profile. Then the
-same fault turned up in the *steering*: a key is on or off, and a ship that
+same fault turned up in the _steering_: a key is on or off, and a ship that
 goes from straight to full lock in half a second cannot be placed on a line
 either. The fix is to keep the two apart — `STEER_RATE` is the ship's lag and
 `KEY_STEER_ON` is the pilot's. Slowing the ship's own steering to make the
@@ -1158,8 +1158,8 @@ keyboard feel better costs a perfect driver the line: best achievable goes from
 ### Navigation is a rating from 0 to 100, and it is a lever in the lab
 
 _Added 2026-09-21._ The ghost now has a **Navigation** slider. At 100 it is the
-reference line exactly, with no randomness in it at all; below that the *same
-driver* is worse informed in three ways, each something a pilot would plausibly
+reference line exactly, with no randomness in it at all; below that the _same
+driver_ is worse informed in three ways, each something a pilot would plausibly
 be bad at rather than a number bolted onto the outcome:
 
 - **how far ahead it reads the road** — `GHOST_LEAD × skill`, deterministic,
@@ -1179,16 +1179,16 @@ something other than what it says.
 **Measured** (`npm run feel`, r55/90°, handling 1.2, 60 runs a row):
 
 | nav | worst off: median | 90th | ticks | left the path |
-| --- | --- | --- | --- | --- |
-| 0 | 13.1 | 30.5 | 896 | 87% |
-| 25 | 9.6 | 26.7 | 866 | 57% |
-| 55 | 5.5 | 17.3 | 835 | 15% |
-| 85 | 1.8 | 3.7 | 820 | 0% |
-| 100 | 0.6 | 0.6 | 817 | 0% |
+| --- | ----------------- | ---- | ----- | ------------- |
+| 0   | 13.1              | 30.5 | 896   | 87%           |
+| 25  | 9.6               | 26.7 | 866   | 57%           |
+| 55  | 5.5               | 17.3 | 835   | 15%           |
+| 85  | 1.8               | 3.7  | 820   | 0%            |
+| 100 | 0.6               | 0.6  | 817   | 0%            |
 
 Smooth and monotone on both measures, and about 10% on the clock end to end.
 **The 90th column is the interesting one**: a low rating is not reliably
-mediocre, it is a *range*. Being badly navigated is mostly about the bad days,
+mediocre, it is a _range_. Being badly navigated is mostly about the bad days,
 which is a much better thing to sell a component against than an average.
 
 Each run draws a fresh seed, so pressing `R` a few times shows the spread rather
@@ -1203,7 +1203,7 @@ there was no way to make it try.
 
 **The shove.** `Shape.bump` is a sideways velocity applied at a point on the
 course — tap the road in the lab to place it, or use the sliders. It is a
-*crossing*, not a proximity, so a fast ship cannot step over it and a stopped
+_crossing_, not a proximity, so a fast ship cannot step over it and a stopped
 one cannot sit in it. Both the player and the ghost hit it. It is what turned
 "can it recover?" from a guess into a measurement.
 
@@ -1238,36 +1238,36 @@ What separates them is failing **differently**:
 - anticipation comes back fast (`skill ^ 0.6`), so 50 already looks broadly
   competent;
 - the wobble in where it thinks the line is fades about evenly (`^1.3`), and its
-  amplitude is now *smaller* than before;
+  amplitude is now _smaller_ than before;
 - misjudging its own pace is concentrated at the very bottom (`^3.0`), so a ship
   with no navigation does not wobble more, it arrives at corners hopelessly
   wrong and blows them.
 
 | nav | median off | 90th | ticks | left the path |
-| --- | --- | --- | --- | --- |
-| 0 | 22.4 | 33.5 | 1226 | 100% |
-| 25 | 16.1 | 28.2 | 1073 | 100% |
-| 55 | 8.7 | 10.6 | 1038 | 40% |
-| 85 | 1.6 | 2.1 | 861 | 0% |
-| 100 | 0.4 | 0.4 | 831 | 0% |
+| --- | ---------- | ---- | ----- | ------------- |
+| 0   | 22.4       | 33.5 | 1226  | 100%          |
+| 25  | 16.1       | 28.2 | 1073  | 100%          |
+| 55  | 8.7        | 10.6 | 1038  | 40%           |
+| 85  | 1.6        | 2.1  | 861   | 0%            |
+| 100 | 0.4        | 0.4  | 831   | 0%            |
 
 0 against 50 is now 22.4 units against ~10, and 48% longer against 25%.
 
 ### Bumpers, and the overshoot that was making recovery look violent
 
-_Added 2026-09-21._ The owner, on the recovery rebuilt an hour earlier: *"it
+_Added 2026-09-21._ The owner, on the recovery rebuilt an hour earlier: _"it
 seems pretty aggressive when we get off course. I'm envisioning something like
-invisible bumpers that kinda push us back toward the track."*
+invisible bumpers that kinda push us back toward the track."_
 
 **The diagnosis was not what the word suggested.** Tracing the offset through a
-recovery showed the ship was not being *forceful*, it was **oscillating**:
+recovery showed the ship was not being _forceful_, it was **oscillating**:
 
 ```
 0 → 8 → 14 → 16 → 14 → 9 → 1 → -4 → -6 → -7   (and back again)
 ```
 
 It swung clean past the centre and out the other side. The tuning pass that
-caused it scored *"ticks until back within one unit of the line"* — a metric
+caused it scored _"ticks until back within one unit of the line"_ — a metric
 that rewards a fast first crossing and says **nothing at all** about what
 happens after it. A controller can score perfectly on it while ringing like a
 bell. Scored on overshoot instead, the answer is the opposite of what the
@@ -1278,13 +1278,13 @@ shove now reads
 0 → 8 → 13 → 9 → 6 → 5 → 4 → 3 → 2
 ```
 
-| | before | after |
-| --- | --- | --- |
-| past the centre, the other way | 9.7 units | **0.1** |
-| mean yaw through the recovery | 0.29 | **0.13** |
-| ticks pinned at the yaw clamp | 95 | **9** |
-| worst offset after a shove | 22.6 | **14.0** |
-| clean lap | 2453t | 2506t (+0.6%) |
+|                                | before    | after         |
+| ------------------------------ | --------- | ------------- |
+| past the centre, the other way | 9.7 units | **0.1**       |
+| mean yaw through the recovery  | 0.29      | **0.13**      |
+| ticks pinned at the yaw clamp  | 95        | **9**         |
+| worst offset after a shove     | 22.6      | **14.0**      |
+| clean lap                      | 2453t     | 2506t (+0.6%) |
 
 **And the bumpers, which are what made the gentler gains affordable.**
 `Shape.bumpers` is a soft lateral push back toward the road once a ship is
@@ -1292,21 +1292,21 @@ shove now reads
 wall, not a penalty, and not the pilot's doing — the road leans on the ship. The
 force is absolute rather than scaled by grip, because it belongs to the road: a
 grippy ship should not be shoved back harder than a loose one. With them on, the
-worst a shove does falls from 22.6 to 14.0 *despite* the halved correction.
+worst a shove does falls from 22.6 to 14.0 _despite_ the halved correction.
 
 **They change what the navigation dial can mean, and that is worth knowing.** A
-bumper bounds how far *anybody* gets, so the separation between ratings moves
+bumper bounds how far _anybody_ gets, so the separation between ratings moves
 off the ruler and onto the clock. Re-fitted (`NAV_WANDER_LINE` 0.9 → 1.6,
 `NAV_PACE_CURVE` 3.0 → 1.6), measured with bumpers on, which is what the lab
 now runs:
 
 | nav | median off | 90th | ticks | left the path |
-| --- | --- | --- | --- | --- |
-| 0 | 12.3 | 14.0 | 1171 | 100% |
-| 25 | 10.5 | 12.8 | 1067 | 78% |
-| 55 | 5.6 | 8.9 | 978 | 5% |
-| 85 | 1.3 | 2.0 | 843 | 0% |
-| 100 | 0.4 | 0.4 | 834 | 0% |
+| --- | ---------- | ---- | ----- | ------------- |
+| 0   | 12.3       | 14.0 | 1171  | 100%          |
+| 25  | 10.5       | 12.8 | 1067  | 78%           |
+| 55  | 5.6        | 8.9  | 978   | 5%            |
+| 85  | 1.3        | 2.0  | 843   | 0%            |
+| 100 | 0.4        | 0.4  | 834   | 0%            |
 
 The 90th-percentile tail is gone, which was previously the best argument for
 owning a navigation system ("it is mostly about the bad days"). That argument
@@ -1330,7 +1330,7 @@ with, bumpers included, so its tables are the numbers you actually feel.
   gives away 0% to 2.3% — most on a tight bend with a grippy ship, where the
   corridor is widest relative to the radius, and nothing at all on an open
   sweeper where the corner was never the limit. So "navigation 100" means
-  *perfectly on the line*, not *fastest possible*. That ~2% is unclaimed
+  _perfectly on the line_, not _fastest possible_. That ~2% is unclaimed
   headroom: either the ghost learns the real racing line, or the gap is
   deliberately where a higher tier of component, or player skill, lives.
 - **Nothing in `src/sim` has changed.** The lab is an experiment; the game's
@@ -1357,12 +1357,12 @@ most want it, all measured, none of them touched:**
 stock `bareShip(1, 1)` has `BASE_NAV` — no navigation system at all — and now
 flies like it:
 
-| track | nav 0 | nav 1 | nav 2 | nav 3 |
-| --- | --- | --- | --- | --- |
-| Kestrel Loop | 3535 | 3210 | 2607 | 1996 |
-| Meridian Run | 4149 | 3593 | 3061 | 2656 |
-| Cinder Coil | 2529 | 2358 | 1772 | 1358 |
-| Proving Ground | 3152 | 2959 | 2355 | 1779 |
+| track          | nav 0 | nav 1 | nav 2 | nav 3 |
+| -------------- | ----- | ----- | ----- | ----- |
+| Kestrel Loop   | 3535  | 3210  | 2607  | 1996  |
+| Meridian Run   | 4149  | 3593  | 3061  | 2656  |
+| Cinder Coil    | 2529  | 2358  | 1772  | 1358  |
+| Proving Ground | 3152  | 2959  | 2355  | 1779  |
 
 Every track's `par` was authored against the old model and is now only
 reachable with a good navigation system. That is arguably correct — it makes
@@ -1385,12 +1385,40 @@ do, or the wall is honest scenery — but it should be a decision.
 swing, where a tighter line was worth taking if you could hold it. Under
 flight, a tighter line is simply a lower holding speed and the ship slows for
 it. The Meridian's inside line costs 159 / 74 / 32 ticks at handling 0.7 / 1.2
-/ 1.8 — always a cost. The *cost* still scales with grip, which is what
+/ 1.8 — always a cost. The _cost_ still scales with grip, which is what
 `route.test.ts` now pins, but the choice is gone until the splits are
 re-authored against the road ships actually fly. This is a content job.
 
 Also stale and unmeasured since: the 72-season balance harness, every number
 under S7, and where `nav` sits in the shop now that it does two jobs.
+
+## A race takes 30 seconds to watch, whatever it took to fly
+
+_Landed 2026-09-22._ The flight model made laps long: a stock ship flies the
+Proving Ground in 4096 ticks, which is 68 seconds of watching, and a heat is
+two of them. The film's length is known before the first frame of it is drawn,
+so the cursor is now moved at whatever rate fits a whole race into
+`VIEW_SECONDS` — `src/ui/playback.ts`, one number. A pacing lap gets the thirty
+to itself; a heat gives each lap fifteen. Measured in a browser: 30.1s, then
+15.0s and 15.2s.
+
+Nothing slows down. A race already inside its share keeps the speed it was
+flown at, so thirty seconds is a ceiling rather than a stretch.
+
+**The cost, and it is a real one: going faster no longer looks faster.** A ship
+that flies a lap in 2000 ticks and one that takes 4000 are played back over the
+same fifteen seconds, so the improvement the player bought reads on the clock
+and in the standings but not in the window. Inside a race nothing is lost —
+every ship shares one film, so gaps and overtakes are as they were.
+
+Two things would get it back, neither taken here:
+
+- **Anchor the rate to the track rather than the film.** A lap at par takes the
+  viewing length and a slow lap overruns it, which is the honest version — but
+  every par is stale (item 1 above), so it wants the tuning pass first.
+- **Shorten the race rather than the watching.** 4096 ticks for one lap is the
+  flight model's doing, and the pars say the tracks were authored for something
+  a third of that.
 
 ## Not scheduled
 
@@ -1430,7 +1458,7 @@ is to make a navigation system worth its slot.
 **The blocker is not the split, it is the golden path.** A safer line is worth
 nothing while the golden path is free: damage today comes only from being
 thrown off it, so there is no danger on it to buy safety from. Hazards that sit
-*on* the track have to land before "safer" is a reason to go anywhere.
+_on_ the track have to land before "safer" is a reason to go anywhere.
 
 _Unblocked — stage 5 of the track model landed the mechanism._ A stretch of
 road can now be thick, dangerous, hard to read, or worth money, and the track
@@ -1460,7 +1488,7 @@ Two smaller things left behind by the same stage:
   by 4σ when its shape changed. See the measurement under S7.
 - **A fixture cannot be dragged on the canvas.** The builder places one with
   three sliders (sector, road, how far along), which is enough to author with
-  and is not enough to author *comfortably*. Sectors themselves now drag.
+  and is not enough to author _comfortably_. Sectors themselves now drag.
 
 **~~Splits could be allowed to cross the circuit now.~~** _Done._ The rule is
 now "two roads may cross, they may not be in the same place", measured against
@@ -1474,4 +1502,4 @@ be: two roads that cross in the plan view are separated in height, and the sim
 never compared positions anyway. Loosening it would open up a whole family of
 track shapes — figure-eights, crossovers — that cannot be authored today. Left
 alone for now because the four tracks that ship are all plain loops and nothing
-is waiting on it; the change is to the *invariant*, not to any code.
+is waiting on it; the change is to the _invariant_, not to any code.

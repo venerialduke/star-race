@@ -25,6 +25,24 @@ export const HOLD_GRIP = 0.0078;
 export const SWING_SPREAD = 40;
 
 /**
+ * The bend the spread above is quoted for, and how hard tightness bites.
+ *
+ * **The swing had no geometry in it at all.** A 30-radius hairpin and a
+ * 90-radius sweeper threw a ship exactly the same distance for the same
+ * relative excess, which is wrong on the face of it — carrying 40% too much
+ * speed through a hairpin asks far more of a ship than 40% through a sweeper.
+ *
+ * It is also why the racing line came out a constant. Entry speed is quoted as
+ * a multiple of the holding speed, and holding speed already contains the
+ * radius, so with no radius in the swing either there was nothing left for the
+ * shape of a bend to change. With it, a tight bend wants a lower entry and an
+ * open one a higher: measured, a fast ship wants 1.30–1.40 at r30 and
+ * 1.45–1.60 at r90.
+ */
+export const SWING_REFERENCE_RADIUS = 55;
+export const SWING_TIGHTNESS = 0.7;
+
+/**
  * How steeply the swing grows with excess speed. Above 1 means a ship slightly
  * too fast is usually fine and a ship much too fast is unpredictable — which
  * is the whole bet the game rests on.
@@ -52,10 +70,10 @@ export const PATH_HALF_WIDTH = 9;
 export const WIDE_SPEED_AT_EDGE = 0.94;
 
 /** How much more it loses per track unit beyond the edge. */
-export const WIDE_SPEED_PER_UNIT = 0.028;
+export const WIDE_SPEED_PER_UNIT = 0.12;
 
 /** However far out it ends up, it keeps at least this much. */
-export const WIDE_SPEED_FLOOR = 0.42;
+export const WIDE_SPEED_FLOOR = 0.18;
 
 /** How fast the swing opens up through the bend, as a fraction closed per tick. */
 export const SWING_RISE = 0.09;
@@ -383,6 +401,85 @@ export const WALL_CLEAR = 0.9;
 export const BASE_NAV = 0;
 
 /** Nav needed to plan a split of each grade. A grade above your nav is unplannable. */
+/**
+ * How far off the racing line a ship with no navigation at all drives, as a
+ * fraction of the line either way, and how much each level of nav takes off.
+ *
+ * **Either way, on purpose.** A ship that was only ever wrong in the fast
+ * direction would be telling the same one-sided story the wide-penalty used to:
+ * send it, and mostly get away with it. A poor navigator brakes too early as
+ * often as too late — it is inconsistent, not reckless — so nav buys precision
+ * rather than nerve, and the time it saves comes from both sides.
+ */
+/*
+ * Measured against what a player sees, which is the only thing this number is
+ * for: **how often does a bend throw me off the path?**
+ *
+ * The first version derived it from the swing's *spread* and came out at 0.14.
+ * That was wrong twice over. The realised swing is `spread * draw`, so a slip
+ * sized against the spread only reaches the path edge when the swing draw is
+ * also high; and the blur is centred on the line, so half of it brakes early
+ * and cannot go wide at all. The result was a ship with no navigation system
+ * leaving the path on 9% of the Meridian's bends — tidy, when it should have
+ * looked lost — and nav 3 taking that to 3%, which is not a stat.
+ *
+ * Of the bends a speed build actually meets, at 0.25:
+ *
+ *              nav 0   nav 1   nav 2   nav 3
+ *   Kestrel      31%     26%     20%      9%
+ *   Meridian     18%     10%      9%      2%
+ *   Cinder       32%     25%     24%     20%
+ *
+ * Wider than this buys little and costs a lot: a symmetric blur cannot push a
+ * bad driver past about a third of bends, because the slow half of it only
+ * ever brakes early — and past 0.25 the widest excursion reaches the corridor
+ * wall, which is a ban rather than a risk.
+ */
+/**
+ * How much of the offset a ship arrives on carries into the bend's swing.
+ *
+ * **A bend used to forgive whatever came before it.** The swing target was
+ * absolute — `-turn * swing` — so a ship arriving twenty units wide had its
+ * offset discarded and started the bend fresh from the centre. That is the
+ * single biggest reason the racing line came out a constant: a run of bends was
+ * no harder than one bend, and a short straight no harder than a long one,
+ * because nothing could carry between them.
+ *
+ * At 1 the swing is measured from where the ship actually is. Arriving wide on
+ * the **outside** compounds and can reach the wall; arriving wide on the
+ * **inside** is a good line into the bend and gives some of it back, which is
+ * the racing line falling out of the rule rather than being drawn on top.
+ */
+export const SWING_COMPOUND = 1;
+
+/**
+ * Speed handed back on leaving a bend, for having held the path through it.
+ *
+ * The tradeoff real racing is built on and this game had no version of: entry
+ * speed used to buy exit speed with nothing owed. Now carrying too much in
+ * throws the ship wide, and being wide through the bend costs the exit — so
+ * what a bend is worth depends on the straight that follows it, which is how
+ * "distance to the next curve" reaches the answer at all.
+ *
+ * Paid as a share of the bend's holding speed, scaled by how near the path the
+ * ship held: full at the centre line, nothing at the path's edge.
+ */
+export const EXIT_BONUS = 0.22;
+
+/**
+ * How much of the braking force Handling is worth, per point above 1.
+ *
+ * A ship used to brake at a flat rate and so always arrive at exactly the
+ * speed it aimed for, whatever the approach — which decoupled entry speed from
+ * everything, including the length of the straight it came down. A grippy ship
+ * now stops better, so a long straight is a harder braking problem than a short
+ * one and a low-handling ship can arrive hot without choosing to.
+ */
+export const BRAKE_PER_HANDLING = 0.55;
+
+export const NAV_SLIP = 0.25;
+export const NAV_SLIP_PER_LEVEL = 0.0625;
+
 export const NAV_FOR_DIM = 1;
 export const NAV_FOR_DARK = 2;
 
@@ -597,3 +694,214 @@ export const TRACTOR_TOW_PULL = 0.004;
  * levels do nothing is a part nobody buys twice.
  */
 export const COLLECT_SHARE = [0.3, 0.5, 0.75] as const;
+
+// ---------------------------------------------------------------------------
+// FLIGHT
+//
+// How a ship flies, which the feel lab found and `src/sim/flight.ts` runs. The
+// swing these replaced drew one number at turn-in and nothing the ship did
+// afterwards could change where it ended up; this is a force the bend applies
+// and a grip the ship answers with, so handling, entry speed, the length of the
+// approach and the shape of the bend all reach the answer on their own.
+// ---------------------------------------------------------------------------
+
+/**
+ * Coasting drag, as a fraction of speed shed per tick. Small: enough that
+ * lifting off is felt, not so much that it stands in for the brake.
+ *
+ * It applies only off the power. Applied under thrust as well it fights the
+ * acceleration taper, and a ship settles below the top speed its own engine
+ * claims — which makes every speed number quietly mean something else.
+ */
+export const DRAG = 0.0012;
+
+/**
+ * How fast the *ship* answers the steering, as a fraction of the way to the
+ * asked-for input per tick. Steering has weight; a ship does not snap from
+ * straight to full lock.
+ *
+ * Slowing this costs a perfect pilot the line: measured over sixteen
+ * ship-and-bend pairs, the best it can hold goes from 1.4 units off at 0.09 to
+ * 7.5 at 0.05 and 14.6 at 0.035, whatever it anticipates.
+ */
+export const STEER_RATE = 0.09;
+
+/** Throttle builds (a ship has mass) and lifts off at once (so does a pilot). */
+export const THROTTLE_RATE_UP = 0.08;
+export const THROTTLE_RATE_DOWN = 0.5;
+
+/**
+ * Below this speed, steering has nothing to work against — dividing the ship's
+ * turn rate by its speed would blow up. A floor, not a rule.
+ */
+export const MIN_ROLLING_SPEED = 0.08;
+
+/**
+ * How far a ship may point away from the road before it is simply spinning.
+ * Reaching it is not a penalty, it is a statement: the bend is gone.
+ */
+export const MOST_YAW = 0.7;
+
+/** Past this much yaw the ship is visibly sliding. */
+export const SLIDING_YAW = 0.22;
+
+// --- The pilot -------------------------------------------------------------
+
+/**
+ * How far ahead a perfect pilot steers for, in ticks of its own steering lag.
+ *
+ * Measured, and then explained: a ship that turns in exactly one steering time
+ * constant early holds the line to within a unit; one that waits for the bend
+ * to arrive is nine units wide at the same speed, and no correction afterwards
+ * recovers it, because at the limit there is no lock left to correct with.
+ *
+ * **Anticipation is what a navigation system buys** — not precision against a
+ * number, but knowing the bend is coming in time to do anything about it.
+ */
+export const PILOT_LEAD = 1 / STEER_RATE;
+
+/**
+ * How hard a pilot pulls back toward the line, per unit off it, and how hard
+ * it damps its own approach, per unit of sideways.
+ *
+ * Tuned against overshoot rather than against how fast the line is first
+ * touched. Scoring "ticks until back within one unit" rewards a fast first
+ * crossing and says nothing about what follows, so a pilot can score perfectly
+ * on it while ringing like a bell — which one did: 0, 8, 14, 16, 14, 9, 1, -4,
+ * -6, -7, and back again. Scored on overshoot instead: past the centre by 9.7
+ * units before, 0.1 now, and the return is monotone.
+ */
+export const PILOT_PULL = 0.003;
+export const PILOT_DAMP = 0.3;
+
+/**
+ * How far above its ceiling a pilot must be for full brake. Below it the
+ * throttle eases, which is what makes a ship look like it is being flown
+ * rather than switched. It arrives about 13% over a bend's limit and trails
+ * the rest off on the way in, the way a driver trails the brake.
+ */
+export const PILOT_SOFT = 0.06;
+
+/**
+ * How much warning a pilot gets about a bend, **in ticks** — so the distance
+ * it reads scales with how fast it is going, and every ship gets the same
+ * amount of *time* to react rather than the same amount of road.
+ *
+ * Written as a distance first, and that was wrong twice over. A fixed distance
+ * long enough to be plausible (700 units) could never bite at all: by the time
+ * a far bend constrains a ship the gap is already short, so gating it out
+ * changes nothing. Short enough to bite, it read as a ship that cannot see
+ * forty units ahead. In ticks it is neither — it is reaction time, and the
+ * braking a bend needs grows with speed while the warning does not, so the
+ * dark catches exactly the ships that are carrying speed into it.
+ *
+ * 55 against a bend that needs about 42 ticks of braking on the tracks that
+ * ship: clear sight is comfortable, `shadow` at 0.55 is thirty ticks and is
+ * not, and a faster ship is caught harder.
+ */
+export const PILOT_SIGHT = 55;
+
+// --- Getting back on the line ----------------------------------------------
+
+/**
+ * The bend gets its steering first; the correction may only have the lock left
+ * over, plus this much overdraw.
+ *
+ * Without it a stiff correction fights the feed-forward and the ship simply
+ * leaves the bend: shoved before turn-in, the same gains go from 6.8 units off
+ * with this rule to 60.7 without it.
+ */
+export const RECOVER_OVERDRAW = 0.5;
+
+/**
+ * And when there is no lock to spare, the answer is not to steer harder, it is
+ * to slow down: if getting back to the line needs `fix` of the lock, the bend
+ * may only have `1 - fix`, so the ship must be down to
+ * `sqrt(grip · (1 - fix) / curvature)`.
+ *
+ * **This is where the cost of going wide comes from.** Nothing has to punish
+ * an excursion — it is slow on its own, because getting back spends the grip
+ * the bend was using. A penalty that falls out of the physics beats one that
+ * is invented, which is why the old speed penalties for being off the path are
+ * gone.
+ */
+export const RECOVER_DEADBAND = 0.25;
+export const RECOVER_LEAST = 0.15;
+export const RECOVER_MOST = 0.85;
+
+// --- The bumpers -----------------------------------------------------------
+
+/**
+ * A soft push back toward the road once a ship is well off it. Not a wall, not
+ * a penalty, and not the pilot's doing — it is the road leaning on the ship,
+ * so a deep excursion is bounded without anybody yanking at the steering.
+ * Containing it this way is what let the correction above be halved: with the
+ * bumpers on, the worst a hard shove does falls from 22.6 units to 14.0.
+ */
+export const BUMPER_FROM = PATH_HALF_WIDTH;
+export const BUMPER_RAMP = 6;
+export const BUMPER_PUSH = 0.024;
+
+// --- Navigation ------------------------------------------------------------
+
+/** The nav stat at which a ship flies the reference line exactly. */
+export const NAV_BEST = 3;
+
+/**
+ * Lateral acceleration per point of handling — grip, in the units flight is
+ * worked out in. `HOLD_GRIP` by another name, exported under one that says
+ * what it is to the model rather than to the bend.
+ */
+export const GRIP_PER_HANDLING = HOLD_GRIP;
+
+/**
+ * How quickly a misjudgement forgets where it was, per tick. 0.008 is a time
+ * constant of 125 ticks, so one lasts two seconds of race — long enough to put
+ * the ship somewhere it has to recover from, and slow enough to read as a
+ * misjudgement rather than as a twitch.
+ *
+ * It was 0.02, chosen when a race was watched at the speed it was flown. A
+ * race is now played back into thirty seconds, so the same wander arrived two
+ * to three times faster on screen and read as jitter. The wander is spent in
+ * race ticks, so the fix is here rather than in the projector.
+ */
+export const WANDER_SETTLE = 0.008;
+
+/**
+ * How far a ship with no navigation misjudges the line, as a multiple of the
+ * path's half-width, and how badly it misjudges its own ceiling, as a fraction
+ * of it. Sometimes it arrives too hot, sometimes it crawls.
+ *
+ * The line was 1.6 — a believed line 14 units out, when the path is 9 wide —
+ * and the ship sawed at the steering to chase it: a tenth of full lock put on
+ * or taken off *every tick*, twice what it uses in a bend. It read as a drunk
+ * rather than as a ship flown badly. Most of that misjudgement now goes into
+ * the pace instead, where being wrong shows as lifting and getting back on it.
+ *
+ * Measured over a lap with no navigation system, against 1.6 / 0.35:
+ *
+ * | | was | now |
+ * | --- | --- | --- |
+ * | off the line, rms / worst | 6.8 / 14 | 2.1 / 5 |
+ * | steering moved per tick | 0.051 | 0.029 |
+ * | ticks off the power | 23% | 29% |
+ * | speed varies by | 46% | 59% |
+ * | the lap it costs | 76.5s | 74.3s |
+ */
+export const NAV_WANDER_LINE = 0.35;
+export const NAV_WANDER_PACE = 0.65;
+
+/**
+ * How the rating maps onto the three things it is made of. See `skillOf` in
+ * `flight.ts`: anticipation comes back fast, the wobble fades evenly, and
+ * misjudging its own pace is concentrated at the very bottom.
+ */
+/**
+ * The least a ship will believe of its own speed ceiling, as a multiple. Below
+ * this it is not flying badly, it is parked: see `paceBelief` in `flight.ts`.
+ */
+export const PACE_LEAST = 0.4;
+
+export const NAV_LEAD_CURVE = 0.65;
+export const NAV_LINE_CURVE = 1.3;
+export const NAV_PACE_CURVE = 0.7;

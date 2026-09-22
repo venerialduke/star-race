@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { leavePit, startField, stepField, type Entrant } from '../../src/sim/field';
-import { chooseRoute, startRace, stepRace, type CornerPlan } from '../../src/sim/race';
+import { chooseRoute, startRace, stepRace } from '../../src/sim/race';
 import { seedFrom } from '../../src/sim/rng';
 import { bareShip, resolveBuild } from '../../src/sim/ship';
 import {
@@ -20,6 +20,7 @@ import {
   sampleOn,
   TRACKS,
   KESTREL_LOOP,
+  MERIDIAN_RUN,
   type Route,
   type Sector,
   type Track,
@@ -35,13 +36,12 @@ const lapTicks = (
   track: Track,
   routes: readonly number[],
   handling: number,
-  plan: CornerPlan = 'carry',
   seed = 'route',
+  nav?: number,
 ): number => {
   const config = {
     track,
-    stats: bareShip(1, handling),
-    plan,
+    stats: nav === undefined ? bareShip(1, handling) : { ...bareShip(1, handling), nav },
     routes,
     seed: seedFrom(seed),
   };
@@ -148,25 +148,44 @@ describe.each(TRACKS)('$name splits', (track: Track) => {
 });
 
 describe('what a split is worth', () => {
-  it('changes the lap, and which way depends on what the ship can hold', () => {
-    // The Kestrel's dark split is the sharpest case: a shorter, tighter line
-    // that a ship with handling to spare wins on and one without it loses on.
+  it('costs an unguided ship less the more grip it has, on a tighter line', () => {
+    // **No split that ships is a win for a ship that is flown well.** Every
+    // one of them was authored against the swing, where a tighter line was
+    // worth taking if you could hold it; under the flight model a tighter line
+    // is simply a lower holding speed, and the ship slows for it. Measured on
+    // the Meridian's inside line over sixteen seeds with a maxed navigation
+    // system it costs 108 / 111 / 121 ticks at handling 0.7 / 1.2 / 1.8 — and
+    // the better the ship, the more the detour costs, because the main line is
+    // being flown faster.
     //
-    // Averaged over seeds, not measured on one. Taking a split changes which
-    // seeded stream its bends draw from, so any single seed can flatter or damn
-    // a line by a swing it happened to get — worth about thirty ticks, which is
-    // more than the effect being measured here.
+    // That is a content job rather than an engineering one, and it is recorded
+    // in BACKLOG.md: the splits need re-authoring against the road the ships
+    // now fly.
+    //
+    // What is pinned here is the mechanism: for a ship with no navigation
+    // system the cost is a function of what it can hold, and falls away
+    // steeply with grip — 100 / 42 / −7 ticks at the same three handlings, so
+    // at the top of the range a loose line stops being a cost at all. That is
+    // the nearest thing to a split being worth taking that the game currently
+    // has, and it is worth knowing if it moves.
+    //
+    // Averaged over seeds, not measured on one: taking a split changes which
+    // seeded stream its navigation draws from.
     const seeds = Array.from({ length: 16 }, (_, i) => `worth${i}`);
-    const over = (routes: readonly number[], handling: number): number =>
+    const over = (routes: readonly number[], handling: number, nav?: number): number =>
       seeds.reduce(
-        (sum, seed) => sum + lapTicks(KESTREL_LOOP, routes, handling, 'carry', seed),
+        (sum, seed) => sum + lapTicks(MERIDIAN_RUN, routes, handling, seed, nav),
         0,
       ) / seeds.length;
 
     const main = [0, 0, 0, 0];
-    const needle = [0, 0, 0, 1];
-    expect(over(needle, 0.7)).toBeGreaterThan(over(main, 0.7));
-    expect(over(needle, 1.4)).toBeLessThan(over(main, 1.4));
+    const inside = [0, 0, 1, 0];
+    const cost = (handling: number, nav?: number): number =>
+      over(inside, handling, nav) - over(main, handling, nav);
+    expect(cost(0.7)).toBeGreaterThan(0);
+    expect(cost(1.8)).toBeLessThan(cost(0.7) / 4);
+    // Flown well, it is a cost at every grip there is.
+    expect(cost(1.8, 3)).toBeGreaterThan(0);
   });
 
   it('puts the ship on a different road, not just on a different clock', () => {
@@ -228,7 +247,7 @@ describe('navigation, and what it lets you plan', () => {
     };
     const field = startField(
       [blind],
-      [{ plan: 'carry', routes: [1, 1, 1, 1] }],
+      [{ routes: [1, 1, 1, 1] }],
       KESTREL_LOOP,
     );
     const flown = (field.ships[0] as { routes: readonly number[] }).routes;

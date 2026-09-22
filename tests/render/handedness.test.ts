@@ -13,6 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  KESTREL_LOOP,
   TRACKS,
   normalOf,
   placeSmooth,
@@ -31,6 +32,7 @@ const shipAt = (distance: number): ShipView => ({
   distance,
   route: 0,
   offset: 0,
+  yaw: 0,
   wide: false,
   isPlayer: true,
   wake: [],
@@ -233,5 +235,33 @@ describe('the lap runs clockwise', () => {
       // for a loop going clockwise.
       expect((swept * 180) / Math.PI, `${track.name}`).toBeLessThan(-300);
     }
+  });
+});
+
+describe('a sliding ship is drawn sliding', () => {
+  // The screen was the last place yaw had not reached. A ship crabbing across
+  // a bend was drawn pointing dead ahead down the road, which is the one thing
+  // that gives away that the model is not being shown.
+  const view = fitView(KESTREL_LOOP, 400, 400);
+
+  it('turns the hull away from the road, and the right way', () => {
+    const here = placeSmooth(KESTREL_LOOP, 200, 0);
+    const straight = shipFacing(view, here, 0, 0);
+    const slid = shipFacing(view, here, 0, 0.4);
+    expect(slid).not.toBeCloseTo(straight, 6);
+
+    // Positive yaw moves a ship toward *less* offset, and offset is measured
+    // to the left — so it points to its right, and the two yaws must turn the
+    // hull opposite ways about the road.
+    const other = shipFacing(view, here, 0, -0.4);
+    const turn = (a: number, b: number): number =>
+      Math.atan2(Math.sin(a - b), Math.cos(a - b));
+    expect(Math.sign(turn(slid, straight))).toBe(-Math.sign(turn(other, straight)));
+    expect(Math.abs(turn(slid, straight))).toBeGreaterThan(0.2);
+  });
+
+  it('leaves a ship with no yaw exactly as it was', () => {
+    const here = placeSmooth(KESTREL_LOOP, 640, 0);
+    expect(shipFacing(view, here, 3, 0)).toBe(shipFacing(view, here, 3));
   });
 });

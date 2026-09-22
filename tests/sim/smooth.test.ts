@@ -79,7 +79,7 @@ describe('watching the film between its ticks', () => {
       isPlayer: true,
     };
     const entrants = [me, makeBot(TRACKS[0] as Track, seed, 1)];
-    return recordSegment(startField(entrants, ['carry', 'carry'], TRACKS[0]), {
+    return recordSegment(startField(entrants, [{ routes: [] }, { routes: [] }], TRACKS[0]), {
       track: TRACKS[0] as Track,
       laps: LAPS_PER_HEAT,
       seed,
@@ -137,66 +137,35 @@ describe('the simulation is untouched by any of it', () => {
   });
 
   it('races exactly the same as it did before there was a camera', () => {
-    // Measured on this commit and on the one before the smoothing landed; all
-    // nine agreed. If one of these moves, something that should only ever have
-    // been drawing has reached into the race.
+    // Measured on this commit and on the one before the smoothing landed. If
+    // one of these moves, something that should only ever have been drawing has
+    // reached into the race.
     //
-    // Five of the nine moved once since, deliberately, when tracks became
-    // sections and the checkpoints went from even fractions of the lap to the
-    // joins between shapes. The geometry did not change at all — every lap is
-    // the same length to four decimal places with the same six bends at the
-    // same radii — but two things downstream of a checkpoint did, and it is
-    // worth knowing which, because only one of them is luck.
+    // It used to be three numbers a track — one per corner plan — and the
+    // history of every time they moved is in this file's git log.
     //
-    // A bend's position *within its sector* is part of the key its swing is
-    // drawn from, so every draw re-rolled. That moves Carry and Charge, and it
-    // moves them a long way on a tight track: the Cinder's Carry went 1080 to
-    // 1231, which sounds alarming until you measure the spread across sixty
-    // seeds and find it is 1035 to 1350 with both numbers comfortably inside.
-    // One seed's luck, re-rolled.
+    // These moved a long way when the swing became flight. A `bareShip` has
+    // `BASE_NAV`, which is no navigation system at all, and a ship that cannot
+    // see where the line is now *flies* like one: it misjudges the line and
+    // its own pace, and gets home about half as fast again as the same hull
+    // with a maxed navigation system. That gap is the point of the model, and
+    // it is what makes these numbers what they are. Nothing here is a target —
+    // the balance pass against them is still owed.
     //
-    // Lift is the one that is not luck. It takes no swing, so no draw touches
-    // it and its lap is deterministic — the spread across sixty seeds is a
-    // single value. It still moved four ticks on the Cinder, because braking
-    // looks ahead past the end of the current sector into the next one, so
-    // moving a checkpoint changes which bend a ship is slowing for and when.
-    // That is a real behavioural change from a real design change, and it is
-    // four ticks.
-    // And once more when splits became roads of their own. The golden path did
-    // not move at all, but its bends are now read off the pieces that make it
-    // rather than off the curvature of a sampled line, so they sit a fraction
-    // differently and both the swing keys and the braking points shift with
-    // them. The largest change to a lap that takes no swing at all — and so has
-    // no luck in it — is **one tick**, on the Meridian.
-    const expected: Record<string, [number, number, number]> = {
-      'Kestrel Loop': [2066, 1911, 1797],
-      'Meridian Run': [2981, 2944, 2910],
-      'Cinder Coil': [1407, 1282, 1240],
-      // The properties track, and the only row here that has ever moved for a
-      // reason of its own. Its shape changed: the lap folds back through itself
-      // now so that the one track a player meets first is the one track with a
-      // hill on the line they fly. 16% longer, and its long bend is written as
-      // two corners rather than one 230° sweep — the same curve to thirteen
-      // decimal places, but the corner plan fires at each bend, so two in a row
-      // is not the same proposition as one long one. Lift is untouched by that
-      // (it brakes to a holding speed both halves share); Carry and Charge are
-      // not.
-      //
-      // Lift still slowest and Charge still fastest, as everywhere. The gap is
-      // wider than it was — 244 ticks against 145 — because there is more bend
-      // to be good at. Splitting the hook is most of that: with it written as
-      // one 230° sweep these read 1876, 1769, 1673, so Lift and Carry did not
-      // notice and Charge found 41 ticks.
-      'The Proving Ground': [1876, 1769, 1632],
+    // They moved again when the misjudgement was rebalanced: most of it is now
+    // spent on the pace rather than on the line, so an unguided ship saws at
+    // the steering far less, stays inside the path, and is quicker for it.
+    const expected: Record<string, number> = {
+      'Kestrel Loop': 3675,
+      'Meridian Run': 5129,
+      'Cinder Coil': 2479,
+      'The Proving Ground': 3354,
     };
     for (const track of TRACKS) {
-      const lap = (plan: 'lift' | 'carry' | 'charge'): number => {
-        const config = { track, stats: bareShip(1, 1), plan, seed: seedFrom('kestrel') };
-        let state = startRace(config.stats, []);
-        while (state.lap < 1 && state.tick < 20000) state = stepRace(state, config);
-        return state.tick;
-      };
-      expect([lap('lift'), lap('carry'), lap('charge')]).toEqual(expected[track.name]);
+      const config = { track, stats: bareShip(1, 1), seed: seedFrom('kestrel') };
+      let state = startRace(config.stats, []);
+      while (state.lap < 1 && state.tick < 20000) state = stepRace(state, config);
+      expect(state.tick, track.name).toBe(expected[track.name]);
     }
   });
 });

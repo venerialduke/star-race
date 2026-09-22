@@ -6,7 +6,6 @@
 // — the same seam a real player's choices will arrive through.
 
 import { mineLevel, type Entrant, type Orders } from './field';
-import type { CornerPlan } from './race';
 import { makeRng, seedFrom } from './rng';
 import {
   buy,
@@ -212,7 +211,6 @@ export function botOrders(
   lap: number,
 ): Orders {
   return {
-    plan: botPlan(entrant, seed, lap),
     routes: botRoutes(entrant, track, seed, lap),
     place: botPlace(entrant, track, seed, lap),
   };
@@ -274,16 +272,3 @@ export function botRoutes(
   });
 }
 
-/**
- * What a bot flies this lap. It leans on the plan that suits its own build —
- * a ship with handling to spare can afford to Charge — and sometimes does not.
- */
-export function botPlan(entrant: Entrant, seed: number, lap: number): CornerPlan {
-  // Keyed by who it is, not how long its name is: two bots must not agree.
-  const rng = makeRng(seed ^ seedFrom(entrant.id)).fork(lap * 17 + 1);
-  const spare = entrant.stats.handling - entrant.stats.thrust;
-  const roll = rng.unitInterval();
-  if (spare > 0.15) return roll < 0.75 ? 'charge' : 'carry';
-  if (spare < -0.15) return roll < 0.6 ? 'carry' : roll < 0.85 ? 'charge' : 'lift';
-  return roll < 0.5 ? 'carry' : roll < 0.85 ? 'charge' : 'lift';
-}

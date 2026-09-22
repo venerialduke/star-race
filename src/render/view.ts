@@ -16,6 +16,8 @@ export interface ShipView {
   /** Which way through the current sector: the same distance is a different place. */
   readonly route: number;
   readonly offset: number;
+  /** How far it points away from where the road goes, so it can be drawn sliding. */
+  readonly yaw: number;
   readonly wide: boolean;
   readonly isPlayer: boolean;
   /** Where it has just been, oldest first. */

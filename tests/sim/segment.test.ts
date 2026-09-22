@@ -36,7 +36,7 @@ const config = (): FieldConfig => ({
 describe('a recorded segment', () => {
   it('is the same race as one stepped live, tick for tick', () => {
     const cfg = config();
-    const plans = ['charge', 'carry', 'carry'] as const;
+    const plans = [{ routes: [] }, { routes: [] }, { routes: [] }] as const;
 
     const recorded = recordSegment(startField(entrants(), [...plans]), cfg);
 
@@ -56,7 +56,7 @@ describe('a recorded segment', () => {
 
   it('ends at the decision point, with everyone in', () => {
     const segment = recordSegment(
-      startField(entrants(), ['carry', 'carry', 'carry']),
+      startField(entrants(), [{ routes: [] }, { routes: [] }, { routes: [] }]),
       config(),
     );
     expect(segment.end.phase).toBe('pit');
@@ -66,7 +66,7 @@ describe('a recorded segment', () => {
 
   it('has a frame for every ship at every tick of the film', () => {
     const segment = recordSegment(
-      startField(entrants(), ['carry', 'carry', 'carry']),
+      startField(entrants(), [{ routes: [] }, { routes: [] }, { routes: [] }]),
       config(),
     );
     expect(segment.frames).toHaveLength(3);
@@ -77,7 +77,7 @@ describe('a recorded segment', () => {
 
   it('clamps a cursor past either end rather than falling off it', () => {
     const segment = recordSegment(
-      startField(entrants(), ['carry', 'carry', 'carry']),
+      startField(entrants(), [{ routes: [] }, { routes: [] }, { routes: [] }]),
       config(),
     );
     expect(frameAt(segment, 0, -50)).toEqual(frameAt(segment, 0, 0));
@@ -88,7 +88,7 @@ describe('a recorded segment', () => {
 
   it('shows only what has happened by the cursor', () => {
     const segment = recordSegment(
-      startField(entrants(), ['charge', 'carry', 'carry']),
+      startField(entrants(), [{ routes: [] }, { routes: [] }, { routes: [] }]),
       config(),
     );
     const early = swingsBy(segment, 0, 200);
@@ -99,7 +99,7 @@ describe('a recorded segment', () => {
 
   it('draws a wake from the frames just behind the cursor', () => {
     const segment = recordSegment(
-      startField(entrants(), ['carry', 'carry', 'carry']),
+      startField(entrants(), [{ routes: [] }, { routes: [] }, { routes: [] }]),
       config(),
     );
     const wake = wakeAt(segment, 0, 500, 60);
@@ -113,7 +113,7 @@ describe('the tracking bar during playback', () => {
   // knows who won. A bar that read it would announce the result over the race
   // being shown. These are the claims that say it does not.
   const segment = (): ReturnType<typeof recordSegment> =>
-    recordSegment(startField(entrants(), ['charge', 'carry', 'carry']), config());
+    recordSegment(startField(entrants(), [{ routes: [] }, { routes: [] }, { routes: [] }]), config());
 
   it('starts the field level, with nobody behind anybody', () => {
     const order = orderAt(segment(), 0);

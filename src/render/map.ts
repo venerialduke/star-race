@@ -338,12 +338,15 @@ function drawFixture(
  * that cannot come apart again — it is right for the flip, right for the
  * quarter turn, and needs no special case for either.
  */
-export function shipFacing(view: View, here: Place, out: number): number {
+export function shipFacing(view: View, here: Place, out: number, yaw = 0): number {
   const n = { x: -Math.sin(here.heading), y: Math.cos(here.heading) };
   const at = { x: here.pos.x + n.x * out, y: here.pos.y + n.y * out };
+  // The hull points along the road's heading less its yaw: positive yaw moves
+  // a ship toward less offset, and offset is measured to the left.
+  const aim = here.heading - yaw;
   const ahead = {
-    x: at.x + Math.cos(here.heading) * STEP_AHEAD,
-    y: at.y + Math.sin(here.heading) * STEP_AHEAD,
+    x: at.x + Math.cos(aim) * STEP_AHEAD,
+    y: at.y + Math.sin(aim) * STEP_AHEAD,
   };
   const from = project(view, at);
   const to = project(view, ahead);
@@ -414,7 +417,7 @@ function drawShip(
     x: here.pos.x + n.x * (ship.offset + lane),
     y: here.pos.y + n.y * (ship.offset + lane),
   });
-  const facing = shipFacing(view, here, ship.offset + lane);
+  const facing = shipFacing(view, here, ship.offset + lane, ship.yaw);
   const size = Math.max(isPlayer ? 7 : 6, (isPlayer ? 5 : 4.2) * view.scale);
 
   if (Math.abs(ship.offset) > 0.5) {

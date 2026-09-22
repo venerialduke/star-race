@@ -43,6 +43,7 @@ const shipAt = (distance: number): ShipView => ({
   distance,
   route: 0,
   offset: 0,
+  yaw: 0,
   wide: false,
   isPlayer: true,
   wake: [],

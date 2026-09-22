@@ -245,7 +245,7 @@ describe('height cannot reach the race', () => {
 
     const fly = (): ReturnType<typeof stepRace> => {
       let state = startRace(stats, [], 0);
-      const config: RaceConfig = { track, stats, plan: 'carry', seed: 7 };
+      const config: RaceConfig = { track, stats, seed: 7 };
       for (let i = 0; i < 1500; i += 1) state = stepRace(state, config);
       return state;
     };

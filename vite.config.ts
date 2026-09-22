@@ -13,12 +13,14 @@ export default defineConfig({
   build: {
     target: 'es2022',
     rollupOptions: {
-      // Two pages: the game, and the track builder that makes tracks for it.
-      // The builder ships with the site rather than living somewhere else,
+      // Three pages: the game, the track builder that makes tracks for it, and
+      // the feel lab where how a ship drives is worked out before it reaches
+      // either. They ship with the site rather than living somewhere else,
       // because a tool you have to set up is a tool you stop using.
       input: {
         main: resolve(__dirname, 'index.html'),
         builder: resolve(__dirname, 'builder.html'),
+        lab: resolve(__dirname, 'lab.html'),
       },
     },
   },

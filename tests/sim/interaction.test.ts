@@ -27,8 +27,8 @@ import {
   FIXTURE_LIFE,
   LAPS_PER_HEAT,
   PERFECT_BENDS,
-  SPEED_PER_THRUST,
   TRACK_HALF_WIDTH,
+  PATH_HALF_WIDTH,
 } from '../../src/sim/tuning';
 import {
   ageFixtures,
@@ -55,7 +55,7 @@ const entrant = (id: string, build: readonly Fitted[]): Entrant => ({
 function heat(
   track: (typeof TRACKS)[number],
   entrants: readonly Entrant[],
-  orders: readonly Orders[] = entrants.map(() => ({ plan: 'carry', routes: [] })),
+  orders: readonly Orders[] = entrants.map(() => ({ routes: [] })),
   seed = 7,
 ) {
   const config = { track, laps: LAPS_PER_HEAT, seed };
@@ -87,7 +87,7 @@ describe('nothing lands on the tick it was fired', () => {
     const shooter = entrant('a', [fit('missile-rack', 3), fit('crew-engineers', 3, 2)]);
     const target = entrant('b', [fit('speed-engine', 1)]);
     const config = { track: MERIDIAN_RUN, laps: 1, seed: 3 };
-    let field = startField([shooter, target], [{ plan: 'carry', routes: [] }, 'carry']);
+    let field = startField([shooter, target], [{ routes: [] }, { routes: [] }]);
 
     let firedOn: number | undefined;
     let landedOn: number | undefined;
@@ -150,7 +150,6 @@ describe('a thing on the road bites once', () => {
         track,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [mine] },
@@ -158,7 +157,11 @@ describe('a thing on the road bites once', () => {
       if (state.met.length > before) bites += 1;
     }
     // It flies right past it, well inside the reach, for many ticks.
-    expect(state.distance).toBeGreaterThan(400);
+    // Far enough past the mine to have been near it for a long time. A ship
+    // covers less ground in 900 ticks than it used to — it works its way up to
+    // speed rather than starting at it — so the bar is what the mine sits at
+    // plus room, not a number carried over from a faster start.
+    expect(state.distance).toBeGreaterThan(315);
     expect(bites).toBe(1);
   });
 
@@ -172,7 +175,6 @@ describe('a thing on the road bites once', () => {
         track: KESTREL_LOOP,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [own] },
@@ -207,7 +209,6 @@ describe('what answers a weapon', () => {
         track: KESTREL_LOOP,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [fixture] },
@@ -230,7 +231,6 @@ describe('what answers a weapon', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
       incoming: [{ from: 'b', side: 1, power, scrub: 0 }],
@@ -248,7 +248,10 @@ describe('what answers a weapon', () => {
 
   it('stops a weapon outright when the shields are deeper than it', () => {
     const deep = shoved([fit('speed-engine', 2), fit('general-shields', 3, 2)], 20);
-    expect(deep.offset).toBe(0);
+    // Not exactly zero: a ship flies its line rather than being placed on it,
+    // so the pilot is always correcting a fraction of a unit. The claim is
+    // that nothing shoved it, not that it is on a mathematical centre.
+    expect(Math.abs(deep.offset)).toBeLessThan(0.01);
     expect(deep.lastHit).toBeUndefined();
     // The shielding is spent answering it, even though nothing got through.
     expect(deep.shields).toBeLessThan(resolveBuild([
@@ -274,14 +277,13 @@ describe('what answers a weapon', () => {
       track: KESTREL_LOOP,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
       incoming: [{ from: 'b', side: 1, power: 30, scrub: 0 }],
     });
     expect(state.salvage).toBeGreaterThan(0);
     // It never lands: the ship is not moved an inch by a weapon it kept.
-    expect(state.offset).toBe(0);
+    expect(Math.abs(state.offset)).toBeLessThan(0.01);
     // But catching it loads the shield, so the next one has to wait for the
     // recharge. Without that the shield never leaves full and captures
     // everything for the rest of the race for nothing.
@@ -303,7 +305,7 @@ describe('what answers a weapon', () => {
     const caught = stepRace(startRace(stats, build), { ...config, incoming: [big] });
     // The missiles worth catching are exactly the ones that outweigh a shield.
     expect(caught.salvage).toBeGreaterThan(0);
-    expect(caught.offset).toBe(0);
+    expect(Math.abs(caught.offset)).toBeLessThan(0.01);
     expect(caught.shields).toBe(0);
 
     // And the next one lands, because the shields are no longer full. That is
@@ -353,7 +355,6 @@ describe('the screen can say who did it to you', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
     });
@@ -364,7 +365,6 @@ describe('the screen can say who did it to you', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
       incoming: [{ from: 'rival-3', side: 1, power: 40, scrub: 0 }],
@@ -384,7 +384,6 @@ describe('the screen can say who did it to you', () => {
         track: KESTREL_LOOP,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [laid] },
@@ -398,7 +397,7 @@ describe('the screen can say who did it to you', () => {
     const shooter = entrant('a', [fit('missile-rack', 3), fit('crew-engineers', 3, 2)]);
     const target = entrant('b', [fit('speed-engine', 1)]);
     const config = { track: MERIDIAN_RUN, laps: 1, seed: 3 };
-    let field = startField([shooter, target], ['carry', 'carry']);
+    let field = startField([shooter, target], [{ routes: [] }, { routes: [] }]);
     let aimed: string | undefined;
     for (let i = 0; i < 6000 && field.phase === 'racing'; i += 1) {
       field = stepField(field, config);
@@ -421,7 +420,6 @@ describe('a black hole discriminates by build', () => {
         track: KESTREL_LOOP,
         stats,
         build,
-        plan: 'carry',
         seed: 1,
         id: 'a',
         world: { ships: [], fixtures: [hole] },
@@ -439,8 +437,15 @@ describe('a black hole discriminates by build', () => {
   it('is a corner to a ship that can, and pays it', () => {
     const read = through([fit('dark-matter-engine', 2), fit('collector-shield', 1, 2)]);
     expect(read.lastHit).toBe('through a black hole');
-    expect(Math.min(...read.condition.parts)).toBe(1);
     expect(read.darkMatter).toBeGreaterThan(0);
+    // Not "undamaged", which this used to assert: a ship with no navigation
+    // system goes wide on about a third of its bends and can be scuffed
+    // anywhere on the lap. What the hole did is the claim, so it is measured
+    // against the ship that could not read it rather than against perfection.
+    const hurt = through([fit('speed-engine', 2)]);
+    expect(Math.min(...read.condition.parts)).toBeGreaterThan(
+      Math.min(...hurt.condition.parts),
+    );
   });
 });
 
@@ -471,7 +476,6 @@ describe('charge, and what a ship spends it on', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
     });
@@ -487,7 +491,6 @@ describe('charge, and what a ship spends it on', () => {
       track: MERIDIAN_RUN,
       stats,
       build,
-      plan: 'carry',
       seed: 1,
       id: 'a',
     });
@@ -520,31 +523,56 @@ describe('charge, and what a ship spends it on', () => {
       seed: 5,
       id: 'a',
     };
-    // Every bend entered while the chain still has one left must take no swing
-    // at all; the first bend after it runs out must be able to swing again.
+    // A chained bend is flown by a pilot that knows exactly where the line is;
+    // once the chain runs out the ship is back to its own navigation, which on
+    // this build is none at all. So the claim is about the *line*, not about
+    // entry speed: a pilot that brakes to a ceiling almost never arrives over
+    // what a bend holds, which makes `excess` nothing to measure here.
+    //
+    // A mark is written when a bend *ends* now rather than when it begins, so
+    // what it is checked against is how much chain was left when it began.
     let inChain = 0;
     let afterChain = 0;
-    let swungAfter = false;
+    let heldInChain = 0;
+    let widestAfter = 0;
+    const entered: number[] = [];
+    let wasKey: string | undefined;
     for (let i = 0; i < 2000; i += 1) {
       const before = state.swings.length;
       const chainLeft = state.perfectLeft;
       state = stepRace(state, config);
       if (state.swings.length > before) {
         const swing = state.swings[state.swings.length - 1];
-        if (chainLeft > 0 || state.lastFiredTick === state.tick) {
-          expect(swing?.excess).toBe(0);
+        if (entered.length > 0 && entered[0]! > 0) {
+          // Flown by a pilot that can see: never off the golden path.
+          expect(swing?.swing).toBeLessThan(PATH_HALF_WIDTH);
           inChain += 1;
+          heldInChain = Math.max(heldInChain, swing?.swing ?? 0);
         } else {
           afterChain += 1;
-          if ((swing?.excess ?? 0) > 0) swungAfter = true;
+          widestAfter = Math.max(widestAfter, swing?.swing ?? 0);
         }
+        entered.shift();
       }
+      // A bend has been entered when the key changes; remember how much chain
+      // was left at that moment, because that is what decided how it was flown.
+      if (state.bendKey !== undefined && state.bendKey !== wasKey) entered.push(chainLeft);
+      wasKey = state.bendKey;
       // Never let it charge back up, so exactly one chain is measured.
       state = { ...state, charge: Math.min(state.charge, 0.9) };
     }
     expect(inChain).toBe(PERFECT_BENDS);
     expect(afterChain).toBeGreaterThan(0);
-    expect(swungAfter).toBe(true);
+    // And once it is over, the ship's own navigation is what it has: the bends
+    // it flies next are several times wider than the ones the chain held —
+    // measured at 0.3–0.5 units in the chain against 2.3–3.6 after it.
+    //
+    // It used to claim the ship left the *path* afterwards. That is no longer
+    // what flying blind does: most of a bad navigation system's misjudgement
+    // is spent on the pace rather than on the line, so an unguided ship is
+    // untidy and slow rather than wild. What the chain buys is still exactly
+    // as measurable, and this is the measure of it.
+    expect(widestAfter).toBeGreaterThan(heldInChain * 3);
   });
 });
 
@@ -552,8 +580,8 @@ describe('a mine laid before the heat', () => {
   const armed = entrant('a', [fit('gravity-mine', 2), fit('balanced-engine', 2, 2)]);
   const other = entrant('b', [fit('balanced-engine', 2)]);
   const orders: Orders[] = [
-    { plan: 'carry', routes: [], place: 1 },
-    { plan: 'carry', routes: [] },
+    { routes: [], place: 1 },
+    { routes: [] },
   ];
 
   it('is on the track before a single tick is run', () => {
@@ -579,8 +607,8 @@ describe('a mine laid before the heat', () => {
     const field = startField(
       [other, other],
       [
-        { plan: 'carry', routes: [], place: 1 },
-        { plan: 'carry', routes: [], place: 2 },
+        { routes: [], place: 1 },
+        { routes: [], place: 2 },
       ],
       KESTREL_LOOP,
     );
@@ -603,7 +631,7 @@ describe('nothing pushes a ship somewhere it cannot come back from', () => {
         const field = heat(
           track,
           builds.map((build, i) => entrant(['a', 'b', 'c'][i] as string, build)),
-          builds.map(() => ({ plan: 'charge', routes: [] })),
+          builds.map(() => ({ routes: [] })),
           seed,
         );
         expect(field.phase).toBe('done');
@@ -611,7 +639,12 @@ describe('nothing pushes a ship somewhere it cannot come back from', () => {
           expect(ship.lapTicks).toHaveLength(LAPS_PER_HEAT);
           // Never pinned outside the corridor, and never left crawling.
           expect(Math.abs(ship.state.offset)).toBeLessThanOrEqual(TRACK_HALF_WIDTH + 1e-6);
-          expect(ship.state.speed).toBeGreaterThan(SPEED_PER_THRUST * 0.1);
+          // Still moving. The instantaneous speed used to be checked against a
+          // tenth of a thrust, which a ship now dips under legitimately —
+          // crawling out of one of the Coil's hairpins after being shoved is
+          // slow, and measured at up to 159 consecutive ticks. What matters is
+          // that it comes back, and the lap count above is what says so.
+          expect(ship.state.speed).toBeGreaterThan(0.01);
         }
       }
     }

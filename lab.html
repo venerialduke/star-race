@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1428" />
+    <title>Star Race — the feel lab</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8eeff;
+        --soft: #93a4c8;
+        --deep: #0b1428;
+        --panel: #121d38;
+        --rule: #27365c;
+        --gold: #ffd166;
+        --cyan: #7ee0ff;
+        --warn: #ff7a6b;
+        --good: #8ff0bd;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; height: 100%; background: var(--deep); color: var(--ink);
+        font: 14px/1.4 'Segoe UI', system-ui, sans-serif;
+        overflow: hidden; touch-action: manipulation; user-select: none;
+        -webkit-user-select: none;
+      }
+      #app { display: flex; flex-direction: column; height: 100%; position: relative; }
+      #track { flex: 1 1 auto; display: block; width: 100%; min-height: 0; }
+
+      /* ---- the readouts, floating over the road ---- */
+      #hud {
+        position: absolute; top: 0; left: 0; right: 0;
+        padding: calc(8px + env(safe-area-inset-top)) 128px 8px 10px;
+        display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none;
+      }
+      .card {
+        background: rgba(11, 20, 40, 0.82); border: 1px solid var(--rule);
+        border-radius: 8px; padding: 4px 8px; min-width: 62px;
+        backdrop-filter: blur(3px);
+      }
+      .card b { display: block; font-size: 9px; letter-spacing: 0.1em;
+        text-transform: uppercase; color: var(--soft); font-weight: 600; }
+      .card span { font-size: 15px; font-variant-numeric: tabular-nums; }
+      .card span.hot { color: var(--warn); }
+      .card span.ok { color: var(--good); }
+      /* Its own line, so it never runs under the Tune button or the cards. */
+      #verdict {
+        flex: 1 0 100%; font-size: 12px; color: var(--soft); line-height: 1.4;
+        padding: 2px 2px 0;
+      }
+      #verdict em { font-style: normal; color: var(--gold); }
+
+      /* ---- the deck ---- */
+      #deck {
+        flex: 0 0 auto; background: var(--panel); border-top: 1px solid var(--rule);
+        padding: 7px 10px calc(8px + env(safe-area-inset-bottom));
+      }
+      #strip { display: block; width: 100%; height: 56px; }
+      .gauges { display: flex; gap: 10px; margin: 6px 0 8px; }
+      .gauge { flex: 1; }
+      .gauge b { display: block; font-size: 9px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--soft); margin-bottom: 3px; }
+      .meter {
+        position: relative; height: 12px; border-radius: 6px;
+        background: #0b1428; border: 1px solid var(--rule); overflow: hidden;
+      }
+      .meter i { position: absolute; top: 0; bottom: 0; display: block; }
+      .meter .val { background: var(--gold); left: 0; }
+      .meter .val.mid { left: 50%; background: var(--cyan); }
+      .meter .need {
+        width: 2px; background: var(--good); z-index: 2;
+        box-shadow: 0 0 5px var(--good);
+      }
+      .meter .cap { width: 2px; background: var(--warn); z-index: 2; }
+      .meter.over .val { background: var(--warn); }
+
+      /* ---- the controls ---- */
+      #pads { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+      .pad {
+        background: #1b2645; border: 1px solid var(--rule); border-radius: 9px;
+        color: var(--ink); font: inherit; font-size: 12px; padding: 13px 4px;
+        cursor: pointer; text-align: center; line-height: 1.1;
+      }
+      .pad small { display: block; font-size: 9px; color: var(--soft); margin-top: 2px; }
+      .pad.on { background: #2b3c6f; border-color: var(--cyan); }
+      .pad.gas.on { background: #3a5230; border-color: var(--good); }
+      .pad.slow.on { background: #4a2a2a; border-color: var(--warn); }
+
+      /* ---- the tuning tray ---- */
+      /* The way into every slider in the lab, so it is not a dark box in a
+         dark corner. It pulses until it has been opened once. */
+      #tune {
+        position: absolute; top: calc(8px + env(safe-area-inset-top)); right: 10px;
+        z-index: 4; background: #2b3c6f; color: var(--ink);
+        border: 1px solid var(--cyan); border-radius: 8px; padding: 7px 12px;
+        font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+        pointer-events: auto; white-space: nowrap;
+        box-shadow: 0 0 0 0 rgba(126, 224, 255, 0.55);
+      }
+      /* On a phone the readouts must not eat the road: tighter cards, two
+         rows instead of three, and a smaller line for the running commentary. */
+      @media (max-width: 560px) {
+        #hud { padding-right: 116px; gap: 4px; }
+        .card { min-width: 0; padding: 3px 7px; border-radius: 7px; }
+        .card b { font-size: 8px; letter-spacing: 0.06em; }
+        .card span { font-size: 13px; }
+        #verdict { font-size: 11px; line-height: 1.35; }
+        #tune { padding: 6px 9px; font-size: 11.5px; }
+        #strip { height: 44px; }
+        .gauge b { font-size: 8px; }
+        .pad { padding: 11px 3px; }
+      }
+      #tune.new { animation: knock 2.1s ease-out 3; }
+      @keyframes knock {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(126, 224, 255, 0); }
+        18% { box-shadow: 0 0 0 7px rgba(126, 224, 255, 0.28); }
+        36% { box-shadow: 0 0 0 0 rgba(126, 224, 255, 0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #tune.new { animation: none; }
+      }
+      #tray {
+        position: absolute; top: 0; right: 0; bottom: 0; width: min(330px, 88vw);
+        background: var(--panel); border-left: 1px solid var(--rule); z-index: 5;
+        padding: calc(12px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom));
+        overflow-y: auto; transform: translateX(101%); transition: transform 0.18s ease;
+      }
+      #tray.open { transform: none; }
+      #tray h3 {
+        font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--soft); margin: 16px 0 6px;
+      }
+      #tray h3:first-of-type { margin-top: 4px; }
+      #tray label {
+        display: grid; grid-template-columns: 78px 1fr 46px; gap: 8px;
+        align-items: center; font-size: 11.5px; color: var(--soft); margin-top: 6px;
+      }
+      #tray b { color: var(--gold); text-align: right; font-variant-numeric: tabular-nums; }
+      input[type='range'] { width: 100%; accent-color: var(--cyan); }
+      .presets { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+      .presets button, .acts button {
+        background: #1b2645; color: var(--ink); border: 1px solid var(--rule);
+        border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 11.5px;
+        cursor: pointer;
+      }
+      .presets button:hover, .acts button:hover { background: #24325a; }
+      .acts { display: flex; gap: 6px; margin-top: 14px; }
+      .acts button { flex: 1; padding: 8px; }
+      .note { font-size: 11px; color: var(--soft); margin: 8px 0 0; line-height: 1.5; }
+      .note em { font-style: normal; color: var(--gold); }
+      .toggle { display: flex; align-items: center; gap: 8px; margin-top: 8px;
+        font-size: 11.5px; color: var(--soft); }
+      .toggle input { accent-color: var(--cyan); }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="track"></canvas>
+      <div id="hud"></div>
+      <button id="tune" class="new">Ship &amp; corner</button>
+      <div id="deck">
+        <canvas id="strip"></canvas>
+        <div class="gauges" id="gauges"></div>
+        <div id="pads"></div>
+      </div>
+      <div id="tray"></div>
+    </div>
+    <script type="module" src="/src/lab/main.ts"></script>
+  </body>
+</html>

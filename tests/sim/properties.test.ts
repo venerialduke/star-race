@@ -39,7 +39,7 @@ import {
   type Properties,
   type Track,
 } from '../../src/sim/track';
-import { ENVIRONMENTS } from '../../src/sim/tuning';
+import { ENVIRONMENTS, NAV_BEST } from '../../src/sim/tuning';
 import { labelOf } from '../../src/render/view';
 
 /** A ring that closes: two halves of 180°, the second the first turned round. */
@@ -158,41 +158,57 @@ describe('bands', () => {
  */
 const RACER: ShipStats = { ...bareShip(2.4, 0.8), shields: 60, shieldRegen: 1 };
 
-/** Fly a track and watch it: what it ended as, and what happened on the way. */
-function fly(track: Track, plan: RaceConfig['plan'], ticks = 3000) {
-  let state = startRace(RACER, [], 0);
-  const config: RaceConfig = { track, stats: RACER, plan, seed: 99 };
+/**
+ * Fly a track and watch it: what it ended as, and what happened on the way.
+ *
+ * `nav` is the only lever there is on how well it is flown. Nothing can be
+ * forced off its line any more — a ship works out its own entry speed, and how
+ * near it gets is what a navigation system decides. `NAV_BEST` flies the
+ * reference line exactly; 0 is a ship with none at all.
+ */
+function fly(track: Track, nav = NAV_BEST, ticks = 3000, thrust = 2.4) {
+  const stats: ShipStats = { ...RACER, thrust, nav };
+  let state = startRace(stats, [], 0);
+  const config: RaceConfig = { track, stats, seed: 99 };
   let bitTicks = 0;
   let lost = 0;
   let inFirst = 0;
+  let fastestInFirst = 0;
   for (let i = 0; i < ticks; i += 1) {
     const next = stepRace(state, config);
     if (next.shields < state.shields - 1e-9) {
       bitTicks += 1;
       lost += state.shields - next.shields;
     }
-    if (sectorAt(track, next.distance) === 0) inFirst += 1;
+    if (sectorAt(track, next.distance) === 0) {
+      inFirst += 1;
+      fastestInFirst = Math.max(fastestInFirst, next.speed);
+    }
     state = next;
   }
-  return { state, bitTicks, lost, inFirst };
+  return { state, bitTicks, lost, inFirst, fastestInFirst };
 }
 
-/** The widest this ship was thrown. */
-const widest = (state: RaceState): number =>
-  state.swings.reduce((most, s) => Math.max(most, s.swing), 0);
 
 describe('grip', () => {
-  it('throws the same ship wider through the same bend', () => {
-    // The bet the whole game rests on, applied to a stretch instead of to a
-    // build: same shape, same entry, less grip, more swing.
-    const clear = fly(loop(), 'carry');
-    const thick = fly(loop(half, { environment: 'nebula' }), 'carry');
-    expect(widest(thick.state)).toBeGreaterThan(widest(clear.state));
+  it('lowers the speed a ship can hold through the stretch', () => {
+    // This used to claim the same bend threw the ship *wider*, and under the
+    // swing it did: a swing was a function of excess over the holding speed,
+    // and thinning the grip lowered the holding speed without slowing the
+    // ship down.
+    //
+    // A ship flies itself now, so it answers thin grip the only way there is —
+    // by going slower. Grip reaches the line rather than the clock only when
+    // the speed is held fixed, which a race never does; that property is
+    // pinned in `tests/lab/flight.test.ts`, where a speed can be held.
+    const clear = fly(loop());
+    const thick = fly(loop(half, { environment: 'nebula' }));
+    expect(thick.fastestInFirst).toBeLessThan(clear.fastestInFirst);
   });
 
-  it('costs time, because a ship thrown wider is a ship going slower', () => {
-    const clear = fly(loop(), 'carry');
-    const thick = fly(loop(half, { environment: 'nebula' }), 'carry');
+  it('costs time, because a ship with less grip is a ship going slower', () => {
+    const clear = fly(loop());
+    const thick = fly(loop(half, { environment: 'nebula' }));
     expect(thick.state.distance).toBeLessThan(clear.state.distance);
   });
 });
@@ -202,21 +218,31 @@ describe('sight', () => {
     // Shadow is not a new way to lose. It is the swing, reached by being into
     // the bend before you were set — which is the same currency as everything
     // else the track can do to you.
-    const clear = fly(loop(), 'carry');
-    const dark = fly(loop(half, { environment: 'shadow' }), 'carry');
+    //
+    // Sight is spent in one place now: how far ahead the ship can see a bend
+    // at all. A dark stretch hides it until later, so the ship starts slowing
+    // later and arrives carrying more than it can hold — which is the same
+    // currency as everything else the track can do to you.
+    const clear = fly(loop());
+    const dark = fly(loop(half, { environment: 'shadow' }));
     const excessOf = (s: RaceState): number =>
       s.swings.reduce((most, x) => Math.max(most, x.excess), 0);
     expect(excessOf(dark.state)).toBeGreaterThan(excessOf(clear.state));
     expect(dark.state.distance).toBeLessThan(clear.state.distance);
   });
 
-  it('cannot touch the plan that gives up its speed for certainty', () => {
-    // Lift takes no swing at anything, so there is nothing for a surprise to
-    // make worse. That is a deliberate property rather than a gap: the safe
-    // plan is safe from this too, and it pays for that in time everywhere else.
-    const clear = fly(loop(), 'lift');
-    const dark = fly(loop(half, { environment: 'shadow' }), 'lift');
-    expect(dark.state.distance).toBeCloseTo(clear.state.distance, 6);
+  it('reaches every ship now, because none of them gives up all its speed', () => {
+    // This used to assert the opposite: Lift took no swing at anything, so
+    // there was nothing for a surprise to make worse, and buying certainty
+    // bought immunity to the dark along with it.
+    //
+    // There is no Lift to hide behind. Sight is spent as excess beside the
+    // ship's own, so a shadow costs something even to a ship braking under the
+    // bend's limit — it is a place that is worse for everybody, which is what a
+    // property of the road ought to be.
+    const clear = fly(loop());
+    const dark = fly(loop(half, { environment: 'shadow' }));
+    expect(dark.state.distance).toBeLessThan(clear.state.distance);
   });
 });
 
@@ -225,13 +251,13 @@ describe('hazard', () => {
     // The lesson S3.6 learned about parts, V1.2 about the wall, and S6 about
     // mines: per-tick damage bans a build rather than risking it.
     //
-    // Lift is flown because it never goes wide, so the excursion hazard cannot
-    // fire and every point of damage here is the road itself. Over this run the
-    // ship spends the better part of a thousand ticks inside the debris field
-    // and is bitten on two of them — once per crossing. Per tick would be the
-    // whole thousand.
-    const clear = fly(loop(), 'lift');
-    const gritty = fly(loop(half, { environment: 'debris' }), 'lift');
+    // Flown with a full navigation system, because that is the ship that never
+    // goes wide — so the excursion hazard cannot fire and every point of damage
+    // here is the road itself. Over this run the ship spends the better part of
+    // a thousand ticks inside the debris field and is bitten on a handful of
+    // them, once per crossing. Per tick would be the whole thousand.
+    const clear = fly(loop());
+    const gritty = fly(loop(half, { environment: 'debris' }));
 
     expect(clear.bitTicks).toBe(0);
     expect(gritty.bitTicks).toBeGreaterThan(0);
@@ -242,28 +268,35 @@ describe('hazard', () => {
   it('costs more the faster it is met', () => {
     // The only scaling the game uses for damage, and the reason a debris field
     // on a straight is worse than one in a hairpin.
-    const slow = fly(loop(half, { environment: 'debris' }), 'lift');
-    const fast = fly(loop(half, { environment: 'debris' }), 'charge');
+    // Both stay on the path — the faster one is the one that carries the
+    // bend's own limit rather than braking under it. Asking for a ship that
+    // never lifts off would be slower at the bite, not faster, because being
+    // thrown wide now takes the speed straight back off it.
+    // Two ships, same line, different engines: the bigger one meets the field
+    // faster. Asking for a badly navigated ship would be slower at the bite,
+    // not faster, because being off the line takes the speed straight off it.
+    const slow = fly(loop(half, { environment: 'debris' }), NAV_BEST, 3000, 1.2);
+    const fast = fly(loop(half, { environment: 'debris' }), NAV_BEST, 3000, 2.4);
     expect(fast.lost / fast.bitTicks).toBeGreaterThan(slow.lost / slow.bitTicks);
   });
 
   it('does not touch a ship on a stretch that says nothing', () => {
-    expect(fly(loop(), 'lift').lost).toBe(0);
+    expect(fly(loop()).lost).toBe(0);
   });
 });
 
 describe('pocket', () => {
   it('pays for the ground flown through it', () => {
-    expect(fly(loop(half, { pocket: 10 }), 'carry').state.salvage).toBeGreaterThan(0);
+    expect(fly(loop(half, { pocket: 10 }), undefined).state.salvage).toBeGreaterThan(0);
   });
 
   it('pays nothing on a road that holds none', () => {
-    expect(fly(loop(), 'carry').state.salvage).toBe(0);
+    expect(fly(loop(), undefined).state.salvage).toBe(0);
   });
 
   it('pays twice as much for twice the pocket', () => {
-    const thin = fly(loop(half, { pocket: 5 }), 'carry');
-    const rich = fly(loop(half, { pocket: 10 }), 'carry');
+    const thin = fly(loop(half, { pocket: 5 }), undefined);
+    const rich = fly(loop(half, { pocket: 10 }), undefined);
     expect(rich.state.salvage).toBeCloseTo(thin.state.salvage * 2, 6);
   });
 });
@@ -300,7 +333,7 @@ describe('what the author left on the road', () => {
   it('is on the track before anybody has raced on it', () => {
     const track = withMine();
     expect(track.fixtures).toHaveLength(1);
-    const state = startField([entrant('one')], ['carry'], track);
+    const state = startField([entrant('one')], [{ routes: [] }], track);
     const laid = state.fixtures.filter((f) => f.owner === TRACK_OWNER);
     expect(laid).toHaveLength(1);
     // Half way through sector 1, on the golden path, in canonical distance —
@@ -313,7 +346,7 @@ describe('what the author left on the road', () => {
     // A fixture never bites its owner. The track's own furniture has to have an
     // owner no entrant can be, or one ship would fly the track for free.
     const track = withMine();
-    let state = startField([entrant('one'), entrant('two')], ['carry', 'carry'], track);
+    let state = startField([entrant('one'), entrant('two')], [{ routes: [] }, { routes: [] }], track);
     for (let i = 0; i < 3000; i += 1) {
       state = stepField(state, { track, laps: 3, seed: 4 });
     }
@@ -321,7 +354,7 @@ describe('what the author left on the road', () => {
   });
 
   it('leaves a track with nothing on it with nothing on it', () => {
-    expect(startField([entrant('one')], ['carry'], loop()).fixtures).toEqual([]);
+    expect(startField([entrant('one')], [{ routes: [] }], loop()).fixtures).toEqual([]);
   });
 });
 
@@ -396,7 +429,7 @@ describe('the track that exists to be looked at', () => {
   });
 
   it('pays somebody who flies its scrapyard', () => {
-    const paid = fly(PROVING_GROUND, 'carry').state.salvage;
+    const paid = fly(PROVING_GROUND, undefined).state.salvage;
     expect(paid).toBeGreaterThan(0);
   });
 });

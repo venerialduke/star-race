@@ -1019,6 +1019,21 @@ against its `par`, and is paid `PACING_BASE` for turning up plus
 `PACING_PER_TICK` for every tick under par, to `PACING_CAP`. It is the first
 sight of a track and the first credits of a season, and nobody can lose it.
 
+**A par is the reference lap plus the whole pacing bonus.** The reference is
+the opening budget spent well — an engine and a navigation system, one level
+each, 60 of the 100 credits a season starts with — so spending it well takes
+the entire payout, and spending it badly takes part of it or none. A hull that
+bought nothing misses par on every track and every lap tried.
+
+A par is level data, and level data goes stale silently when the model under it
+changes: every par shipped was authored against the swing, and under flight
+they had drifted into being *the maxed ship's lap* — the Kestrel's par of 2100
+against 2099 for a fully built ship. Nothing failed; the pacing lap simply
+stopped being winnable. `npm run pars` measures the reference lap on every
+track and prints what each par should be, and `tests/sim/par.test.ts` says what
+a par has to be true of. Run the first after anything that changes how a ship
+flies.
+
 **The first track is always The Proving Ground**, whatever the seed. Every other
 heat is drawn, but the opening one is spent on the track that says what a road
 can be made of — every property, one per sector, one of each kind of fixture,
